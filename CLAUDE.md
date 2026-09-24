@@ -30,7 +30,7 @@ Aulas que são partes do mesmo tema viram uma página só: `aulas/NN-MM-slug.htm
 commit `Aulas NN-MM - Título`. Exercícios e resoluções ficam junto da teoria. Só gerar a página com as transcrições
 do bloco inteiro (o autor pode mandar em partes). Aulas avulsas continuam `NN-slug.html`.
 
-Feitas: 02 · 03–07 · 08 · 09 · 10–14 · 15–19 · 20–24 · 25–26 · 27–31 · 32–34 · 36–38 · 39–43.
+Feitas: 02 · 03–07 · 08 · 09 · 10–14 · 15–19 · 20–24 · 25–26 · 27–31 · 32–34 · 36–38 · 39–43 · 44–47.
 
 Plano (títulos da playlist; a aula 35 não aparece nela):
 - 10–14 Tipos primitivos (convenções, declaração/memória, casting, Strings, exercício)

@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>44–47 · Métodos</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="topo">
+      <a class="voltar" href="../index.html">← Todas as aulas</a>
+      <h1>44–47 · Métodos: parâmetros e retorno</h1>
+      <p>Comportamento das classes: declarar, chamar, passar argumentos e devolver valores · <a href="https://www.youtube.com/playlist?list=PL62G310vn6nFIsOCC0H-C2infYgwm8SWW" target="_blank" rel="noopener">playlist</a></p>
+    </header>
+
+    <nav class="abas">
+      <a href="#resumo">Resumo</a>
+      <a href="#flashcards">Flashcards</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#estudo">Material de estudo</a>
+    </nav>
+
+    <p class="aviso">Junta as aulas 44 (métodos), 45 (parâmetros), 46 e 47 (retorno). Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. Os nomes dos métodos seguem o que dá para entender no áudio (<code>somaDoisNumeros</code>, <code>divideDoisNumeros</code>...). A assinatura, o "missing return statement" e os itens marcados como "extra" não estão nos vídeos.</p>
+
+    <section id="resumo">
+      <h2>Resumo</h2>
+      <p>Até aqui as classes só tinham <strong>atributos</strong> (características). <strong>Métodos</strong> são o <strong>comportamento</strong>: o que o objeto sabe fazer. O exemplo das quatro aulas é uma <code>Calculadora</code>, no pacote novo <code>javacore.Bintroducaometodos</code> (com <code>dominio</code> e <code>test</code>, como antes). A analogia que o William repete: <strong>"corte esta maçã"</strong>. Para cortar, eu preciso te dar a maçã (<strong>parâmetro</strong>). Depois, você pode me devolver os pedaços (<strong>retorno</strong>) ou ficar com eles (<code>void</code>).</p>
+
+      <h3>44 · Anatomia e chamada</h3>
+<pre><code>public class Calculadora {
+//  acesso  retorno  nome              (parâmetros)
+    public  void     somaDoisNumeros() {
+        System.out.println(10 + 10);   // corpo
+    }
+
+    public void subtraiDoisNumeros() {
+        System.out.println(21 - 2);
+    }
+}
+
+// CalculadoraTeste01
+Calculadora calculadora = new Calculadora();
+calculadora.somaDoisNumeros();       // 20
+System.out.println("Finalizando CalculadoraTeste01");
+calculadora.subtraiDoisNumeros();    // 19</code></pre>
+      <ul>
+        <li>As partes de um método: <strong>modificador de acesso</strong> (<code>public</code>), <strong>tipo de retorno</strong>, <strong>nome</strong>, <strong>parênteses com os parâmetros</strong> e o <strong>corpo</strong> entre chaves.</li>
+        <li><strong><code>void</code></strong> significa "vazio": o método executa, mas <strong>não devolve nada</strong> para quem chamou.</li>
+        <li><strong>Retorno não é saída.</strong> Imprimir no console é uma <em>saída</em>. Devolver um valor para quem chamou é <em>retorno</em>. Um método <code>void</code> pode imprimir e ainda assim não retornar nada.</li>
+        <li>O nome segue a convenção das variáveis: <code>camelCase</code>, começando com minúscula.</li>
+        <li>Para chamar, use a variável de referência, o ponto, o nome e os <strong>parênteses</strong>: <code>calculadora.somaDoisNumeros();</code>. Atributo não tem parênteses e recebe valor com <code>=</code>. Método tem parênteses.</li>
+        <li><strong>O fluxo:</strong> ao chegar na chamada, a execução <strong>entra</strong> no método, roda o corpo e <strong>volta</strong> para a linha seguinte de quem chamou. O debug (<code>Shift+F9</code>, <code>F8</code>) mostra esse vai e volta.</li>
+        <li>O método roda <strong>no objeto</strong> para o qual a variável aponta. <code>Ctrl+B</code> (ou Ctrl+clique) no nome abre o método na classe.</li>
+      </ul>
+
+      <h3>45 · Parâmetros e argumentos</h3>
+<pre><code>public void multiplicaDoisNumeros(int num1, int num2) {
+    System.out.println(num1 * num2);
+}
+
+calculadora.multiplicaDoisNumeros(10, 20);   // 200</code></pre>
+      <ul>
+        <li><strong>Parâmetros</strong> são variáveis locais do método, que só existem enquanto ele executa. A sintaxe é igual à de declarar variável: <code>tipo nome</code>. Pode ser qualquer primitivo, referência ou array.</li>
+        <li><strong>Cada parâmetro precisa do seu tipo:</strong> <code>(int num1, num2)</code> não compila. O certo é <code>(int num1, int num2)</code>.</li>
+        <li><strong>Parâmetro × argumento:</strong> na declaração (<code>int num1</code>) é <em>parâmetro</em>. Na chamada (<code>10</code>) é <em>argumento</em>. No IntelliJ, <code>Ctrl+P</code> mostra o que o método espera.</li>
+        <li>Passar um argumento é como uma atribuição (<code>num1 = 10</code>), e <strong>as mesmas regras de tipo valem</strong>: um <code>double</code> num parâmetro <code>int</code> não compila (com cast compila, mas "é muito feio"). Um <code>int</code> num parâmetro <code>float</code> entra sem problema. Já <code>20.5</code> precisa de <code>F</code>.</li>
+        <li><strong>A assinatura é um contrato:</strong> "para eu funcionar, me passe dois ints". Quem chama não precisa saber <em>como</em> o método faz, e ele pode até chamar outro sistema. Se o contrato mudar (por exemplo, um terceiro parâmetro), todas as chamadas antigas param de compilar.</li>
+        <li>O método <strong>não sabe que valores vão chegar</strong>. Pense no que pode vir errado, como uma divisão por zero.</li>
+        <li><strong>Boa prática:</strong> mais de <strong>três parâmetros</strong> costuma indicar um método fazendo coisa demais. Divida em métodos menores.</li>
+      </ul>
+
+      <h3>46 · Retorno</h3>
+<pre><code>public double divideDoisNumeros(double num1, double num2) {
+    if (num2 == 0) {
+        return 0;          // sai do método aqui e devolve 0
+    }
+    return num1 / num2;
+}
+
+double resultado = calculadora.divideDoisNumeros(20, 2);   // 10.0
+System.out.println(resultado);
+System.out.println(calculadora.divideDoisNumeros(20, 2));  // direto no println</code></pre>
+      <ul>
+        <li>No lugar de <code>void</code>, qualquer tipo (primitivo ou referência) diz <strong>o que o método devolve</strong>.</li>
+        <li>Com tipo de retorno, o <strong><code>return</code> é obrigatório</strong>. Sem ele, não compila. <code>return 0;</code> já basta para compilar.</li>
+        <li>Chamar o método e <strong>ignorar o retorno</strong> é permitido (<code>calculadora.divideDoisNumeros(20, 2);</code>), mas não acontece nada visível: o valor volta e é descartado.</li>
+        <li>O retorno é tratado como um valor comum: dá para guardar numa variável ou usar direto. <strong>As regras de cast valem</strong>: um <code>double</code> devolvido não cabe num <code>int</code> sem <code>(int)</code>. Se o método declarar <code>int</code>, o <code>return num1 / num2</code> com doubles precisa de cast.</li>
+        <li>Com double, dividir por zero dá <code>Infinity</code> e não gera erro. Por isso a validação <code>if (num2 == 0) return 0;</code>.</li>
+        <li><strong>O <code>return</code> funciona como um <code>break</code> do método</strong>: ao executá-lo, o método termina na hora e volta para quem chamou. As linhas seguintes não rodam.</li>
+      </ul>
+
+      <h3>47 · Mais sobre retorno e o <code>return</code> em void</h3>
+<pre><code>// Três jeitos de fazer a mesma coisa:
+if (num2 == 0) { return 0; } return num1 / num2;              // aula 46
+if (num2 == 0) { return 0; } else { return num1 / num2; }     // com else
+if (num2 != 0) { return num1 / num2; } return 0;              // lógica invertida
+
+public void imprimeDivisaoDeDoisNumeros(double num1, double num2) {
+    if (num2 == 0) {
+        System.out.println("Não existe divisão por zero");
+        return;            // em void: só "sai do método", sem valor
+    }
+    System.out.println(num1 / num2);
+}</code></pre>
+      <ul>
+        <li>As três versões dão o mesmo resultado. Lógica de programação é individual, e com experiência você cria seu próprio estilo.</li>
+        <li><strong><code>return;</code> sem valor também funciona em métodos <code>void</code></strong>, para encerrar mais cedo. Sem ele (e sem <code>else</code>), a execução continuaria e imprimiria <code>Infinity</code>.</li>
+        <li><code>break</code> dentro de um <code>if</code> que não está em laço nem <code>switch</code> não compila. Para sair de método, use <code>return</code>.</li>
+        <li><strong>Um método <code>void</code> não pode ir dentro de um <code>println</code></strong>: <code>System.out.println(calculadora.imprimeDivisaoDeDoisNumeros(86, 5));</code> não compila, porque não há valor para imprimir.</li>
+        <li>O estilo do William: <strong>validações no começo do método</strong>, parando a execução logo se algo estiver errado, e <strong>a lógica de negócio depois</strong>. É o que se chama de <em>guard clause</em>.</li>
+      </ul>
+
+      <h3>Atenção</h3>
+      <ul>
+        <li><code>calculadora.somaDoisNumeros</code> sem parênteses não compila. Com parênteses é chamada de método, sem é acesso a atributo.</li>
+        <li><strong>Extra: "missing return statement".</strong> Se o <code>return</code> estiver só dentro de um <code>if</code>, o compilador reclama, porque existe um caminho sem retorno. Todo caminho precisa de um <code>return</code>.</li>
+        <li><strong>Extra: código depois de <code>return</code></strong> no mesmo bloco não compila (<em>unreachable statement</em>).</li>
+        <li><strong>Extra: divisão por zero depende do tipo.</strong> Com double dá <code>Infinity</code> (ou <code>NaN</code> em 0/0), sem erro. Com int lança <code>ArithmeticException</code>. O método da aula recebe double.</li>
+        <li><strong>Extra: o tipo de retorno não faz parte da assinatura.</strong> A assinatura é o nome mais os tipos dos parâmetros. Isso vai importar na sobrecarga (aula 57).</li>
+        <li><strong>Extra:</strong> o parâmetro recebe uma <em>cópia</em> do valor. Mudar <code>num1</code> dentro do método não altera a variável de quem chamou. Com referências a história tem nuances (aulas 48–50).</li>
+      </ul>
+
+      <h3>Paralelo com PHP</h3>
+      <ul>
+        <li><strong>Sintaxe:</strong> <code>public function divide(float $a, float $b): float</code> vira <code>public double divide(double a, double b)</code>. Em Java não existe a palavra <code>function</code>, e o tipo de retorno vem <strong>antes</strong> do nome.</li>
+        <li><strong><code>void</code></strong> existe nas duas. Em PHP, sem <code>return</code> o método devolve <code>null</code>. Em Java, método com tipo de retorno e sem <code>return</code> <strong>não compila</strong>.</li>
+        <li><strong>Tipos dos argumentos:</strong> sem <code>strict_types</code>, o PHP converte <code>"10"</code> em <code>10</code> sozinho. O Java só aceita tipos compatíveis e verifica na compilação.</li>
+        <li><strong>Sem parâmetros opcionais nem nomeados:</strong> <code>function x($a, $b = 0)</code> e <code>x(b: 2, a: 1)</code> não existem em Java. O equivalente é a <em>sobrecarga</em> (aula 57), com vários métodos de mesmo nome e parâmetros diferentes.</li>
+        <li><strong>Divisão por zero:</strong> no PHP 8, <code>1 / 0</code> lança <code>DivisionByZeroError</code>. Em Java, com double dá <code>Infinity</code> em silêncio.</li>
+        <li><strong>Guard clauses</strong> (<code>if (!$user) return;</code> no começo) são as mesmas nas duas linguagens.</li>
+      </ul>
+    </section>
+
+    <section id="flashcards">
+      <h2>Flashcards</h2>
+      <p style="color:var(--muted);margin-top:-6px">Toque no cartão para virar.</p>
+      <div id="flashcards-app"></div>
+    </section>
+
+    <section id="quiz">
+      <h2>Quiz</h2>
+      <div id="quiz-app"></div>
+    </section>
+
+    <section id="estudo">
+      <h2>Material de estudo</h2>
+
+      <h3>Mapa mental</h3>
+<pre><code>Métodos
+├── O que são (44)
+│   └── comportamento da classe (atributos = características)
+├── Anatomia (44)
+│   ├── acesso · retorno · nome(camelCase) · (parâmetros) · { corpo }
+│   ├── void = não devolve nada
+│   └── retorno ≠ saída (println)
+├── Chamada (44)
+│   ├── ref.metodo();  (parênteses!)
+│   └── entra no método → executa → volta
+├── Parâmetros (45)
+│   ├── (int num1, int num2) → cada um com seu tipo
+│   ├── parâmetro (declaração) × argumento (chamada) · Ctrl+P
+│   ├── mesmas regras de tipo/cast
+│   └── assinatura = contrato · evite mais de 3 parâmetros
+└── Retorno (46–47)
+    ├── tipo no lugar de void → return obrigatório
+    ├── valor usado, guardado ou ignorado
+    ├── return encerra o método (como um break)
+    ├── return; em void para sair mais cedo
+    ├── void não vai dentro de println
+    └── validações primeiro (guard clauses)</code></pre>
+
+      <h3>Prática no seu WSL (20 minutos)</h3>
+<pre><code>cd ~/java-lab
+B=src/academy/devdojo/maratonajava/javacore/Bintroducaometodos
+mkdir -p $B/dominio $B/test
+
+cat > $B/dominio/Calculadora.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Bintroducaometodos.dominio;
+
+public class Calculadora {
+    public void multiplicaDoisNumeros(int num1, int num2) {
+        System.out.println(num1 * num2);
+    }
+
+    public double divideDoisNumeros(double num1, double num2) {
+        if (num2 == 0) {
+            return 0;
+        }
+        return num1 / num2;
+    }
+
+    public void imprimeDivisaoDeDoisNumeros(double num1, double num2) {
+        if (num2 == 0) {
+            System.out.println("Não existe divisão por zero");
+            return;
+        }
+        System.out.println(num1 / num2);
+    }
+}
+EOF
+
+cat > $B/test/CalculadoraTeste01.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Bintroducaometodos.test;
+
+import academy.devdojo.maratonajava.javacore.Bintroducaometodos.dominio.Calculadora;
+
+public class CalculadoraTeste01 {
+    public static void main(String[] args) {
+        Calculadora calculadora = new Calculadora();
+        calculadora.multiplicaDoisNumeros(10, 20);               // ?
+        double resultado = calculadora.divideDoisNumeros(20, 2);
+        System.out.println(resultado);                           // ?
+        System.out.println(calculadora.divideDoisNumeros(1, 0)); // ?
+        calculadora.imprimeDivisaoDeDoisNumeros(86, 5);          // ?
+        calculadora.imprimeDivisaoDeDoisNumeros(86, 0);          // ?
+        int inteiro = (int) calculadora.divideDoisNumeros(7, 2);
+        System.out.println(inteiro);                             // ?
+    }
+}
+EOF
+
+javac -d out $(find src -name '*.java')
+java -cp out academy.devdojo.maratonajava.javacore.Bintroducaometodos.test.CalculadoraTeste01</code></pre>
+      <details>
+        <summary>Ver a saída esperada</summary>
+<pre><code>200
+10.0
+0.0
+17.2
+Não existe divisão por zero
+3</code></pre>
+      </details>
+      <p><strong>Exercícios:</strong></p>
+      <ol>
+        <li>Crie <code>somaDoisNumeros(int a, int b)</code> que <strong>retorna</strong> um int e use o resultado para somar três números: <code>soma(soma(1, 2), 3)</code>.</li>
+        <li>Crie <code>isPar(int numero)</code> que retorna <code>boolean</code> (reaproveite o <code>%</code> da aula 28).</li>
+        <li>Reescreva <code>divideDoisNumeros</code> nas três formas da aula 47 e confira que dão o mesmo resultado.</li>
+        <li>Provoque os erros: tire o <code>return 0;</code> (missing return), ponha uma linha depois do último <code>return</code> (unreachable), coloque um método void dentro de <code>println</code>.</li>
+      </ol>
+
+      <h3>Glossário</h3>
+      <ul>
+        <li><strong>Método</strong>: bloco de código de uma classe que define um comportamento.</li>
+        <li><strong>Tipo de retorno</strong>: o tipo do valor que o método devolve, ou <code>void</code>.</li>
+        <li><strong><code>void</code></strong>: "vazio", o método não devolve nada.</li>
+        <li><strong>Parâmetro</strong>: variável declarada nos parênteses do método.</li>
+        <li><strong>Argumento</strong>: valor passado na chamada.</li>
+        <li><strong>Assinatura</strong>: nome mais os tipos dos parâmetros, o "contrato" do método.</li>
+        <li><strong><code>return</code></strong>: encerra o método e, se houver tipo de retorno, devolve o valor.</li>
+        <li><strong>Guard clause</strong>: validação no começo que sai do método cedo com <code>return</code>.</li>
+      </ul>
+
+      <h3>Revisão espaçada</h3>
+      <ul class="revisao">
+        <li><span class="dia">Dia 1</span><span>Todos os flashcards + a prática com previsões.</span></li>
+        <li><span class="dia">Dia 3</span><span>Quiz + exercícios 1 e 2.</span></li>
+        <li><span class="dia">Dia 7</span><span>Exercícios 3 e 4 + explicar em voz alta retorno × saída.</span></li>
+        <li><span class="dia">Dia 14</span><span>Flashcards que errou + questões discursivas.</span></li>
+      </ul>
+
+      <h3>Para aprofundar</h3>
+      <ul>
+        <li>Por que o <code>main</code> é <code>public static void</code>? O que significa cada palavra? (<code>static</code> nas aulas 61–62)</li>
+        <li>O que acontece na memória (pilha de chamadas) quando um método chama outro?</li>
+        <li>O que é "passagem por valor" e por que Java é sempre por valor, mesmo com objetos? (aulas 48–50)</li>
+        <li>Como o princípio "um método, uma responsabilidade" se liga à coesão da aula 41?</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    window.AULA = {
+      flashcards: [
+        ["O que são métodos?", "O comportamento da classe: o que o objeto sabe fazer"],
+        ["Quais as partes de um método?", "Modificador de acesso, tipo de retorno, nome, (parâmetros) e { corpo }"],
+        ["O que significa void?", "Que o método não devolve nada para quem chamou"],
+        ["Retorno e saída são a mesma coisa?", "Não: saída é imprimir; retorno é devolver um valor a quem chamou"],
+        ["Qual a convenção de nome de método?", "camelCase, começando com minúscula"],
+        ["Como chamar um método?", "referencia.nomeDoMetodo(argumentos);"],
+        ["Diferença visual entre atributo e método na chamada?", "Método tem parênteses; atributo não (e recebe valor com =)"],
+        ["O que acontece quando um método é chamado?", "A execução entra nele, roda o corpo e volta para a linha seguinte"],
+        ["O que são parâmetros?", "Variáveis locais do método, declaradas nos parênteses"],
+        ["(int num1, num2) compila?", "Não: cada parâmetro precisa do seu tipo (int num1, int num2)"],
+        ["Parâmetro × argumento?", "Parâmetro: na declaração. Argumento: o valor passado na chamada"],
+        ["Atalho do IntelliJ para ver os parâmetros de um método?", "Ctrl+P"],
+        ["Passar 10.5 para um parâmetro int compila?", "Não: as regras de tipo valem (precisaria de cast)"],
+        ["Por que a assinatura é um contrato?", "Diz o que o método precisa; mudá-la quebra todas as chamadas"],
+        ["Quantos parâmetros é demais?", "Mais de três costuma indicar que o método faz coisa demais"],
+        ["O que muda ao trocar void por double?", "O método passa a devolver um double e o return fica obrigatório"],
+        ["Chamar um método e ignorar o retorno é permitido?", "Sim: o valor volta e é descartado"],
+        ["O que o return faz com a execução?", "Encerra o método na hora e volta para quem chamou (como um break)"],
+        ["Pode usar return em método void?", "Sim, sem valor: return; (para sair mais cedo)"],
+        ["System.out.println(metodoVoid()) compila?", "Não: void não tem valor para imprimir"],
+        ["break dentro de if fora de laço serve para sair do método?", "Não compila. Use return"],
+        ["O que dá 1.0 / 0 com double?", "Infinity (sem erro)"],
+        ["O que é 'missing return statement'?", "Erro de compilação: existe um caminho do método sem return"],
+        ["Onde o William prefere colocar as validações?", "No começo do método (guard clauses), antes da lógica"],
+        ["Diferença de retorno entre PHP e Java?", "Em Java o tipo vem antes do nome e sem return não compila; no PHP devolve null"]
+      ],
+      quiz: [
+        { tipo: 'vf', pergunta: 'Um método void pode imprimir algo no console, mesmo sem retornar nada.', correta: 0,
+          explicacao: 'Verdadeiro: imprimir é saída; retornar é devolver um valor a quem chamou. São coisas diferentes.' },
+        { tipo: 'multipla', pergunta: 'Qual declaração de método está correta?', opcoes: ['public multiplica(int a, int b) void', 'public void multiplica(int a, b)', 'public void multiplica(int a, int b)', 'public function multiplica(int a, int b)'], correta: 2,
+          explicacao: 'acesso + retorno + nome + (tipo nome, tipo nome). Cada parâmetro precisa do seu tipo, e function não existe em Java.' },
+        { tipo: 'multipla', pergunta: 'Em calculadora.multiplica(10, 20), como se chamam 10 e 20?', opcoes: ['Parâmetros', 'Argumentos', 'Atributos', 'Retornos'], correta: 1,
+          explicacao: 'Na chamada são argumentos. Na declaração (int a, int b) são parâmetros.' },
+        { tipo: 'vf', pergunta: 'Um método declarado como public double calcula() compila sem nenhum return.', correta: 1,
+          explicacao: 'Falso: com tipo de retorno, todo caminho precisa de return.' },
+        { tipo: 'multipla', pergunta: 'O que imprime: System.out.println(calc.divide(20, 0)); com if (num2 == 0) return 0; return num1 / num2; (doubles)?', opcoes: ['Infinity', '0.0', 'Erro de compilação', 'ArithmeticException'], correta: 1,
+          explicacao: 'A validação encontra num2 == 0 e retorna 0. O return encerra o método e a divisão nem roda.' },
+        { tipo: 'multipla', pergunta: 'Qual linha NÃO compila, sendo imprimeDivisao um método void?', opcoes: ['calc.imprimeDivisao(86, 5);', 'System.out.println(calc.imprimeDivisao(86, 5));', 'calc.divide(20, 2);', 'double r = calc.divide(20, 2);'], correta: 1,
+          explicacao: 'Um método void não tem valor para passar ao println.' },
+        { tipo: 'multipla', pergunta: 'Método: public int metade(double n) { return n / 2; } — o que acontece?', opcoes: ['Compila e arredonda', 'Não compila: double não cabe em int sem cast', 'Compila e trunca', 'Lança exceção ao rodar'], correta: 1,
+          explicacao: 'O valor retornado segue as regras de atribuição: double → int precisa de (int).' },
+        { tipo: 'vf', pergunta: 'Num método void, "return;" encerra a execução e as linhas seguintes do método não rodam.', correta: 0,
+          explicacao: 'Verdadeiro: return sem valor é o "break" dos métodos void. É o padrão de validar no começo e sair cedo.' },
+        { tipo: 'discursiva', pergunta: 'Explique a analogia da maçã usada pelo William para parâmetros, retorno e void.',
+          explicacao: 'Pedir "corte esta maçã" é chamar o método. Para cortar, você precisa receber a maçã: isso é o parâmetro (e o valor entregue é o argumento). Depois de cortar, você pode me devolver os dois pedaços (retorno, com um tipo no lugar de void) ou ficar com eles (void: a ação aconteceu, mas nada volta para quem pediu). Imprimir o resultado no console seria só mostrar os pedaços, uma saída, não um retorno.' },
+        { tipo: 'discursiva', pergunta: 'Você tem em PHP: public function desconto(float $preco, float $pct = 10): float. Como ficaria em Java e o que muda?',
+          explicacao: 'public double desconto(double preco, double pct) { return preco * pct / 100; }. O tipo de retorno vem antes do nome, não existe a palavra function nem $. Não há valor padrão de parâmetro: para permitir chamar só com o preço, cria-se um segundo método desconto(double preco) que chama desconto(preco, 10), a sobrecarga da aula 57. Também não há argumentos nomeados, e os tipos são verificados na compilação.' }
+      ]
+    };
+  </script>
+  <script src="../js/app.js"></script>
+</body>
+</html>
