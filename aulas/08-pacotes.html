@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>08 · Pacotes</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="topo">
+      <a class="voltar" href="../index.html">← Todas as aulas</a>
+      <h1>08 · Pacotes</h1>
+      <p>Organizando as classes em pacotes · <a href="https://www.youtube.com/playlist?list=PL62G310vn6nFIsOCC0H-C2infYgwm8SWW" target="_blank" rel="noopener">playlist</a></p>
+    </header>
+
+    <nav class="abas">
+      <a href="#resumo">Resumo</a>
+      <a href="#flashcards">Flashcards</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#estudo">Material de estudo</a>
+    </nav>
+
+    <p class="aviso">Feito a partir da transcrição automática da aula. Nomes que a transcrição trocou (como o pacote <code>academy.devdojo.maratonajava.introducao</code> e a classe <code>OlaDevDojo</code>) foram corrigidos. A prática com <code>javac</code> no WSL não está no vídeo: é um complemento.</p>
+
+    <section id="resumo">
+      <h2>Resumo</h2>
+      <p>Normalmente pacotes aparecem só lá pela aula 15 ou 20, mas o William preferiu mostrar logo no começo para o código já nascer organizado. Um projeto pequeno e bem estruturado passa fácil de <strong>200 classes</strong>. Os <strong>pacotes</strong> servem para agrupar as classes que têm algo em comum.</p>
+
+      <h3>O que é um pacote</h3>
+      <ul>
+        <li>No fundo, um pacote é uma <strong>estrutura de diretórios</strong>. Cada parte separada por ponto vira uma pasta.</li>
+        <li><code>academy.devdojo.maratonajava.introducao</code> vira <code>src/academy/devdojo/maratonajava/introducao/</code>.</li>
+        <li>Toda classe que você criar deve ficar dentro de um pacote.</li>
+      </ul>
+
+      <h3>Convenção de nome</h3>
+      <ul>
+        <li><strong>Domínio do site invertido</strong> + <strong>nome do projeto</strong> + <strong>divisão</strong>.</li>
+        <li>No curso: domínio <code>devdojo.academy</code> → <code>academy.devdojo</code>. Depois o projeto, <code>maratonajava</code>, e a divisão, <code>introducao</code>.</li>
+        <li>O projeto podia ser outro, como um <code>crm</code>. As divisões mudam conforme o tema. No fim do curso vão ser mais de 30 pacotes.</li>
+        <li>Tudo em <strong>minúsculas</strong>, sem traços e sem acentos.</li>
+      </ul>
+
+      <h3>A declaração <code>package</code></h3>
+      <ul>
+        <li>Ao mover a classe <code>OlaDevDojo</code> para o pacote, o IntelliJ adiciona sozinho a linha:<br><code>package academy.devdojo.maratonajava.introducao;</code></li>
+        <li>O <code>package</code> tem que ser a <strong>primeira linha de código</strong> do arquivo. Comentários antes dele são permitidos (comentários são o tema da próxima aula).</li>
+        <li>Classes criadas direto dentro do pacote já nascem com essa linha. A IDE cuida disso.</li>
+        <li>O nome completo da classe passa a ser <code>academy.devdojo.maratonajava.introducao.OlaDevDojo</code>. Isso vai importar quando uma classe usar outra de outro pacote.</li>
+      </ul>
+
+      <h3>No IntelliJ</h3>
+      <ul>
+        <li><strong>Criar pacote</strong>: botão direito em <code>src</code> → <em>New → Package</em>.</li>
+        <li><strong>Mover classe</strong>: arrastar para dentro do pacote e confirmar o <em>Refactor</em>. Não use copiar e colar, senão a classe fica duplicada.</li>
+        <li><strong>Renomear</strong> (inclusive pacote): <em>Refactor → Rename</em> ou <code>Shift+F6</code>.</li>
+        <li><strong>Compilar</strong>: <code>Ctrl+F9</code> (Build). <strong>Executar</strong>: <code>Shift+F10</code>.</li>
+        <li><em>Show in Explorer</em> mostra as pastas reais. A pasta <code>out</code> (onde ficam os <code>.class</code>) repete a mesma estrutura de pacotes do <code>src</code>.</li>
+        <li>A pasta <code>out</code> é temporária, gerada na compilação. Não precisa se preocupar com ela.</li>
+      </ul>
+
+      <h3>Atenção</h3>
+      <ul>
+        <li>Na aula o traço aparece como "não aconselhável", mas na verdade <strong>traço nem compila</strong> em nome de pacote. <code>maratona-java</code> é inválido. Use <code>maratonajava</code> ou, se precisar mesmo separar, <code>maratona_java</code>.</li>
+        <li>O domínio vai <strong>invertido</strong>: <code>devdojo.academy</code> vira <code>academy.devdojo</code>, e não o contrário.</li>
+        <li>Nada de código antes do <code>package</code>. Só comentários e linhas em branco.</li>
+        <li>O <code>.class</code> precisa ficar numa pasta igual ao pacote, senão a JVM não acha a classe. A IDE faz isso por você. Na mão, é o <code>javac -d</code> que monta as pastas.</li>
+        <li>Fora da IDE, para executar é preciso o <strong>nome completo</strong>: <code>java -cp out academy.devdojo.maratonajava.introducao.OlaDevDojo</code>.</li>
+      </ul>
+
+      <h3>Paralelo com PHP</h3>
+      <p>O pacote é o <code>namespace</code> do PHP, e a pasta que acompanha o pacote lembra o <strong>PSR-4</strong> do Composer (<code>App\Http\Controllers</code> → <code>app/Http/Controllers</code>). Três diferenças:</p>
+      <ul>
+        <li>No Java a pasta é parte da linguagem, não uma configuração de autoload no <code>composer.json</code>.</li>
+        <li>O separador é ponto (<code>.</code>), não barra invertida (<code>\</code>).</li>
+        <li>A convenção é tudo minúsculo e com o domínio invertido. No Laravel é <code>PascalCase</code> e começa pelo vendor (<code>App</code>, <code>Illuminate</code>).</li>
+      </ul>
+      <p>O nome completo <code>academy.devdojo...OlaDevDojo</code> é o equivalente ao FQCN <code>App\Models\User</code>.</p>
+    </section>
+
+    <section id="flashcards">
+      <h2>Flashcards</h2>
+      <p style="color:var(--muted);margin-top:-6px">Toque no cartão para virar.</p>
+      <div id="flashcards-app"></div>
+    </section>
+
+    <section id="quiz">
+      <h2>Quiz</h2>
+      <div id="quiz-app"></div>
+    </section>
+
+    <section id="estudo">
+      <h2>Material de estudo</h2>
+
+      <h3>Mapa mental</h3>
+<pre><code>Pacotes
+├── Para quê
+│   └── Organizar e agrupar classes (projetos têm centenas)
+├── O que são
+│   └── Estrutura de diretórios (cada ponto = uma pasta)
+├── Convenção
+│   ├── domínio invertido → academy.devdojo
+│   ├── + projeto → maratonajava
+│   ├── + divisão → introducao
+│   └── minúsculas, sem traço, sem acento
+├── No código
+│   ├── package ...; = 1ª linha de código (comentários podem vir antes)
+│   └── nome completo = pacote + classe
+└── IntelliJ
+    ├── New → Package / arrastar + Refactor
+    ├── Shift+F6 renomear
+    ├── Ctrl+F9 build / Shift+F10 run
+    └── out/ espelha src/ (pasta temporária)</code></pre>
+
+      <h3>Prática no seu WSL (10 minutos)</h3>
+      <p>Mesmo exercício da aula, mas na mão, para ver o que a IDE faz:</p>
+<pre><code># 1. Criar a estrutura de pastas do pacote
+mkdir -p ~/java-lab/src/academy/devdojo/maratonajava/introducao
+cd ~/java-lab
+
+# 2. A classe começa com o package
+cat > src/academy/devdojo/maratonajava/introducao/OlaDevDojo.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.introducao;
+
+public class OlaDevDojo {
+    public static void main(String[] args) {
+        System.out.println("Olá DevDojo, agora dentro de um pacote!");
+    }
+}
+EOF
+
+# 3. Compilar: o -d cria as pastas do pacote dentro de out/
+javac -d out src/academy/devdojo/maratonajava/introducao/OlaDevDojo.java
+find out -name '*.class'
+# out/academy/devdojo/maratonajava/introducao/OlaDevDojo.class
+
+# 4. Executar pelo nome completo
+java -cp out academy.devdojo.maratonajava.introducao.OlaDevDojo
+
+# 5. Ver os erros (e ler as mensagens):
+java -cp out OlaDevDojo            # nome curto: classe não encontrada</code></pre>
+      <p><strong>Desafio:</strong> crie um segundo pacote <code>academy.devdojo.maratonajava.teste</code> com uma classe <code>Teste</code> que imprime algo. Compile as duas classes num comando só (<code>javac -d out $(find src -name '*.java')</code>) e execute cada uma.</p>
+
+      <h3>Glossário</h3>
+      <ul>
+        <li><strong>Pacote (package)</strong>: agrupamento de classes, que no disco é uma estrutura de pastas.</li>
+        <li><strong>Domínio invertido</strong>: convenção para o nome do pacote ser único no mundo (<code>com.empresa</code>, <code>academy.devdojo</code>).</li>
+        <li><strong>Declaração <code>package</code></strong>: primeira linha de código do arquivo, diz a qual pacote a classe pertence.</li>
+        <li><strong>Nome completo (fully qualified name)</strong>: pacote + nome da classe.</li>
+        <li><strong>Refactor</strong>: mudança de estrutura feita pela IDE, que atualiza as referências sozinha (mover, renomear).</li>
+        <li><strong>Pasta <code>out</code></strong>: saída da compilação no IntelliJ, com os <code>.class</code> na mesma estrutura dos pacotes.</li>
+      </ul>
+
+      <h3>Revisão espaçada</h3>
+      <ul class="revisao">
+        <li><span class="dia">Dia 1</span><span>Todos os flashcards + a prática do WSL.</span></li>
+        <li><span class="dia">Dia 3</span><span>Quiz sem olhar o resumo.</span></li>
+        <li><span class="dia">Dia 7</span><span>Fazer o desafio dos dois pacotes sem consultar.</span></li>
+        <li><span class="dia">Dia 14</span><span>Flashcards que errou + questões discursivas.</span></li>
+      </ul>
+
+      <h3>Para aprofundar</h3>
+      <ul>
+        <li>O que acontece com uma classe sem <code>package</code> (o "pacote padrão") e por que evitar isso?</li>
+        <li>Como usar uma classe de outro pacote? (<code>import</code>, que vem mais à frente no curso)</li>
+        <li>Por que <code>java.lang</code> é o único pacote que não precisa de import?</li>
+        <li>Como o Maven/Gradle organiza as pastas (<code>src/main/java/...</code>) comparado ao <code>src/</code> do IntelliJ?</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    window.AULA = {
+      flashcards: [
+        ['Para que servem os pacotes?', 'Organizar o código, agrupando classes que têm algo em comum'],
+        ['O que um pacote é, fisicamente?', 'Uma estrutura de diretórios: cada parte separada por ponto é uma pasta'],
+        ['Qual a convenção para nomear pacotes?', 'Domínio invertido + nome do projeto + divisão'],
+        ['Qual o pacote usado no início do curso?', 'academy.devdojo.maratonajava.introducao'],
+        ['Como fica o domínio devdojo.academy no pacote?', 'Invertido: academy.devdojo'],
+        ['Qual pasta corresponde a academy.devdojo.maratonajava.introducao?', 'academy/devdojo/maratonajava/introducao'],
+        ['Pode usar traço no nome do pacote?', 'Não: é inválido e não compila. Use maratonajava ou maratona_java'],
+        ['Letras maiúsculas ou minúsculas em pacotes?', 'Minúsculas, por convenção'],
+        ['Qual linha toda classe dentro de um pacote precisa ter?', 'package nome.do.pacote; (com ponto e vírgula)'],
+        ['Onde fica a declaração package?', 'Na primeira linha de código do arquivo (só comentários podem vir antes)'],
+        ['Qual o nome completo da classe OlaDevDojo no curso?', 'academy.devdojo.maratonajava.introducao.OlaDevDojo'],
+        ['Como mover uma classe para um pacote no IntelliJ?', 'Arrastar para dentro do pacote e confirmar o Refactor'],
+        ['Por que não copiar e colar a classe para o pacote?', 'Porque ela fica duplicada; o certo é mover (Refactor)'],
+        ['Atalho do IntelliJ para renomear?', 'Shift+F6'],
+        ['Atalho do IntelliJ para compilar (Build)?', 'Ctrl+F9'],
+        ['Atalho do IntelliJ para executar?', 'Shift+F10'],
+        ['O que tem na pasta out do IntelliJ?', 'Os .class compilados, na mesma estrutura de pacotes do src'],
+        ['Como executar uma classe com pacote pelo terminal?', 'java -cp out academy.devdojo.maratonajava.introducao.OlaDevDojo'],
+        ['Qual o equivalente do pacote Java no PHP?', 'O namespace (e a relação pasta/namespace lembra o PSR-4)']
+      ],
+      quiz: [
+        { tipo: 'vf', pergunta: 'Pacotes servem para organizar e agrupar classes que têm algo em comum.', correta: 0,
+          explicacao: 'Verdadeiro: é o motivo de eles existirem. Mesmo projetos pequenos chegam a centenas de classes.' },
+        { tipo: 'multipla', pergunta: 'No disco, um pacote é:', opcoes: ['Um arquivo .jar', 'Uma estrutura de diretórios', 'Um arquivo de configuração', 'Uma classe especial'], correta: 1,
+          explicacao: 'Cada parte do nome separada por ponto vira uma pasta.' },
+        { tipo: 'multipla', pergunta: 'Seguindo a convenção, o site devdojo.academy com o projeto maratonajava gera o pacote:', opcoes: ['devdojo.academy.maratonajava', 'maratonajava.devdojo.academy', 'academy.devdojo.maratonajava', 'Academy.DevDojo.MaratonaJava'], correta: 2,
+          explicacao: 'Domínio invertido (academy.devdojo), depois o projeto, tudo em minúsculas.' },
+        { tipo: 'vf', pergunta: 'A declaração package pode ficar em qualquer linha do arquivo, desde que antes da classe.', correta: 1,
+          explicacao: 'Falso: ela tem que ser a primeira linha de código. Só comentários e linhas em branco podem vir antes.' },
+        { tipo: 'multipla', pergunta: 'Qual declaração está correta?', opcoes: ['package academy.devdojo.maratonajava.introducao;', 'package academy/devdojo/maratonajava/introducao;', 'namespace academy.devdojo.maratonajava.introducao;', 'package academy.devdojo.maratona-java.introducao;'], correta: 0,
+          explicacao: 'Usa ponto como separador e termina com ";". Barra não é aceita, namespace é do PHP e traço não compila.' },
+        { tipo: 'vf', pergunta: 'Para colocar uma classe num pacote no IntelliJ, o recomendado é copiar e colar o arquivo.', correta: 1,
+          explicacao: 'Falso: copiar deixa a classe duplicada. O certo é arrastar (mover) e confirmar o Refactor, que também ajusta o package.' },
+        { tipo: 'multipla', pergunta: 'No IntelliJ, Ctrl+F9, Shift+F10 e Shift+F6 fazem, respectivamente:', opcoes: ['Executar, compilar, renomear', 'Compilar, executar, renomear', 'Renomear, compilar, executar', 'Compilar, renomear, executar'], correta: 1,
+          explicacao: 'Ctrl+F9 = Build, Shift+F10 = Run, Shift+F6 = Rename.' },
+        { tipo: 'multipla', pergunta: 'Depois de compilar com "javac -d out ...", como executar OlaDevDojo, que está no pacote academy.devdojo.maratonajava.introducao?', opcoes: ['java -cp out OlaDevDojo', 'java out/academy/devdojo/maratonajava/introducao/OlaDevDojo.class', 'java -cp out academy.devdojo.maratonajava.introducao.OlaDevDojo', 'java -cp out/academy OlaDevDojo'], correta: 2,
+          explicacao: 'A JVM precisa do nome completo (pacote + classe), e o -cp aponta para a raiz de onde as pastas do pacote começam.' },
+        { tipo: 'discursiva', pergunta: 'Por que a pasta out tem a mesma estrutura de pastas do src?',
+          explicacao: 'Porque o pacote é uma estrutura de diretórios também para os compilados: a JVM procura o .class de academy.devdojo...OlaDevDojo na pasta academy/devdojo/... a partir do classpath. A compilação mantém essa estrutura para a classe ser encontrada.' },
+        { tipo: 'discursiva', pergunta: 'Compare o pacote Java com o namespace do PHP/Laravel.',
+          explicacao: 'Os dois agrupam classes e formam um nome completo (academy.devdojo...OlaDevDojo e App\\Models\\User). No Java, a relação com as pastas faz parte da linguagem e o separador é ponto. No PHP, quem liga namespace e pasta é o autoload PSR-4 do Composer, e o separador é barra invertida. A convenção de nome também muda: domínio invertido e minúsculas no Java, PascalCase começando pelo vendor no PHP.' }
+      ]
+    };
+  </script>
+  <script src="../js/app.js"></script>
+</body>
+</html>

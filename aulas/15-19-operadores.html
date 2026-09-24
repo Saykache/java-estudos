@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>15–19 · Operadores</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="topo">
+      <a class="voltar" href="../index.html">← Todas as aulas</a>
+      <h1>15–19 · Operadores</h1>
+      <p>Aritméticos, relacionais, lógicos (AND, OR) e de atribuição · <a href="https://www.youtube.com/playlist?list=PL62G310vn6nFIsOCC0H-C2infYgwm8SWW" target="_blank" rel="noopener">playlist</a></p>
+    </header>
+
+    <nav class="abas">
+      <a href="#resumo">Resumo</a>
+      <a href="#flashcards">Flashcards</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#estudo">Material de estudo</a>
+    </nav>
+
+    <p class="aviso">Junta as aulas 15 (aritméticos), 16 (resto e relacionais), 17 (lógico AND), 18 (lógico OR) e 19 (atribuição, incremento e decremento). Feito a partir das legendas automáticas, baixadas com <code>ferramentas/transcricao.py</code>. Na aula 16, o William chama os operadores <code>&lt;</code>, <code>&gt;</code>, <code>==</code> e <code>!=</code> de "lógicos"; aqui eles aparecem com o nome certo, <strong>relacionais</strong>. O curto-circuito, a divisão por zero e o <code>%</code> com negativos não estão nos vídeos: são complementos, marcados como "extra".</p>
+
+    <section id="resumo">
+      <h2>Resumo</h2>
+      <p>Operadores são os símbolos que fazem operações com valores. Há os que calculam (<strong>aritméticos</strong>), os que comparam e devolvem <code>boolean</code> (<strong>relacionais</strong>), os que combinam condições (<strong>lógicos</strong>) e os que guardam valores em variáveis (<strong>atribuição</strong>). O curso cria a classe <code>Aula04Operadores</code> e faz tudo nela.</p>
+
+      <h3>15 · Aritméticos: <code>+ - * /</code></h3>
+      <ul>
+        <li>Com <code>int numero1 = 10</code> e <code>int numero2 = 20</code>: <code>numero2 - numero1</code> dá 10, <code>+</code> dá 30 e <code>*</code> dá 200. O resultado pode ir direto no <code>println</code> ou ser guardado numa variável (<code>int resultado = numero1 + numero2;</code>).</li>
+        <li><strong>O <code>+</code> é sobrecarregado:</strong> soma números, mas vira <strong>concatenação</strong> a partir do momento em que aparece uma String, lendo da esquerda para a direita:
+          <ul>
+            <li><code>"Valor " + numero1 + numero2</code> → <code>"Valor 1020"</code></li>
+            <li><code>numero1 + numero2 + " valor"</code> → <code>"30 valor"</code>, porque primeiro soma e depois encontra a String</li>
+          </ul>
+          O William avisa que esse tipo de conta é mais comum em prova de certificação do que no dia a dia.</li>
+        <li><strong>Divisão entre inteiros dá inteiro:</strong> <code>10 / 20</code> dá <code>0</code>, e não <code>0.5</code>. A parte decimal é descartada.</li>
+        <li>Para ter <code>0.5</code>, basta que <strong>um</strong> dos lados seja decimal: <code>double numero2 = 20.0</code>, ou um cast como <code>(double) numero1 / numero2</code>. O cast funciona, mas a aula chama de "feio": é bom saber que existe.</li>
+      </ul>
+
+      <h3>16 · Resto e relacionais</h3>
+      <ul>
+        <li><strong>Resto (<code>%</code>)</strong>: <code>20 % 2</code> dá <code>0</code>. Se o resto da divisão por 2 é 0, o número é <strong>par</strong>, e se não é, é ímpar.</li>
+        <li><strong>Relacionais</strong> comparam valores e <strong>sempre devolvem <code>boolean</code></strong> (<code>true</code>/<code>false</code>): <code>&lt;</code>, <code>&gt;</code>, <code>&lt;=</code>, <code>&gt;=</code>, <code>==</code> e <code>!=</code>.</li>
+        <li><code>=</code> <strong>atribui</strong> e <code>==</code> <strong>compara</strong>. Com um sinal só, a comparação não compila.</li>
+        <li>O nome da variável pode deixar claro o que ela guarda: <code>boolean isDezMaiorQueVinte = 10 &gt; 20;</code> (false). Na hora de imprimir, vale pôr um rótulo: <code>"isDezMaiorQueVinte " + isDezMaiorQueVinte</code>.</li>
+        <li><code>10 == 10.0</code> é <code>true</code>: int e double são <strong>tipos comparáveis</strong>, e o int é promovido para double.</li>
+        <li>Comparar tipos incomparáveis, como <code>10 == "10"</code>, é <strong>erro de compilação</strong>.</li>
+        <li>String tem um caso especial: <strong>evite <code>==</code> para comparar Strings</strong>. O motivo fica para a parte de String.</li>
+        <li>No IntelliJ, uma variável declarada e nunca usada fica cinza ("is never used"). Dá para apagar sem medo.</li>
+      </ul>
+
+      <h3>17 · Lógico AND: <code>&amp;&amp;</code></h3>
+      <ul>
+        <li>Os três lógicos: <code>&amp;&amp;</code> (<strong>E</strong>), <code>||</code> (<strong>OU</strong>) e <code>!</code> (<strong>NÃO</strong>). Eles fazem mais sentido com <code>if</code>, então aqui é só a introdução.</li>
+        <li>Com <code>&amp;&amp;</code>, <strong>todas</strong> as condições precisam ser verdadeiras para o resultado ser <code>true</code>.</li>
+        <li>O exemplo da aula é o visto de imigrante qualificado na Holanda: com 30 anos ou mais, o salário mínimo exigido é €4.612; com menos de 30, é €3.381.</li>
+      </ul>
+<pre><code>int idade = 35;
+float salario = 3500F;
+boolean isDentroDaLeiMaiorQueTrinta = idade &gt;= 30 &amp;&amp; salario &gt;= 4612;
+boolean isDentroDaLeiMenorQueTrinta = idade &lt; 30 &amp;&amp; salario &gt;= 3381;
+// idade 35 → false e false · idade 29 → false e true</code></pre>
+      <ul>
+        <li>Não dá para separar condições com vírgula. Em programação, o "e" tem que ser escrito com <code>&amp;&amp;</code>.</li>
+        <li>A aula usa o <strong>debug</strong> para conferir cada parte: breakpoint, <code>Shift+F9</code>, <code>F8</code>. A tabela verdade vem nas aulas de condicionais.</li>
+      </ul>
+
+      <h3>18 · Lógico OR: <code>||</code></h3>
+      <ul>
+        <li>Com <code>||</code>, <strong>basta uma</strong> condição verdadeira para o resultado ser <code>true</code>.</li>
+        <li>O exemplo é comprar um PlayStation 5 se <em>qualquer uma</em> das duas contas tiver saldo:</li>
+      </ul>
+<pre><code>double valorTotalContaCorrente = 200;
+double valorTotalContaPoupanca = 10000;
+float valorPlayStation = 5000F;
+boolean isPlayStationCincoCompravel =
+        valorTotalContaCorrente &gt; valorPlayStation || valorTotalContaPoupanca &gt; valorPlayStation;
+// false || true → true</code></pre>
+      <ul>
+        <li><strong>Não traduza a fala ao pé da letra.</strong> "Se a corrente ou a poupança for maior que o valor" não vira <code>contaCorrente || contaPoupanca &gt; valor</code>, que nem compila. Cada lado do <code>||</code> é uma comparação completa.</li>
+        <li>IntelliJ: <code>Ctrl+Alt+L</code> reformata o código. No debug, <code>Alt+F8</code> (<em>Evaluate Expression</em>) calcula qualquer expressão selecionada antes de a linha executar.</li>
+        <li>A negação (<code>!</code>) fica para depois do <code>if</code>.</li>
+      </ul>
+
+      <h3>19 · Atribuição, incremento e decremento</h3>
+      <ul>
+        <li>Além do <code>=</code>, existem <code>+=</code>, <code>-=</code>, <code>*=</code>, <code>/=</code> e <code>%=</code>. Eles só <strong>economizam código</strong>: <code>bonus += 1000</code> é o mesmo que <code>bonus = bonus + 1000</code>.</li>
+        <li>Com <code>double bonus = 1800</code>: <code>+= 1000</code> dá 2800, <code>-= 1000</code> volta a 1800, <code>*= 2</code> dá 3600, <code>/= 2</code> volta a 1800 e <code>%= 2</code> dá 0.</li>
+        <li><strong>Evite hard code:</strong> escrever <code>bonus = 2800</code> "funciona", mas quebra quando o bônus inicial mudar. Use o valor da variável: <code>bonus = bonus + 1000</code>.</li>
+        <li>Não dá para declarar a mesma variável duas vezes (<code>double bonus</code> duas vezes). Para mudar o valor, só atribua de novo.</li>
+        <li><strong>Incremento e decremento:</strong> <code>contador++</code> soma 1 e <code>contador--</code> subtrai 1. São atalhos para <code>contador += 1</code>. Precisa ser o sinal duplo: <code>+++</code> ou <code>+</code> sozinho não servem.</li>
+        <li><strong>Pós × pré:</strong>
+          <ul>
+            <li><code>contador2++</code> (pós): <em>primeiro usa</em> o valor e depois incrementa. <code>println(contador2++)</code> imprime <strong>0</strong>, e a variável passa a valer 1.</li>
+            <li><code>++contador2</code> (pré): <em>primeiro incrementa</em> e depois usa. <code>println(++contador2)</code> imprime <strong>1</strong>.</li>
+          </ul>
+          Isso vai aparecer muito nos laços de repetição.</li>
+      </ul>
+
+      <h3>Atenção</h3>
+      <ul>
+        <li><code>double r = 10 / 20;</code> dá <strong>0.0</strong>. A divisão entre dois ints acontece <em>antes</em> e só o resultado (0) é convertido. Guardar num double não salva a conta.</li>
+        <li><code>(double) (10 / 20)</code> também dá 0.0, porque o cast vem tarde demais. O certo é <code>(double) 10 / 20</code>, que dá 0.5.</li>
+        <li><code>if (x = 5)</code> não compila em Java, porque <code>x = 5</code> é um int e não um boolean. É uma proteção que o PHP não tem.</li>
+        <li><strong>Extra: curto-circuito.</strong> <code>&amp;&amp;</code> não avalia o lado direito se o esquerdo já é <code>false</code>. <code>||</code> não avalia se o esquerdo já é <code>true</code>. Por isso <code>b != 0 &amp;&amp; a / b &gt; 1</code> é seguro. (<code>&amp;</code> e <code>|</code> simples avaliam os dois lados.)</li>
+        <li><strong>Extra: divisão por zero.</strong> Entre ints dá erro na execução (<code>ArithmeticException</code>). Com double dá <code>Infinity</code> ou <code>NaN</code>, sem erro.</li>
+        <li><strong>Extra: <code>%</code> com negativos.</strong> <code>-7 % 2</code> dá <code>-1</code>. Para testar ímpar, use <code>n % 2 != 0</code>, e não <code>== 1</code>.</li>
+        <li><strong>Extra: <code>+=</code> faz cast escondido.</strong> <code>byte b = 10; b += 5;</code> compila, mas <code>b = b + 5;</code> não (a soma vira int).</li>
+        <li>Precedência: <code>* / %</code> vêm antes de <code>+ -</code>. Na dúvida, use parênteses.</li>
+      </ul>
+
+      <h3>Paralelo com PHP</h3>
+      <ul>
+        <li><strong>Divisão:</strong> no PHP, <code>10 / 20</code> dá <code>0.5</code>. No Java dá <code>0</code>. O equivalente em PHP à divisão inteira do Java é <code>intdiv(10, 20)</code>. É a pegadinha mais perigosa desta página.</li>
+        <li><strong>Igualdade:</strong> Java não tem <code>===</code>. Entre primitivos, o <code>==</code> já é "estrito" quanto ao tipo: <code>10 == "10"</code> é <code>true</code> no PHP e erro de compilação no Java. A exceção é a promoção numérica, que faz <code>10 == 10.0</code> dar <code>true</code>.</li>
+        <li><strong>Concatenar:</strong> <code>.=</code> no PHP é <code>+=</code> no Java (<code>texto += " mais"</code>).</li>
+        <li><strong>Lógicos:</strong> <code>&amp;&amp;</code>, <code>||</code> e <code>!</code> são iguais e também fazem curto-circuito. As palavras <code>and</code>/<code>or</code> do PHP não existem em Java.</li>
+        <li><strong>Iguais nas duas:</strong> <code>++</code>/<code>--</code> pré e pós, os compostos <code>+= -= *= /= %=</code> e a precedência.</li>
+      </ul>
+    </section>
+
+    <section id="flashcards">
+      <h2>Flashcards</h2>
+      <p style="color:var(--muted);margin-top:-6px">Toque no cartão para virar.</p>
+      <div id="flashcards-app"></div>
+    </section>
+
+    <section id="quiz">
+      <h2>Quiz</h2>
+      <div id="quiz-app"></div>
+    </section>
+
+    <section id="estudo">
+      <h2>Material de estudo</h2>
+
+      <h3>Mapa mental</h3>
+<pre><code>Operadores
+├── Aritméticos (15)
+│   ├── + - * /  (e % na aula 16)
+│   ├── + com String → concatena (esquerda → direita)
+│   └── int / int = int (10/20 = 0) → use double ou cast
+├── Relacionais (16)
+│   ├── &lt; &gt; &lt;= &gt;= == !=  → sempre boolean
+│   ├── = atribui · == compara
+│   └── tipos incomparáveis → erro de compilação
+├── Lógicos (17–18)
+│   ├── &amp;&amp; → todas verdadeiras
+│   ├── || → basta uma verdadeira
+│   ├── ! → negação (depois do if)
+│   └── cada lado é uma comparação completa
+└── Atribuição (19)
+    ├── = += -= *= /= %=
+    ├── evite hard code
+    └── ++ / -- · pós (usa, depois soma) × pré (soma, depois usa)</code></pre>
+
+      <h3>Prática no seu WSL (15 minutos)</h3>
+      <p>Antes de rodar, tente prever cada linha e anote o que acha que vai sair. Depois compare.</p>
+<pre><code>cd ~/java-lab
+cat > src/academy/devdojo/maratonajava/introducao/Aula04Operadores.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.introducao;
+
+public class Aula04Operadores {
+    public static void main(String[] args) {
+        int numero1 = 10;
+        int numero2 = 20;
+        System.out.println("Valor " + numero1 + numero2);   // ?
+        System.out.println(numero1 + numero2 + " valor");   // ?
+        System.out.println(numero1 / numero2);              // ?
+        double r = numero1 / numero2;
+        System.out.println(r);                              // ?
+        System.out.println((double) numero1 / numero2);     // ?
+        System.out.println(7 % 2 + " " + -7 % 2);           // ?
+        System.out.println(10 == 10.0);                     // ?
+
+        int idade = 29;
+        float salario = 3500F;
+        System.out.println(idade &gt;= 30 &amp;&amp; salario &gt;= 4612); // ?
+        System.out.println(idade &lt; 30 &amp;&amp; salario &gt;= 3381);  // ?
+
+        double bonus = 1800;
+        bonus += 1000;
+        bonus *= 2;
+        System.out.println(bonus);                          // ?
+
+        int contador = 0;
+        System.out.println(contador++);                     // ?
+        System.out.println(++contador);                     // ?
+        System.out.println(contador);                       // ?
+    }
+}
+EOF
+javac -d out src/academy/devdojo/maratonajava/introducao/Aula04Operadores.java
+java -cp out academy.devdojo.maratonajava.introducao.Aula04Operadores</code></pre>
+      <details>
+        <summary>Ver as respostas</summary>
+<pre><code>Valor 1020
+30 valor
+0
+0.0
+0.5
+1 -1
+true
+false
+true
+5600.0
+0
+2
+2</code></pre>
+      </details>
+      <p><strong>Provoque os erros:</strong> <code>boolean b = 10 == "10";</code>, <code>boolean c = 10 = 10;</code>, <code>int x = 10 / 0;</code> (compila, mas quebra ao rodar) e <code>boolean d = valorCorrente || valorPoupanca &gt; 5000;</code>.</p>
+      <p><strong>Exercício:</strong> declare <code>int numero</code> e imprima <code>"numero é par: true/false"</code> usando <code>%</code>. Depois escreva o <code>boolean</code> do PS5 para o caso em que você só compra se <em>as duas</em> contas <em>juntas</em> tiverem saldo suficiente e a corrente não estiver negativa.</p>
+
+      <h3>Glossário</h3>
+      <ul>
+        <li><strong>Operador aritmético</strong>: faz conta (<code>+ - * / %</code>).</li>
+        <li><strong>Operador sobrecarregado</strong>: um mesmo símbolo com mais de um comportamento, como o <code>+</code> (soma ou concatena).</li>
+        <li><strong>Resto (módulo)</strong>: <code>%</code>, o que sobra da divisão inteira.</li>
+        <li><strong>Operador relacional</strong>: compara e devolve boolean (<code>&lt; &gt; &lt;= &gt;= == !=</code>).</li>
+        <li><strong>Operador lógico</strong>: combina booleans (<code>&amp;&amp; || !</code>).</li>
+        <li><strong>Curto-circuito</strong>: parar de avaliar quando o resultado já está definido.</li>
+        <li><strong>Operador de atribuição composto</strong>: <code>+= -= *= /= %=</code>.</li>
+        <li><strong>Operador unário</strong>: atua sobre uma variável só (<code>++</code>, <code>--</code>, <code>!</code>).</li>
+        <li><strong>Hard code</strong>: valor fixo escrito no código onde deveria vir de uma variável ou cálculo.</li>
+        <li><strong>Evaluate Expression</strong>: <code>Alt+F8</code> no debug, calcula uma expressão na hora.</li>
+      </ul>
+
+      <h3>Revisão espaçada</h3>
+      <ul class="revisao">
+        <li><span class="dia">Dia 1</span><span>Todos os flashcards + a prática com previsões.</span></li>
+        <li><span class="dia">Dia 3</span><span>Quiz sem olhar o resumo + o exercício do par/ímpar.</span></li>
+        <li><span class="dia">Dia 7</span><span>Explicar em voz alta (ou por escrito) pré × pós-incremento e int / int.</span></li>
+        <li><span class="dia">Dia 14</span><span>Flashcards que errou + questões discursivas.</span></li>
+      </ul>
+
+      <h3>Para aprofundar</h3>
+      <ul>
+        <li>Qual a tabela de precedência completa dos operadores Java? Onde entram <code>!</code>, <code>&amp;&amp;</code> e <code>||</code>?</li>
+        <li>Por que <code>0.1 + 0.2 == 0.3</code> dá <code>false</code>? Como comparar doubles com segurança?</li>
+        <li>O que faz <code>i = i++;</code>? (clássico de certificação)</li>
+        <li>O que são os operadores bit a bit (<code>&amp;</code>, <code>|</code>, <code>^</code>, <code>&lt;&lt;</code>, <code>&gt;&gt;</code>) e onde aparecem?</li>
+        <li>O operador ternário (<code>? :</code>) vem na aula 22. Tente adivinhar como ele funciona.</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    window.AULA = {
+      flashcards: [
+        ["Quais são os operadores aritméticos básicos?", "+ (soma), - (subtração), * (multiplicação), / (divisão) e % (resto)"],
+        ["Por que o + é chamado de sobrecarregado?", "Porque soma números, mas concatena quando há uma String"],
+        ["Quanto dá \"Valor \" + 10 + 20?", "\"Valor 1020\": depois da String, o + concatena"],
+        ["Quanto dá 10 + 20 + \" valor\"?", "\"30 valor\": soma primeiro, depois concatena"],
+        ["Quanto dá 10 / 20 em Java?", "0: divisão entre ints resulta em int"],
+        ["Como obter 0.5 de 10 / 20?", "Tornar um dos lados decimal: 20.0 ou (double) 10 / 20"],
+        ["Para que serve o operador %?", "Dá o resto da divisão. n % 2 == 0 indica número par"],
+        ["Quais são os operadores relacionais?", "<, >, <=, >=, == e !="],
+        ["Que tipo os operadores relacionais devolvem?", "Sempre boolean (true ou false)"],
+        ["Qual a diferença entre = e ==?", "= atribui valor; == compara"],
+        ["10 == 10.0 é verdadeiro?", "Sim: são tipos comparáveis e o int é promovido para double"],
+        ["O que acontece em 10 == \"10\"?", "Erro de compilação: tipos incomparáveis"],
+        ["Como comparar Strings?", "Evite ==; o jeito certo vem na parte de String"],
+        ["Quais são os três operadores lógicos?", "&& (E), || (OU) e ! (NÃO)"],
+        ["Quando && resulta em true?", "Só quando todas as condições são verdadeiras"],
+        ["Quando || resulta em true?", "Quando pelo menos uma condição é verdadeira"],
+        ["Por que \"corrente || poupanca > valor\" está errado?", "Cada lado do || precisa ser uma comparação completa"],
+        ["Quais são os operadores de atribuição compostos?", "+=, -=, *=, /= e %="],
+        ["bonus += 1000 é o mesmo que...?", "bonus = bonus + 1000"],
+        ["Por que evitar hard code?", "O valor fixo quebra quando os dados mudam; use variáveis e cálculos"],
+        ["Qual a diferença entre contador++ e ++contador?", "Pós: usa o valor e depois soma. Pré: soma e depois usa"],
+        ["O que imprime println(c++) com c = 0?", "0 (e c passa a valer 1)"],
+        ["Atalhos: reformatar código e Evaluate Expression?", "Ctrl+Alt+L e Alt+F8 (no debug)"],
+        ["Quanto dá 10 / 20 no PHP e no Java?", "PHP: 0.5. Java: 0 (no PHP, a divisão inteira é intdiv)"],
+        ["Java tem o operador === do PHP?", "Não. Entre primitivos, o == já não mistura tipos incomparáveis"]
+      ],
+      quiz: [
+        { tipo: 'vf', pergunta: 'Os operadores relacionais (<, >, ==, !=...) sempre devolvem um boolean.', correta: 0,
+          explicacao: 'Verdadeiro: toda comparação resulta em true ou false.' },
+        { tipo: 'multipla', pergunta: 'Qual o resultado de 10 / 20 com dois int?', opcoes: ['0.5', '0', '1', 'Erro de compilação'], correta: 1,
+          explicacao: 'Divisão entre inteiros resulta em inteiro, e a parte decimal é descartada.' },
+        { tipo: 'multipla', pergunta: 'O que imprime System.out.println("Valor " + 10 + 20);?', opcoes: ['Valor 30', 'Valor 1020', '30', 'Erro de compilação'], correta: 1,
+          explicacao: 'Depois da String, cada + concatena: "Valor 10" e então "Valor 1020".' },
+        { tipo: 'vf', pergunta: 'Em Java, o = serve tanto para atribuir quanto para comparar.', correta: 1,
+          explicacao: 'Falso: = atribui e == compara. Usar = numa comparação não compila.' },
+        { tipo: 'multipla', pergunta: 'Com idade = 35 e salario = 3500, quanto vale idade >= 30 && salario >= 4612?', opcoes: ['true', 'false', 'Erro de compilação', 'Depende da ordem'], correta: 1,
+          explicacao: 'A primeira condição é true, mas a segunda é false. Com &&, basta uma falsa para tudo ser false.' },
+        { tipo: 'multipla', pergunta: 'Qual linha compila?', opcoes: ['boolean b = 10 == "10";', 'boolean b = corrente || poupanca > 5000;', 'boolean b = corrente > 5000 || poupanca > 5000;', 'boolean b = 10 = 10;'], correta: 2,
+          explicacao: 'Cada lado do || é uma comparação completa. As outras comparam tipos incomparáveis, usam um double como boolean ou atribuem a um literal.' },
+        { tipo: 'vf', pergunta: 'double r = 10 / 20; guarda 0.5 em r, porque a variável é double.', correta: 1,
+          explicacao: 'Falso: a divisão int / int acontece antes e dá 0. Só depois o 0 é convertido para 0.0.' },
+        { tipo: 'multipla', pergunta: 'int c = 0; System.out.println(c++); System.out.println(++c); — o que é impresso?', opcoes: ['0 e 1', '1 e 2', '0 e 2', '1 e 1'], correta: 2,
+          explicacao: 'c++ imprime 0 e c vira 1. ++c incrementa para 2 e depois imprime 2.' },
+        { tipo: 'discursiva', pergunta: 'Explique a diferença entre && e || e dê um exemplo da vida real para cada um, como nas aulas.',
+          explicacao: '&& exige que todas as condições sejam verdadeiras (visto na Holanda: ter a idade E o salário mínimo da faixa). || exige pelo menos uma verdadeira (comprar o PS5 se a conta corrente OU a poupança tiver saldo). Os dois fazem curto-circuito: && para no primeiro false, || para no primeiro true.' },
+        { tipo: 'discursiva', pergunta: 'Você está portando um cálculo de média de um sistema Laravel: $media = $soma / $quantidade;. O que pode dar errado ao escrever o mesmo em Java com variáveis int, e como corrigir?',
+          explicacao: 'Em Java, int / int descarta os decimais (7 / 2 = 3, enquanto o PHP daria 3.5). Guardar o resultado num double não resolve, porque a conta já foi feita como int. Correção: usar double numa das variáveis ou fazer (double) soma / quantidade. Também é preciso tratar quantidade == 0: entre ints isso lança ArithmeticException.' }
+      ]
+    };
+  </script>
+  <script src="../js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>27–31 · Estruturas de repetição</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="topo">
+      <a class="voltar" href="../index.html">← Todas as aulas</a>
+      <h1>27–31 · Estruturas de repetição</h1>
+      <p>while, do-while, for, break, continue e os exercícios dos pares e das parcelas · <a href="https://www.youtube.com/playlist?list=PL62G310vn6nFIsOCC0H-C2infYgwm8SWW" target="_blank" rel="noopener">playlist</a></p>
+    </header>
+
+    <nav class="abas">
+      <a href="#resumo">Resumo</a>
+      <a href="#flashcards">Flashcards</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#estudo">Material de estudo</a>
+    </nav>
+
+    <p class="aviso">Junta as aulas 27 (while, do-while e for), 28 (exercício for), 29 (break), 30 (exercício break) e 31 (continue). Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. Na aula 30 o áudio fala em "carro de 50 mil" e depois usa 30.000; aqui ficou o 30.000, que é o valor que aparece no código. Os itens marcados como "extra" não estão nos vídeos.</p>
+
+    <section id="resumo">
+      <h2>Resumo</h2>
+      <p>Até aqui o código rodava de cima para baixo, uma vez só. <strong>Estruturas de repetição</strong> (laços, <em>loops</em>) fazem um trecho executar várias vezes <strong>enquanto uma condição boolean for verdadeira</strong>. Java tem três laços básicos: <code>while</code>, <code>do-while</code> e <code>for</code>. O <code>break</code> e o <code>continue</code> controlam o laço por dentro. As classes do curso são <code>Aula06EstruturasRepeticao01</code> a <code>05</code>.</p>
+
+      <h3>27 · while</h3>
+<pre><code>int count = 0;
+while (count &lt; 10) {
+    System.out.println(count); // 0 a 9
+    count++;                   // sem isto: laço infinito
+}</code></pre>
+      <ul>
+        <li>A condição, como no <code>if</code>, <strong>precisa ser boolean</strong>. <code>while (count)</code> não compila.</li>
+        <li><strong>Mude o estado da variável dentro do laço</strong>, senão a condição nunca fica falsa e o programa imprime <code>0 0 0...</code> "para o resto da eternidade". No IntelliJ, o quadrado vermelho (ou <code>Ctrl+F2</code>) para o programa.</li>
+        <li>O passo pode ser qualquer um: <code>count += 5</code> conta de 5 em 5.</li>
+        <li><code>System.out.println(++count)</code> incrementa <em>antes</em> de imprimir e mostra de 1 a 10 (lembra do pré-incremento da aula 19?).</li>
+        <li>Se a condição já começa falsa (<code>count = 12</code>), o bloco <strong>nunca executa</strong>.</li>
+      </ul>
+
+      <h3>27 · do-while</h3>
+<pre><code>int count = 12;
+do {
+    System.out.println("Dentro do do-while"); // executa 1 vez, mesmo com 12
+    count++;
+} while (count &lt; 10);</code></pre>
+      <ul>
+        <li>Igual ao <code>while</code>, mas a condição é testada <strong>no fim</strong>. Por isso o bloco roda <strong>pelo menos uma vez</strong>, mesmo com a condição falsa.</li>
+        <li>Repare no <code>;</code> depois do <code>while (...)</code>: ele é obrigatório no do-while.</li>
+        <li>O William conta que precisou disso uma vez em muitos anos. Existe, mas é raro.</li>
+      </ul>
+
+      <h3>27 · for</h3>
+<pre><code>for (int i = 0; i &lt; 10; i++) {
+    System.out.println("For " + i); // 0 a 9
+}</code></pre>
+      <ul>
+        <li>O <code>for</code> tem três partes separadas por <code>;</code>:
+          <ol>
+            <li><strong>inicialização</strong> (<code>int i = 0</code>), que roda <strong>uma vez só</strong>;</li>
+            <li><strong>condição</strong> (<code>i &lt; 10</code>), testada <strong>antes de cada volta</strong>;</li>
+            <li><strong>atualização</strong> (<code>i++</code>), que roda <strong>no fim de cada volta</strong>.</li>
+          </ol>
+        </li>
+        <li>É o laço dos <strong>índices e contagens</strong>, por exemplo para percorrer uma lista de 50 nomes. <code>while</code> combina mais com "repita até achar", como "procure até encontrar um salário menor que 5 mil".</li>
+        <li>Os nomes <code>i</code> e depois <code>j</code> (num laço dentro de outro) são convenção. Não têm significado especial.</li>
+        <li>A variável pode vir de fora: <code>for (count = 0; count &lt; 10; count++)</code>. Mas ela precisa ter valor, porque variável local sem inicializar não compila.</li>
+        <li>Com uma instrução só, as chaves são opcionais em <code>while</code>, <code>do-while</code> e <code>for</code>. Como no <code>if</code>, não é recomendado.</li>
+      </ul>
+
+      <h3>28 · Exercício: números pares até 1.000.000</h3>
+<pre><code>// Solução 1: de 2 em 2. Funciona... até mudarem o início para 1
+for (int i = 0; i &lt;= 1000000; i += 2) {
+    System.out.println(i);
+}
+
+// Solução 2: testa cada número com %. Continua certa se o início mudar
+for (int i = 0; i &lt;= 1000000; i++) {
+    if (i % 2 == 0) {
+        System.out.println(i);
+    }
+}</code></pre>
+      <ul>
+        <li>Na solução 1, trocar o início para <code>1</code> faz o programa imprimir os <strong>ímpares</strong>, sem nenhum erro.</li>
+        <li>A lição: <strong>requisitos mudam</strong>. Segundo o William, uns 70% do tempo de trabalho é alterar ou acrescentar coisas em funcionalidades que já existem. Pense no que acontece se a regra mudar um pouco.</li>
+        <li>No IntelliJ, o atalho <code>fori</code> + Tab monta o <code>for</code> completo.</li>
+      </ul>
+
+      <h3>29 · break</h3>
+<pre><code>int valorMaximo = 50;
+for (int i = 0; i &lt;= valorMaximo; i++) {
+    if (i &gt; 25) {
+        break; // sai do for: imprime só de 0 a 25
+    }
+    System.out.println(i);
+}</code></pre>
+      <ul>
+        <li>É o mesmo <code>break</code> do <code>switch</code>: <strong>encerra o laço na hora</strong> e segue para a linha depois dele.</li>
+        <li>Resolver só com <code>if (i &lt;= 25) println(i)</code> dá a mesma saída, mas o laço <strong>continua rodando até o 50 à toa</strong>. Num sistema real, isso desperdiça processamento.</li>
+        <li>O <code>break</code> sai <strong>do laço</strong>, não do <code>if</code>. Fora de um laço ou <code>switch</code>, ele não compila (<em>break outside switch or loop</em>).</li>
+      </ul>
+
+      <h3>30 · Exercício: em quantas vezes dá para parcelar o carro?</h3>
+      <p>Um carro custa 30.000 e cada parcela precisa ser de <strong>pelo menos 1.000</strong>.</p>
+<pre><code>double valorTotal = 30000;
+for (int parcela = 1; parcela &lt;= valorTotal; parcela++) {
+    double valorParcela = valorTotal / parcela;
+    if (valorParcela &lt; 1000) {
+        break; // daqui em diante as parcelas só diminuem
+    }
+    System.out.println("Parcela " + parcela + " R$ " + valorParcela);
+}
+// 1x 30000.0, 2x 15000.0 ... 30x 1000.0</code></pre>
+      <ul>
+        <li>Sem o <code>break</code>, o resultado aparece certo, mas o laço gira <strong>30.000 vezes</strong>: são 29.970 voltas inúteis depois da parcela 30.</li>
+        <li>A primeira versão da aula usava <code>if (…&gt;= 1000) { imprime } else { break; }</code>. <strong>Inverter a condição</strong> (<code>if (&lt; 1000) break;</code>) economizou linhas e deixou o código mais limpo.</li>
+      </ul>
+
+      <h3>31 · continue</h3>
+<pre><code>for (int parcela = (int) valorTotal; parcela &gt;= 1; parcela--) {
+    double valorParcela = valorTotal / parcela;
+    if (valorParcela &lt; 1000) {
+        continue; // pula o resto DESTA volta e vai para a próxima
+    }
+    System.out.println("Parcela " + parcela + " R$ " + valorParcela);
+}</code></pre>
+      <ul>
+        <li><code>break</code> <strong>sai</strong> do laço. <code>continue</code> <strong>pula o resto da volta atual</strong> e volta para a próxima (no <code>for</code>, passa pelo <code>parcela--</code> e testa a condição de novo).</li>
+        <li>Aqui o laço conta <strong>de trás para frente</strong>, de 30.000 até 1, com <code>parcela--</code>. Como <code>valorTotal</code> é double, é preciso um cast para iniciar a variável int: <code>(int) valorTotal</code>.</li>
+        <li>As parcelas válidas agora estão <em>no fim</em>, então <code>break</code> não serve: ele pararia logo na primeira volta. O <code>continue</code> pula as inválidas e imprime só da 30 até a 1.</li>
+        <li>Pular trabalho pesado importa: <strong>imprimir no console é caro</strong> (entrada e saída), e em sistemas reais o corpo do laço pode acessar o banco ou chamar um serviço externo.</li>
+      </ul>
+
+      <h3>Atenção</h3>
+      <ul>
+        <li><strong>Laço infinito:</strong> esqueceu de atualizar a variável, ou a atualização vai para o lado errado (<code>i--</code> com <code>i &lt; 10</code>).</li>
+        <li><strong><code>&lt;</code> × <code>&lt;=</code>:</strong> <code>i &lt; 10</code> vai até 9 e <code>i &lt;= 10</code> vai até 10. Errar por um é o bug mais comum de laço (<em>off-by-one</em>).</li>
+        <li><strong>Extra: <code>;</code> depois do <code>for</code> ou do <code>while</code>.</strong> <code>for (int i = 0; i &lt; 10; i++);</code> roda um laço vazio e o bloco de baixo executa <em>uma vez</em>. <code>while (x &lt; 10);</code> costuma virar laço infinito.</li>
+        <li><strong>Extra: escopo.</strong> O <code>i</code> declarado no <code>for</code> só existe dentro dele. <code>System.out.println(i)</code> depois do laço não compila.</li>
+        <li><strong>Extra: laços aninhados.</strong> <code>break</code> e <code>continue</code> agem só no laço <strong>mais interno</strong>. Para sair dos dois, use um rótulo: <code>externo: for (...) { for (...) { break externo; } }</code>.</li>
+        <li><strong>Extra: no exercício 31 a solução ainda gira 30.000 vezes</strong>, só pulando a impressão. Dava para calcular o início direto: <code>(int) (valorTotal / 1000)</code>. Laço bom é o que nem começa as voltas inúteis.</li>
+        <li><strong>Extra:</strong> <code>for (;;)</code> e <code>while (true)</code> são laços infinitos de propósito, e só param com <code>break</code>.</li>
+      </ul>
+
+      <h3>Paralelo com PHP</h3>
+      <ul>
+        <li><strong>Sintaxe:</strong> <code>while</code>, <code>do-while</code>, <code>for</code>, <code>break</code> e <code>continue</code> são praticamente idênticos, só trocando <code>$i</code> por <code>int i</code>.</li>
+        <li><strong>Escopo:</strong> no PHP, <code>$i</code> continua existindo depois do <code>for</code> (com o último valor). Em Java, o <code>i</code> declarado no <code>for</code> morre com o laço.</li>
+        <li><strong>Sair de laços aninhados:</strong> o PHP usa <code>break 2</code> ou <code>continue 2</code>. O Java usa rótulos (<code>break externo;</code>).</li>
+        <li><strong>foreach:</strong> o <code>foreach ($lista as $item)</code> do PHP tem um equivalente em Java: <code>for (String item : lista)</code>. Ele aparece na aula 37, junto com arrays.</li>
+        <li><strong>Curiosidade:</strong> no PHP, <code>continue</code> dentro de um <code>switch</code> age como <code>break</code>. Em Java, <code>continue</code> dentro de um <code>switch</code> que está num laço vai para a próxima volta do laço.</li>
+      </ul>
+    </section>
+
+    <section id="flashcards">
+      <h2>Flashcards</h2>
+      <p style="color:var(--muted);margin-top:-6px">Toque no cartão para virar.</p>
+      <div id="flashcards-app"></div>
+    </section>
+
+    <section id="quiz">
+      <h2>Quiz</h2>
+      <div id="quiz-app"></div>
+    </section>
+
+    <section id="estudo">
+      <h2>Material de estudo</h2>
+
+      <h3>Mapa mental</h3>
+<pre><code>Estruturas de repetição
+├── while (27)
+│   ├── testa antes; condição boolean
+│   └── atualize a variável ou vira laço infinito
+├── do-while (27)
+│   ├── testa depois → roda pelo menos 1 vez
+│   └── do { } while (cond);  ← ponto e vírgula
+├── for (27)
+│   ├── (inicialização; condição; atualização)
+│   ├── init 1x · condição antes de cada volta · atualização no fim
+│   └── índices e contagens · fori + Tab
+├── Exercício pares (28)
+│   ├── i += 2 quebra se o início mudar
+│   └── i % 2 == 0 aguenta mudança de requisito
+├── break (29–30)
+│   ├── sai do laço (ou do switch)
+│   └── parcelas: para quando &lt; 1000 (evita 29.970 voltas)
+└── continue (31)
+    ├── pula o resto da volta atual
+    └── laço decrescente: parcela-- com (int) valorTotal</code></pre>
+
+      <h3>Prática no seu WSL (20 minutos)</h3>
+<pre><code>cd ~/java-lab
+cat > src/academy/devdojo/maratonajava/introducao/Aula06EstruturasRepeticao01.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.introducao;
+
+public class Aula06EstruturasRepeticao01 {
+    public static void main(String[] args) {
+        int count = 0;
+        while (count &lt; 3) {
+            System.out.println("while " + ++count);   // ?
+        }
+
+        count = 12;
+        do {
+            System.out.println("do-while " + count);  // ?
+        } while (count &lt; 10);
+
+        for (int i = 0; i &lt; 10; i += 3) {
+            System.out.println("for " + i);           // ?
+        }
+
+        for (int i = 0; i &lt; 10; i++) {
+            if (i % 2 == 0) continue;
+            if (i &gt; 7) break;
+            System.out.println("impar " + i);         // ?
+        }
+    }
+}
+EOF
+javac -d out src/academy/devdojo/maratonajava/introducao/Aula06EstruturasRepeticao01.java
+java -cp out academy.devdojo.maratonajava.introducao.Aula06EstruturasRepeticao01</code></pre>
+      <details>
+        <summary>Ver a saída esperada</summary>
+<pre><code>while 1
+while 2
+while 3
+do-while 12
+for 0
+for 3
+for 6
+for 9
+impar 1
+impar 3
+impar 5
+impar 7</code></pre>
+      </details>
+      <p><strong>Exercícios:</strong></p>
+      <ol>
+        <li>Refaça o exercício das parcelas (aula 30) sem olhar. Depois conte as voltas com e sem <code>break</code>, usando uma variável <code>int voltas</code>.</li>
+        <li>Escreva a tabuada do 7 (de 7 × 1 a 7 × 10) com <code>for</code>, depois com <code>while</code> e depois com <code>do-while</code>.</li>
+        <li>Imprima de 100 até 0 de 10 em 10 (contagem regressiva).</li>
+        <li>Com dois <code>for</code> aninhados, imprima as tabuadas do 1 ao 5 e use um <code>break</code> com rótulo para parar tudo quando o resultado passar de 30.</li>
+      </ol>
+
+      <h3>Glossário</h3>
+      <ul>
+        <li><strong>Laço / loop</strong>: estrutura que repete um trecho enquanto a condição for verdadeira.</li>
+        <li><strong>Iteração</strong>: cada volta do laço.</li>
+        <li><strong>Laço infinito</strong>: laço cuja condição nunca fica falsa.</li>
+        <li><strong>do-while</strong>: laço que testa a condição no fim e roda pelo menos uma vez.</li>
+        <li><strong>break</strong>: encerra o laço (ou o switch) imediatamente.</li>
+        <li><strong>continue</strong>: pula o resto da iteração atual e vai para a próxima.</li>
+        <li><strong>Off-by-one</strong>: erro por um, como usar <code>&lt;</code> quando era <code>&lt;=</code>.</li>
+        <li><strong>Rótulo (label)</strong>: nome dado a um laço para usar <code>break</code>/<code>continue</code> nele de dentro de outro laço.</li>
+      </ul>
+
+      <h3>Revisão espaçada</h3>
+      <ul class="revisao">
+        <li><span class="dia">Dia 1</span><span>Todos os flashcards + a prática com as previsões.</span></li>
+        <li><span class="dia">Dia 3</span><span>Quiz + exercícios 1 e 2.</span></li>
+        <li><span class="dia">Dia 7</span><span>Exercícios 3 e 4 + explicar em voz alta break × continue.</span></li>
+        <li><span class="dia">Dia 14</span><span>Flashcards que errou + questões discursivas.</span></li>
+      </ul>
+
+      <h3>Para aprofundar</h3>
+      <ul>
+        <li>Quando um <code>while</code> é mais claro que um <code>for</code>, mesmo sendo possível usar os dois?</li>
+        <li>Como o <code>for</code> aprimorado (<code>for (x : lista)</code>) da aula 37 evita erros de índice?</li>
+        <li>O que são <code>IntStream.range</code> e <code>forEach</code> (programação funcional, mais à frente no curso)?</li>
+        <li>Como medir quanto tempo um laço leva com <code>System.nanoTime()</code>? Compare imprimir e não imprimir 100 mil linhas.</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    window.AULA = {
+      flashcards: [
+        ["Quais são os três laços básicos do Java?", "while, do-while e for"],
+        ["Que tipo a condição de um laço precisa ter?", "boolean"],
+        ["O que causa um laço infinito no while?", "Não mudar a variável da condição dentro do laço"],
+        ["O while executa se a condição começa falsa?", "Não, o bloco nunca executa"],
+        ["Qual a diferença do do-while?", "Testa a condição no fim, então roda pelo menos uma vez"],
+        ["O que o do-while exige depois do while (cond)?", "Um ponto e vírgula: } while (cond);"],
+        ["Quais são as três partes do for?", "Inicialização; condição; atualização"],
+        ["Quantas vezes roda a inicialização do for?", "Uma vez só, no começo"],
+        ["Quando a condição do for é testada?", "Antes de cada volta"],
+        ["Quando roda a atualização (i++) do for?", "No fim de cada volta, antes do próximo teste"],
+        ["Quando preferir for ou while?", "for para índices e contagens; while para repetir até algo acontecer"],
+        ["Atalho do IntelliJ para gerar um for?", "fori + Tab"],
+        ["Por que for (i = 0; ...; i += 2) é frágil para achar pares?", "Se o início mudar para 1, imprime ímpares sem nenhum erro"],
+        ["Qual solução de pares aguenta mudança de requisito?", "Percorrer todos e testar i % 2 == 0"],
+        ["O que faz o break num laço?", "Sai do laço na hora"],
+        ["O break sai do if onde ele está?", "Não: sai do laço (ou do switch) que envolve o if"],
+        ["Pode usar break fora de laço ou switch?", "Não: erro de compilação"],
+        ["Por que usar break no exercício das parcelas?", "Para parar ao achar parcela < 1000 em vez de girar 30.000 vezes"],
+        ["O que faz o continue?", "Pula o resto da volta atual e vai para a próxima"],
+        ["break × continue em uma frase?", "break sai do laço; continue pula para a próxima volta"],
+        ["Por que (int) valorTotal no for decrescente?", "valorTotal é double e a variável do for é int, então precisa de cast"],
+        ["O que acontece com i < 10 e com i <= 10?", "O primeiro vai até 9, o segundo até 10 (cuidado com off-by-one)"],
+        ["O i declarado no for existe depois do laço?", "Não em Java (no PHP, $i continua existindo)"],
+        ["Como sair de dois laços aninhados em Java?", "Com um rótulo: externo: for (...) { ... break externo; }"],
+        ["Qual o equivalente Java do break 2 do PHP?", "break com rótulo (break externo;)"]
+      ],
+      quiz: [
+        { tipo: 'vf', pergunta: 'O do-while executa o bloco pelo menos uma vez, mesmo se a condição for falsa.', correta: 0,
+          explicacao: 'Verdadeiro: a condição só é testada no fim de cada volta.' },
+        { tipo: 'multipla', pergunta: 'Quantos números imprime: for (int i = 0; i < 10; i++) System.out.println(i);?', opcoes: ['9', '10', '11', 'Laço infinito'], correta: 1,
+          explicacao: 'De 0 a 9: dez números. Com i <= 10 seriam onze.' },
+        { tipo: 'multipla', pergunta: 'int count = 0; while (count < 10) { System.out.println(count); } — o que acontece?', opcoes: ['Imprime de 0 a 9', 'Não imprime nada', 'Imprime 0 infinitamente', 'Erro de compilação'], correta: 2,
+          explicacao: 'count nunca muda, então a condição fica sempre true: laço infinito.' },
+        { tipo: 'vf', pergunta: 'Na estrutura do for, a inicialização (int i = 0) roda antes de cada volta.', correta: 1,
+          explicacao: 'Falso: a inicialização roda uma vez só. A condição é testada antes de cada volta e a atualização roda no fim de cada uma.' },
+        { tipo: 'multipla', pergunta: 'O que o continue faz dentro de um for?', opcoes: ['Sai do laço', 'Reinicia o laço do zero', 'Pula o resto da volta atual e vai para a próxima', 'Não faz nada fora do switch'], correta: 2,
+          explicacao: 'O continue pula o resto da iteração atual. No for, ainda passa pela atualização (i++) antes de testar a condição.' },
+        { tipo: 'multipla', pergunta: 'for (int i = 0; i <= 50; i++) { if (i > 25) break; System.out.println(i); } — qual o último número impresso?', opcoes: ['24', '25', '26', '50'], correta: 1,
+          explicacao: 'Quando i vale 26, o break sai do laço antes do println. O último impresso é 25.' },
+        { tipo: 'vf', pergunta: 'Um break dentro de um if, que está dentro de um for, sai apenas do if e o for continua.', correta: 1,
+          explicacao: 'Falso: break não age sobre o if. Ele sai do laço (ou do switch) mais próximo que o envolve.' },
+        { tipo: 'multipla', pergunta: 'No exercício das parcelas (30.000, mínimo de 1.000 por parcela), quantas voltas o for crescente dá SEM o break?', opcoes: ['30', '31', '1.000', '30.000'], correta: 3,
+          explicacao: 'Vai de 1 até 30.000 mesmo depois da parcela 30. Com break, para na volta 31, a primeira com parcela < 1000.' },
+        { tipo: 'discursiva', pergunta: 'Na aula 28, por que o William prefere testar i % 2 == 0 em vez de pular de 2 em 2? O que isso ensina sobre requisitos?',
+          explicacao: 'Pular de 2 em 2 só funciona se o início for par: trocando o início para 1, o programa passa a imprimir ímpares sem nenhum erro. Testar cada número com % continua certo mesmo se o intervalo mudar. A lição é que requisitos mudam o tempo todo (uns 70% do trabalho é alterar funcionalidades existentes), então vale escrever código que aguente pequenas mudanças de regra.' },
+        { tipo: 'discursiva', pergunta: 'Explique quando usar break e quando usar continue, com base nos exercícios das parcelas (crescente na aula 30, decrescente na aula 31).',
+          explicacao: 'break serve quando, a partir de certo ponto, nada mais interessa. No laço crescente, depois que a parcela fica menor que 1000 ela só diminui, então dá para sair. continue serve quando só algumas voltas devem ser puladas e o laço precisa seguir. No laço decrescente, as parcelas inválidas vêm primeiro e as válidas depois, então é preciso pular as inválidas e continuar. Um break ali pararia logo na primeira volta.' }
+      ]
+    };
+  </script>
+  <script src="../js/app.js"></script>
+</body>
+</html>

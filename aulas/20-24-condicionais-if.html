@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>20–24 · Condicionais: if</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="topo">
+      <a class="voltar" href="../index.html">← Todas as aulas</a>
+      <h1>20–24 · Condicionais: if</h1>
+      <p>if, else, else if, operador ternário, tabela verdade e o exercício do imposto · <a href="https://www.youtube.com/playlist?list=PL62G310vn6nFIsOCC0H-C2infYgwm8SWW" target="_blank" rel="noopener">playlist</a></p>
+    </header>
+
+    <nav class="abas">
+      <a href="#resumo">Resumo</a>
+      <a href="#flashcards">Flashcards</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#estudo">Material de estudo</a>
+    </nav>
+
+    <p class="aviso">Junta as aulas 20 (if), 21 (else e else if), 22 (operador ternário), 23 (tabela verdade + exercício) e 24 (resolução). Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. As faixas do imposto holandês de 2020 (€34.712 e €68.507) foram conferidas com os valores oficiais, porque o áudio não é claro. Os itens marcados como "extra" não estão nos vídeos.</p>
+
+    <section id="resumo">
+      <h2>Resumo</h2>
+      <p>"Tudo na vida é um <em>if</em>": atravessar a rua <strong>se</strong> não vier carro, comprar comida <strong>se</strong> tiver dinheiro. Estruturas condicionais fazem o programa escolher um caminho a partir de uma expressão <code>boolean</code>. O curso começa a classe <code>Aula05EstruturasCondicionais01</code>, criada com <code>Alt+Insert</code> → Java Class.</p>
+
+      <h3>20 · if</h3>
+<pre><code>int idade = 20;
+if (idade &gt;= 18) {
+    System.out.println("Autorizado a comprar bebida alcoólica");
+}
+System.out.println("Fora do if"); // sempre executa</code></pre>
+      <ul>
+        <li>O que vai entre os parênteses <strong>precisa</strong> ser um <code>boolean</code>. O bloco só executa se ele for <code>true</code>. <code>if (true)</code> sempre entra e <code>if (false)</code> nunca entra.</li>
+        <li>Com uma instrução só, dá para omitir as chaves, mas <strong>não é recomendado</strong>, porque confunde. Muitas empresas usam formatador automático que sempre coloca as chaves.</li>
+        <li>Na aula, o William errou de propósito e aprendeu com isso: <code>idade &gt; 20</code> deixava de fora quem tem 18. O certo é <code>idade &gt;= 18</code> (ou <code>&gt; 17</code>).</li>
+        <li>A condição pode ir para uma variável com nome claro: <code>boolean isAutorizadoComprarBebida = idade &gt;= 18;</code> e depois <code>if (isAutorizadoComprarBebida)</code>.</li>
+        <li><strong>Negação:</strong> <code>if (!isAutorizadoComprarBebida)</code> se lê "se <em>não</em> é autorizado". É o mesmo que <code>== false</code>, e é a forma que você vai ver no código dos outros.</li>
+        <li><strong>Pegadinhas de certificação:</strong>
+          <ul>
+            <li><code>if (idade)</code> não compila, porque int não é boolean.</li>
+            <li><code>if (teste = false)</code> <em>compila</em> quando <code>teste</code> é boolean. Isso é uma <strong>atribuição</strong>, não uma comparação: primeiro guarda <code>false</code> e depois testa o valor guardado, então nunca entra. Nunca faça isso no dia a dia.</li>
+          </ul>
+        </li>
+      </ul>
+
+      <h3>21 · else e else if</h3>
+      <ul>
+        <li><code>else</code> é o <strong>senão</strong>: executa quando o <code>if</code> dá <code>false</code>. Não leva condição e <strong>não existe sem um <code>if</code></strong>.</li>
+        <li><strong>Dois <code>if</code> separados</strong> são avaliados um de cada vez, sempre. <strong><code>if/else</code></strong> é uma escolha só: entra em um e pula o outro.</li>
+        <li>Com mais de duas saídas, use <code>else if</code>. O exemplo são as categorias de futebol:</li>
+      </ul>
+<pre><code>int idade = 17;
+String categoria;
+if (idade &lt; 15) {
+    categoria = "Categoria infantil";
+} else if (idade &gt;= 15 &amp;&amp; idade &lt; 18) {
+    categoria = "Categoria juvenil";
+} else {
+    categoria = "Categoria adulto"; // não precisa de "else if (idade &gt;= 18)"
+}
+System.out.println(categoria);</code></pre>
+      <ul>
+        <li>Numa cadeia de <code>else if</code>, quando uma condição dá <code>true</code>, <strong>o resto é ignorado</strong>. O debug (<code>Shift+F9</code>, <code>F8</code>) mostra os saltos.</li>
+        <li>O último caso não precisa de condição: se não é infantil nem juvenil, só sobra adulto. Um <code>else</code> basta.</li>
+        <li><strong>Escopo local:</strong> variáveis declaradas dentro de métodos precisam estar <strong>inicializadas antes de serem usadas</strong>. Se você tirar o <code>else</code> acima, o <code>println(categoria)</code> não compila, porque existe um caminho em que <code>categoria</code> nunca recebeu valor. O compilador não olha o valor da idade. Uma saída é inicializar: <code>String categoria = "";</code>.</li>
+        <li>Refatorar é mudar o código sem mudar o comportamento. Para renomear a classe use <code>Shift+F6</code>, que ajusta o nome do arquivo junto (os dois precisam bater).</li>
+      </ul>
+
+      <h3>22 · Operador ternário</h3>
+      <ul>
+        <li>É um atalho para o caso de um <code>if/else</code> simples que só serve para <strong>escolher um valor</strong>: <code>condição ? valorSeVerdadeiro : valorSeFalso</code>.</li>
+      </ul>
+<pre><code>double salario = 6000;
+String mensagemDoar = "Eu vou doar 500 para o DevDojo";
+String mensagemNaoDoar = "Ainda não tenho condições, mas terei!";
+String resultado = salario &gt; 5000 ? mensagemDoar : mensagemNaoDoar;</code></pre>
+      <ul>
+        <li>Os dois valores precisam ser compatíveis com o tipo de destino. <code>String r = cond ? "doar" : 0;</code> dá erro, e <code>"0"</code> funciona.</li>
+        <li>Sozinho numa linha, ele dá o erro <em>not a statement</em>. O ternário precisa ter o resultado <strong>usado</strong>: atribuído, passado ao <code>println</code> ou (mais para frente) retornado de um método.</li>
+        <li><code>boolean posso = salario &gt; 5000 ? true : false;</code> funciona, mas é redundante. É o mesmo que <code>boolean posso = salario &gt; 5000;</code>.</li>
+        <li>Dá para <strong>aninhar</strong> ternários para substituir um <code>else if</code>. O William mostra uma vez e pede para não usar: "<strong>poder é uma coisa, dever é outra</strong>".</li>
+      </ul>
+<pre><code>// possível, mas difícil de ler: evite
+String categoria = idade &lt; 15 ? "infantil" : idade &lt; 18 ? "juvenil" : "adulto";</code></pre>
+
+      <h3>23 · Tabela verdade</h3>
+<pre><code>  A      B     A &amp;&amp; B   A || B
+true   true    true     true
+true   false   false    true
+false  true    false    true
+false  false   false    false</code></pre>
+      <ul>
+        <li><code>&amp;&amp;</code> só dá <code>true</code> se <strong>todas</strong> forem verdadeiras. Uma falsa derruba tudo.</li>
+        <li><code>||</code> só dá <code>false</code> se <strong>todas</strong> forem falsas. Uma verdadeira basta.</li>
+        <li>Vale para qualquer número de condições: <code>true &amp;&amp; true &amp;&amp; false</code> é false, e <code>false || false || true</code> é true.</li>
+      </ul>
+
+      <h3>23–24 · Exercício: imposto na Holanda (2020)</h3>
+      <p>Dado um salário anual, calcular quanto se paga de imposto:</p>
+<pre><code>Salário anual            Alíquota
+até 34.712               9,70%
+de 34.713 a 68.507       37,35%
+a partir de 68.508       49,50%</code></pre>
+      <ul>
+        <li>A resolução da aula guarda as alíquotas em variáveis (<code>double primeiraFaixa = 9.70 / 100;</code>) e usa uma cadeia <code>if / else if / else</code>. Com 70.000 o imposto dá <strong>34.650</strong>.</li>
+        <li>No código, o separador decimal é o <strong>ponto</strong>: <code>9.70</code>, nunca <code>9,70</code>.</li>
+        <li>"Primeiro chegue no resultado, depois melhore o código." Existem várias soluções certas.</li>
+        <li><strong>Não inicialize <code>valorImposto</code> com 0 "por garantia".</strong> Se um caminho esquecer de calcular, alguém que ganha 5 milhões pagaria zero. Sem inicializar, o compilador obriga todos os caminhos a atribuir um valor.</li>
+        <li>O <code>else if (salarioAnual &gt;= 34713 &amp;&amp; salarioAnual &lt;= 68507)</code> poderia ser só <code>else if (salarioAnual &lt;= 68507)</code>, porque a cadeia já descartou os menores. O William prefere a versão explícita, que é mais fácil de ler.</li>
+        <li><strong>O bug de trocar <code>else if</code> por <code>if</code> separados:</strong> com 25.000, o salário cai na 1ª faixa e <em>também</em> no <code>if (salarioAnual &lt;= 68507)</code> seguinte, e o segundo cálculo sobrescreve o primeiro. É o tipo de bug que "leva dias para achar".</li>
+        <li>O próprio William errou ao vivo: guardou o cálculo em <code>salarioAnual</code> e imprimiu o salário em vez do imposto. A pista foi o IntelliJ deixar <code>valorImposto</code> <strong>cinza</strong>, sinal de variável não usada. Fique de olho nesses avisos.</li>
+      </ul>
+
+      <h3>Atenção</h3>
+      <ul>
+        <li><strong>Extra: <code>if (cond);</code></strong> com ponto e vírgula. O <code>;</code> é um comando vazio e o bloco <code>{ }</code> de baixo executa <em>sempre</em>. Compila sem erro.</li>
+        <li><strong>Extra: sem chaves, só a primeira linha pertence ao if.</strong> Recuo não conta em Java:
+<pre><code>if (idade &gt;= 18)
+    System.out.println("pode");
+    System.out.println("sempre imprime!");</code></pre></li>
+        <li><strong>Extra: "buraco" entre faixas com double.</strong> Na resolução, <code>&lt;= 34712</code> seguido de <code>&gt;= 34713</code> deixa de fora 34712,50, que cai no <code>else</code> e paga 49,50%. Com valores decimais, faça as faixas encostarem: <code>&lt;= 34712</code> e depois <code>&gt; 34712</code>.</li>
+        <li><strong>Extra: imposto progressivo.</strong> O exercício aplica uma alíquota só sobre o salário inteiro, o que é uma simplificação. Na vida real cada faixa é tributada separadamente (veja o desafio).</li>
+        <li><strong>Extra: variável declarada dentro de <code>{ }</code> só existe ali dentro.</strong> <code>if (x) { String msg = "oi"; }</code> e depois <code>println(msg)</code> não compila. Por isso a <code>categoria</code> é declarada <em>antes</em> do if.</li>
+        <li>Na cadeia de <code>else if</code>, a <strong>ordem importa</strong>: ponha as condições mais específicas primeiro. <code>if (idade &gt;= 0) ... else if (idade &gt;= 18)</code> nunca chega ao segundo.</li>
+      </ul>
+
+      <h3>Paralelo com PHP</h3>
+      <ul>
+        <li><strong>Só boolean:</strong> no PHP, <code>if ($idade)</code>, <code>if ($lista)</code> e <code>if ("0")</code> funcionam pela regra de <em>truthy/falsy</em>. Em Java a condição tem que ser <code>boolean</code>: <code>if (idade != 0)</code>.</li>
+        <li><strong><code>elseif</code>:</strong> o PHP aceita tudo junto. Em Java é sempre <code>else if</code>, com espaço.</li>
+        <li><strong>Atribuição no if:</strong> <code>if ($x = 5)</code> é válido no PHP (e é fonte de bugs). Em Java só compila se a variável for boolean, que é a pegadinha da aula 20.</li>
+        <li><strong>Escopo:</strong> no PHP, uma variável criada dentro do <code>if</code> continua existindo depois dele. Em Java, ela morre no <code>}</code>. E variável não inicializada é erro de <em>compilação</em>, não um <code>null</code> com warning.</li>
+        <li><strong>Ternário:</strong> a sintaxe é igual. O PHP 8 <em>proíbe</em> ternário aninhado sem parênteses, e o Java permite (sem ambiguidade). Mesmo assim, evite. O <code>?:</code> (elvis) e o <code>??</code> do PHP não existem em Java.</li>
+        <li><strong>match / switch:</strong> no Laravel você talvez trocasse a cadeia de faixas por <code>match(true)</code>. Em Java, o equivalente próximo é o <code>switch</code>, das aulas 25–26.</li>
+      </ul>
+    </section>
+
+    <section id="flashcards">
+      <h2>Flashcards</h2>
+      <p style="color:var(--muted);margin-top:-6px">Toque no cartão para virar.</p>
+      <div id="flashcards-app"></div>
+    </section>
+
+    <section id="quiz">
+      <h2>Quiz</h2>
+      <div id="quiz-app"></div>
+    </section>
+
+    <section id="estudo">
+      <h2>Material de estudo</h2>
+
+      <h3>Mapa mental</h3>
+<pre><code>Condicionais: if
+├── if (20)
+│   ├── condição obrigatoriamente boolean
+│   ├── sempre use chaves
+│   ├── !cond = "se não"
+│   └── pegadinha: if (b = false) atribui, não compara
+├── else / else if (21)
+│   ├── else não tem condição e precisa de um if
+│   ├── ifs separados × cadeia if/else if
+│   ├── na cadeia, o primeiro true encerra
+│   └── variável local: inicializar antes de usar
+├── Ternário (22)
+│   ├── cond ? seVerdadeiro : seFalso
+│   ├── o resultado precisa ser usado; tipos compatíveis
+│   └── aninhar é possível, mas evite
+├── Tabela verdade (23)
+│   ├── &amp;&amp;: true só se todas true
+│   └── ||: false só se todas false
+└── Exercício imposto (23–24)
+    ├── faixas com if / else if / else
+    ├── não inicializar com 0 "por garantia"
+    └── ifs soltos = sobrescrita (bug)</code></pre>
+
+      <h3>Prática no seu WSL (15 minutos)</h3>
+      <p>Resolva o exercício do imposto <strong>antes</strong> de abrir a resolução. Teste com 25.000, 45.000 e 70.000.</p>
+<pre><code>cd ~/java-lab
+mkdir -p src/academy/devdojo/maratonajava/introducao
+nano src/academy/devdojo/maratonajava/introducao/Aula05EstruturasCondicionais04.java
+javac -d out src/academy/devdojo/maratonajava/introducao/Aula05EstruturasCondicionais04.java
+java -cp out academy.devdojo.maratonajava.introducao.Aula05EstruturasCondicionais04</code></pre>
+      <details>
+        <summary>Ver a resolução (no estilo da aula)</summary>
+<pre><code>package academy.devdojo.maratonajava.introducao;
+
+public class Aula05EstruturasCondicionais04 {
+    public static void main(String[] args) {
+        double salarioAnual = 70000;
+        double primeiraFaixa = 9.70 / 100;
+        double segundaFaixa = 37.35 / 100;
+        double terceiraFaixa = 49.50 / 100;
+        double valorImposto;
+
+        if (salarioAnual &lt;= 34712) {
+            valorImposto = salarioAnual * primeiraFaixa;
+        } else if (salarioAnual &gt; 34712 &amp;&amp; salarioAnual &lt;= 68507) {
+            valorImposto = salarioAnual * segundaFaixa;
+        } else {
+            valorImposto = salarioAnual * terceiraFaixa;
+        }
+        System.out.println(valorImposto);
+        // 25000 → 2425.0 · 45000 → 16807.5 · 70000 → 34650.0
+    }
+}</code></pre>
+      </details>
+      <p><strong>Experimentos:</strong></p>
+      <ol>
+        <li>Troque os <code>else if</code> por <code>if</code> soltos e rode com 25.000. Qual faixa "ganha"? Por quê?</li>
+        <li>Apague o <code>else</code> e compile. Leia a mensagem <em>variable valorImposto might not have been initialized</em>.</li>
+        <li>Reescreva as categorias de futebol com ternário aninhado e compare a leitura.</li>
+        <li>Ponha um <code>;</code> logo depois de <code>if (salarioAnual &lt;= 34712)</code> e veja o que acontece.</li>
+      </ol>
+      <p><strong>Desafio (imposto progressivo):</strong> calcule como na vida real: 9,70% sobre os primeiros 34.712, 37,35% só sobre o que passar disso até 68.507, e 49,50% sobre o resto. Para 70.000, o resultado deve ser 3.367,06 + 12.622,43 + 739,04 = <strong>16.728,53</strong>.</p>
+
+      <h3>Glossário</h3>
+      <ul>
+        <li><strong>Estrutura condicional</strong>: comando que escolhe o que executar a partir de um boolean.</li>
+        <li><strong>Bloco</strong>: trecho entre <code>{ }</code>, que define também o escopo das variáveis declaradas nele.</li>
+        <li><strong>Cadeia else if</strong>: sequência de condições em que só o primeiro caso verdadeiro executa.</li>
+        <li><strong>Operador ternário</strong>: <code>cond ? a : b</code>, uma expressão que devolve um de dois valores.</li>
+        <li><strong>Tabela verdade</strong>: todas as combinações de true/false e o resultado de <code>&amp;&amp;</code> e <code>||</code>.</li>
+        <li><strong>Escopo local</strong>: variáveis de método, que precisam ser inicializadas antes do uso.</li>
+        <li><strong>Refatorar</strong>: melhorar a estrutura do código sem mudar o comportamento.</li>
+        <li><strong>Imposto progressivo</strong>: cada faixa da renda é tributada com a sua alíquota.</li>
+      </ul>
+
+      <h3>Revisão espaçada</h3>
+      <ul class="revisao">
+        <li><span class="dia">Dia 1</span><span>Todos os flashcards + o exercício do imposto sem consultar.</span></li>
+        <li><span class="dia">Dia 3</span><span>Quiz + os 4 experimentos da prática.</span></li>
+        <li><span class="dia">Dia 7</span><span>Escrever a tabela verdade de memória + o desafio do imposto progressivo.</span></li>
+        <li><span class="dia">Dia 14</span><span>Flashcards que errou + questões discursivas.</span></li>
+      </ul>
+
+      <h3>Para aprofundar</h3>
+      <ul>
+        <li>Como o compilador decide que uma variável está "definitivamente atribuída" (<em>definite assignment</em>)?</li>
+        <li>Quando um <code>if/else</code> pode virar um <em>early return</em> ou uma <em>guard clause</em>? (você já usa isso em Laravel)</li>
+        <li>Como o <code>switch</code> das aulas 25–26 se compara à cadeia de <code>else if</code>?</li>
+        <li>Por que é melhor usar <code>BigDecimal</code> em cálculos de imposto de verdade?</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    window.AULA = {
+      flashcards: [
+        ["Que tipo a condição do if precisa ter?", "boolean. if (idade) não compila"],
+        ["Quando o bloco do if executa?", "Só quando a condição é true"],
+        ["Pode omitir as chaves do if?", "Com uma instrução só, pode, mas não é recomendado"],
+        ["Como ler if (!isAutorizado)?", "\"Se não é autorizado\": o mesmo que isAutorizado == false"],
+        ["O que acontece em if (teste = false) com teste boolean?", "Compila, mas atribui false e nunca entra. É atribuição, não comparação"],
+        ["O que é o else?", "O \"senão\": executa quando o if dá false. Não tem condição"],
+        ["Pode existir else sem if?", "Não"],
+        ["Qual a diferença entre dois ifs separados e if/else?", "Os ifs separados são sempre avaliados; no if/else só um caminho executa"],
+        ["Quando usar else if?", "Quando há mais de duas saídas possíveis"],
+        ["O que acontece na cadeia else if depois que uma condição dá true?", "As outras são ignoradas"],
+        ["Por que o último caso da cadeia pode ser só else?", "Porque todas as outras possibilidades já foram testadas"],
+        ["Qual a regra das variáveis locais?", "Precisam ser inicializadas antes de serem usadas, ou dá erro de compilação"],
+        ["Por que tirar o else pode quebrar a compilação?", "Porque passa a existir um caminho em que a variável nunca recebe valor"],
+        ["Qual a sintaxe do ternário?", "condição ? valorSeVerdadeiro : valorSeFalso"],
+        ["Quando usar o ternário?", "Num if/else simples que só escolhe um valor para atribuir ou usar"],
+        ["Por que \"cond ? a : b;\" sozinho dá erro?", "Not a statement: o resultado precisa ser usado"],
+        ["O que há de errado em \"boolean b = x > 5 ? true : false;\"?", "É redundante: basta boolean b = x > 5;"],
+        ["Ternário aninhado é permitido?", "Sim, mas é difícil de ler. Poder não é dever"],
+        ["Quando A && B é true?", "Só quando A e B são true"],
+        ["Quando A || B é false?", "Só quando A e B são false"],
+        ["Por que não inicializar valorImposto com 0?", "Porque um caminho esquecido resultaria em imposto zero; sem inicializar, o compilador cobra"],
+        ["Qual o bug de trocar else if por ifs soltos no imposto?", "Um valor pode entrar em mais de uma faixa, e o último cálculo sobrescreve"],
+        ["O que acontece em \"if (cond); { ... }\"?", "O ; encerra o if e o bloco executa sempre"],
+        ["if ($x) do PHP funciona em Java?", "Não: Java não tem truthy/falsy, só boolean"],
+        ["Variável criada dentro do bloco do if existe depois dele?", "Em Java não (morre no }). No PHP sim"]
+      ],
+      quiz: [
+        { tipo: 'vf', pergunta: 'A condição de um if em Java precisa resultar em um boolean.', correta: 0,
+          explicacao: 'Verdadeiro: if (idade) não compila. Não existe truthy/falsy como no PHP.' },
+        { tipo: 'multipla', pergunta: 'Com idade = 18, qual condição autoriza a compra?', opcoes: ['idade > 18', 'idade >= 18', 'idade > 20', 'idade == 17'], correta: 1,
+          explicacao: '>= 18 inclui o próprio 18. idade > 18 deixaria o 18 de fora, o mesmo tipo de erro que o William mostra com > 20.' },
+        { tipo: 'vf', pergunta: 'O else precisa de uma condição entre parênteses.', correta: 1,
+          explicacao: 'Falso: o else não tem condição. Ele executa quando o if (ou toda a cadeia) deu false.' },
+        { tipo: 'multipla', pergunta: 'idade = 12. O que imprime a cadeia: if (idade < 15) "infantil"; else if (idade < 18) "juvenil"; else "adulto"?', opcoes: ['infantil', 'infantil e juvenil', 'juvenil', 'adulto'], correta: 0,
+          explicacao: 'Na cadeia, o primeiro true encerra. 12 < 18 também é verdade, mas nem chega a ser avaliado.' },
+        { tipo: 'multipla', pergunta: 'Qual linha compila?', opcoes: ['salario > 5000 ? "doar" : "não doar";', 'String r = salario > 5000 ? "doar" : 0;', 'String r = salario > 5000 ? "doar" : "não doar";', 'String r = salario > 5000 : "doar" ? "não doar";'], correta: 2,
+          explicacao: 'O ternário precisa ser usado (a primeira dá "not a statement"), os dois lados precisam combinar com o tipo e a ordem é ? antes de :.' },
+        { tipo: 'multipla', pergunta: 'Qual o resultado de true && false || true?', opcoes: ['true', 'false', 'Erro de compilação', 'Depende da JVM'], correta: 0,
+          explicacao: '&& vem antes de ||: (true && false) = false, e false || true = true.' },
+        { tipo: 'vf', pergunta: 'Com boolean teste = true;, a linha if (teste = false) { ... } não compila.', correta: 1,
+          explicacao: 'Falso: compila, porque a atribuição resulta num boolean (false). O bloco nunca executa. É pegadinha de certificação.' },
+        { tipo: 'multipla', pergunta: 'String categoria; if (idade < 15) { categoria = "infantil"; } else if (idade < 18) { categoria = "juvenil"; } System.out.println(categoria); — o que acontece?', opcoes: ['Imprime null quando idade >= 18', 'Imprime string vazia', 'Erro de compilação: categoria pode não ter sido inicializada', 'Erro só ao executar'], correta: 2,
+          explicacao: 'Sem else existe um caminho em que categoria nunca recebe valor, e variáveis locais precisam estar inicializadas antes do uso.' },
+        { tipo: 'discursiva', pergunta: 'No exercício do imposto, o que acontece se trocar "else if" por "if" soltos? Use o salário de 25.000 no exemplo.',
+          explicacao: 'Cada if passa a ser avaliado de forma independente. 25.000 entra na primeira faixa (<= 34.712) e, se a segunda condição for só <= 68.507, entra também nela. O segundo cálculo sobrescreve o primeiro e o imposto sai com 37,35% em vez de 9,70%. A cadeia else if garante que só a primeira condição verdadeira execute.' },
+        { tipo: 'discursiva', pergunta: 'Você tem em PHP: if ($usuario && $usuario->ativo) { $msg = "ok"; } echo $msg ?? "negado";. Como ficaria em Java e quais regras do Java mudam a escrita?',
+          explicacao: 'Em Java a condição precisa ser boolean: usuario != null && usuario.isAtivo() (o curto-circuito do && evita erro com null). A variável tem que existir e estar inicializada fora do bloco: String msg = "negado"; if (...) { msg = "ok"; } System.out.println(msg); ou com ternário: String msg = usuario != null && usuario.isAtivo() ? "ok" : "negado";. O ?? do PHP não existe em Java.' }
+      ]
+    };
+  </script>
+  <script src="../js/app.js"></script>
+</body>
+</html>

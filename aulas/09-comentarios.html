@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>09 · Comentários</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="topo">
+      <a class="voltar" href="../index.html">← Todas as aulas</a>
+      <h1>09 · Comentários</h1>
+      <p>Linha, múltiplas linhas e Javadoc: quando comentar · <a href="https://www.youtube.com/playlist?list=PL62G310vn6nFIsOCC0H-C2infYgwm8SWW" target="_blank" rel="noopener">playlist</a></p>
+    </header>
+
+    <nav class="abas">
+      <a href="#resumo">Resumo</a>
+      <a href="#flashcards">Flashcards</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#estudo">Material de estudo</a>
+    </nav>
+
+    <p class="aviso">Feito a partir da transcrição automática da aula. Os atalhos do IntelliJ foram reconstruídos a partir do áudio ("contra o bebê" = <code>Ctrl+B</code>, "contra o quê" = <code>Ctrl+Q</code>). A prática com <code>javap</code> e <code>javadoc</code> no WSL não está no vídeo: é um complemento.</p>
+
+    <section id="resumo">
+      <h2>Resumo</h2>
+      <p><strong>Comentários</strong> são trechos de texto no código que <strong>não afetam a execução</strong>. Eles servem só para informar outro desenvolvedor (ou você mesmo no futuro). O compilador ignora os comentários: eles <strong>nem entram no bytecode</strong>. Na aula, o William abre o <code>.class</code> para mostrar que não sobrou nada deles.</p>
+
+      <h3>Os três tipos</h3>
+      <ul>
+        <li><strong>Uma linha</strong>: <code>//</code>. Tudo o que vem à direita das barras, até o fim da linha, é comentário.</li>
+        <li><strong>Múltiplas linhas</strong>: começa com <code>/*</code> e termina com <code>*/</code>. Tudo o que está entre os dois é ignorado. Os <code>*</code> no começo de cada linha do meio são opcionais, só estética. Dá para usar numa linha só, mas para isso o indicado é o <code>//</code>.</li>
+        <li><strong>Javadoc</strong>: começa com <code>/**</code> e termina com <code>*/</code>. É o comentário "oficial", que descreve <strong>classes e métodos</strong> para quem vai <strong>usar</strong> o seu código. Aceita HTML e tags como <code>@param</code> e <code>{@link ...}</code>.</li>
+      </ul>
+<pre><code>// comentário de uma linha
+
+/*
+ * comentário de
+ * múltiplas linhas
+ */
+
+/**
+ * Javadoc: descreve a classe ou o método para quem vai usá-lo.
+ * Aceita &lt;b&gt;HTML&lt;/b&gt; e tags como @param.
+ */</code></pre>
+
+      <h3>Javadoc no IntelliJ</h3>
+      <ul>
+        <li>Digite <code>/**</code> e Enter acima de um método: a IDE monta o bloco, já com os <code>@param</code>.</li>
+        <li><code>Ctrl+Alt+Q</code> alterna a <strong>visualização renderizada</strong> do Javadoc no editor, com o HTML formatado.</li>
+        <li><code>Ctrl+Q</code> (Quick Documentation) com o cursor em <code>println</code> abre a documentação do método ali mesmo.</li>
+        <li><code>Ctrl+B</code> (ou Ctrl+clique) vai até a declaração. Abrindo a classe <code>String</code>, você vê Javadoc "para todo lado": o mundo inteiro precisa entender o que cada método faz.</li>
+      </ul>
+
+      <h3>Devo comentar meu código?</h3>
+      <ul>
+        <li><strong>Javadoc, sim.</strong> O conselho do William: todo <strong>método público</strong> deve ter Javadoc, porque é a documentação que quem usa sua classe vai ler.</li>
+        <li><strong>Os outros tipos, evite ao máximo.</strong> O livro <em>Clean Code</em> (Código Limpo) defende que, se você precisa de um comentário para explicar o código, o código não está claro. Melhore os nomes e a estrutura.</li>
+        <li>Nada de comentário óbvio. <code>// imprime algo</code> em cima de um <code>System.out.println</code> não acrescenta nada.</li>
+        <li><strong>A exceção</strong> são as decisões que não dá para deduzir do código, como regras de negócio ou decisões que vieram da gerência. Exemplo da aula: aceitar data de nascimento negativa não faz sentido, mas se uma regra de negócio exige isso, um comentário de uma linha explica o porquê para a próxima pessoa.</li>
+        <li>Enquanto está aprendendo, pode comentar à vontade. No trabalho, segure a mão.</li>
+      </ul>
+
+      <h3>Atenção</h3>
+      <ul>
+        <li><strong>Comentário mente.</strong> Quando alguém muda o código e esquece de atualizar o comentário, ele passa a explicar algo errado. Por isso algumas empresas nem gostam de Javadoc.</li>
+        <li><code>/* ... */</code> <strong>não pode ser aninhado</strong>. O primeiro <code>*/</code> fecha o comentário, e o que sobra vira erro de compilação.</li>
+        <li><code>/*</code> e <code>/**</code> são diferentes. Só o segundo é Javadoc e aparece na documentação (<code>Ctrl+Q</code>, ferramenta <code>javadoc</code>).</li>
+        <li>O Javadoc vale quando está logo acima de uma declaração (classe, método, atributo). Solto no meio de um método, é só um comentário comum.</li>
+        <li><code>"// isto"</code> dentro de uma String não é comentário, é texto.</li>
+        <li>Comentários podem vir <strong>antes</strong> do <code>package</code>. Era esse o "detalhe" que a aula 08 deixou para depois.</li>
+        <li>Em PHP, <code>#</code> também é comentário. Em Java, não: dá erro.</li>
+      </ul>
+
+      <h3>Paralelo com PHP</h3>
+      <p>É quase idêntico. PHP também tem <code>//</code>, <code>/* */</code> e o <strong>PHPDoc</strong> (<code>/** */</code>), que se inspirou justamente no Javadoc: <code>@param</code>, <code>@return</code> e <code>@throws</code> funcionam igual. Duas diferenças:</p>
+      <ul>
+        <li>No PHP, o docblock muitas vezes serve para <em>tipar</em> o que a linguagem não tipava (<code>@var Collection&lt;User&gt;</code>) e é lido por PHPStan e Psalm. Em Java o tipo já está na assinatura, então o Javadoc fica focado em explicar o <strong>comportamento</strong>.</li>
+        <li>Java tem uma ferramenta oficial, a <code>javadoc</code>, que vem na JDK e gera um site HTML de documentação. No PHP isso depende de ferramentas externas, como o phpDocumentor.</li>
+      </ul>
+    </section>
+
+    <section id="flashcards">
+      <h2>Flashcards</h2>
+      <p style="color:var(--muted);margin-top:-6px">Toque no cartão para virar.</p>
+      <div id="flashcards-app"></div>
+    </section>
+
+    <section id="quiz">
+      <h2>Quiz</h2>
+      <div id="quiz-app"></div>
+    </section>
+
+    <section id="estudo">
+      <h2>Material de estudo</h2>
+
+      <h3>Mapa mental</h3>
+<pre><code>Comentários
+├── O que são
+│   ├── Texto para desenvolvedores, não afeta o código
+│   └── Não vai para o bytecode
+├── Tipos
+│   ├── // uma linha
+│   ├── /* ... */ múltiplas linhas (não aninha)
+│   └── /** ... */ Javadoc (HTML, @param, {@link})
+├── IntelliJ
+│   ├── /** + Enter → gera o bloco
+│   ├── Ctrl+Alt+Q → renderizar
+│   ├── Ctrl+Q → ver documentação
+│   └── Ctrl+B → ir à declaração (ex.: String)
+└── Boas práticas
+    ├── Javadoc em métodos públicos
+    ├── Evitar os demais (Clean Code)
+    ├── Nada de comentário óbvio
+    ├── Exceção: regra de negócio / decisão não óbvia
+    └── Risco: comentário desatualizado mente</code></pre>
+
+      <h3>Prática no seu WSL (10 minutos)</h3>
+      <p>Prove que os comentários não vão para o bytecode e gere um site de documentação:</p>
+<pre><code>mkdir -p ~/java-lab/src/academy/devdojo/maratonajava/introducao
+cd ~/java-lab
+
+cat > src/academy/devdojo/maratonajava/introducao/Calculadora.java &lt;&lt;'EOF'
+// Comentário antes do package: permitido.
+package academy.devdojo.maratonajava.introducao;
+
+/**
+ * Operações matemáticas &lt;b&gt;simples&lt;/b&gt;.
+ */
+public class Calculadora {
+
+    /**
+     * Soma dois números inteiros.
+     *
+     * @param a primeiro número
+     * @param b segundo número
+     * @return a soma de a e b
+     */
+    public static int somar(int a, int b) {
+        /* comentário de
+           múltiplas linhas */
+        return a + b; // comentário de uma linha
+    }
+
+    public static void main(String[] args) {
+        System.out.println(somar(2, 3));
+    }
+}
+EOF
+
+# 1. Compilar e executar
+javac -d out src/academy/devdojo/maratonajava/introducao/Calculadora.java
+java -cp out academy.devdojo.maratonajava.introducao.Calculadora
+
+# 2. Desmontar o bytecode: nenhum comentário aparece
+javap -c -cp out academy.devdojo.maratonajava.introducao.Calculadora
+
+# 3. Gerar o site de documentação a partir do Javadoc
+javadoc -d docs -sourcepath src academy.devdojo.maratonajava.introducao
+explorer.exe "$(wslpath -w docs/index.html)"   # abre no navegador do Windows</code></pre>
+      <p><strong>Desafio:</strong> coloque um <code>/* */</code> dentro de outro e compile. Leia o erro e explique por que ele acontece.</p>
+
+      <h3>Glossário</h3>
+      <ul>
+        <li><strong>Comentário</strong>: texto ignorado pelo compilador, só para leitura humana.</li>
+        <li><strong>Javadoc</strong>: comentário <code>/** */</code> que documenta classes e métodos. É também o nome da ferramenta da JDK que gera HTML a partir dele.</li>
+        <li><strong>Tag Javadoc</strong>: marcação como <code>@param</code>, <code>@return</code>, <code>@throws</code> ou <code>{@link}</code>.</li>
+        <li><strong>Clean Code</strong>: livro de Robert C. Martin sobre código legível. Defende que o código se explique sozinho.</li>
+        <li><strong>Regra de negócio</strong>: decisão do domínio (da empresa), que o código sozinho não explica.</li>
+        <li><strong><code>javap</code></strong>: ferramenta da JDK que mostra o conteúdo de um <code>.class</code>.</li>
+      </ul>
+
+      <h3>Revisão espaçada</h3>
+      <ul class="revisao">
+        <li><span class="dia">Dia 1</span><span>Todos os flashcards + a prática do WSL.</span></li>
+        <li><span class="dia">Dia 3</span><span>Quiz sem olhar o resumo.</span></li>
+        <li><span class="dia">Dia 7</span><span>Escrever o Javadoc de um método novo com <code>@param</code> e <code>@return</code> e gerar a documentação.</span></li>
+        <li><span class="dia">Dia 14</span><span>Flashcards que errou + questões discursivas.</span></li>
+      </ul>
+
+      <h3>Para aprofundar</h3>
+      <ul>
+        <li>Abra a classe <code>String</code> com <code>Ctrl+B</code> e leia o Javadoc de <code>length()</code> e <code>substring()</code>. O que as tags informam?</li>
+        <li>Qual a diferença entre <code>{@link}</code> e <code>@see</code>?</li>
+        <li>O que são os <em>markdown doc comments</em> (<code>///</code>) do Java 23 e por que foram criados?</li>
+        <li>Pegue um trecho de código seu em PHP com comentário explicando <em>o quê</em> faz. Dá para trocar o comentário por um nome de método melhor?</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    window.AULA = {
+      flashcards: [
+        ['O que é um comentário?', 'Texto no código que não afeta a execução, só informa quem lê'],
+        ['Comentários vão para o bytecode (.class)?', 'Não. O compilador ignora e eles não aparecem no .class'],
+        ['Quais os três tipos de comentário em Java?', 'Uma linha (//), múltiplas linhas (/* */) e Javadoc (/** */)'],
+        ['Até onde vai um comentário //?', 'Até o fim da linha: tudo à direita das barras'],
+        ['Como abrir e fechar um comentário de múltiplas linhas?', 'Abre com /* e fecha com */'],
+        ['Os * no início de cada linha de /* */ são obrigatórios?', 'Não, são só estética'],
+        ['Dá para aninhar /* */ dentro de outro /* */?', 'Não: o primeiro */ fecha o comentário e o resto vira erro'],
+        ['Como começa um Javadoc?', 'Com /** (duas estrelas) e termina com */'],
+        ['Para que serve o Javadoc?', 'Documentar classes e métodos para quem vai usar o seu código'],
+        ['O Javadoc aceita HTML?', 'Sim, além de tags como @param, @return e {@link}'],
+        ['Atalho do IntelliJ para ver o Javadoc renderizado no editor?', 'Ctrl+Alt+Q'],
+        ['Atalho do IntelliJ para abrir a documentação de um método?', 'Ctrl+Q (Quick Documentation)'],
+        ['Atalho do IntelliJ para ir à declaração de um método?', 'Ctrl+B (ou Ctrl+clique)'],
+        ['Quais métodos devem ter Javadoc, segundo a aula?', 'Os métodos públicos'],
+        ['O que o Clean Code diz sobre comentários?', 'Evitar: se precisa comentar, o código provavelmente não está claro'],
+        ['Por que "// imprime algo" acima de um println é ruim?', 'É óbvio: o próprio código já diz isso'],
+        ['Quando um comentário comum vale a pena?', 'Para explicar decisões não óbvias, como regras de negócio'],
+        ['Qual o principal risco de um comentário?', 'Ficar desatualizado e explicar algo errado'],
+        ['Pode haver comentário antes da linha package?', 'Sim, o package é a primeira linha de código, e comentário não conta'],
+        ['Qual o equivalente do Javadoc no PHP?', 'PHPDoc: /** */ com @param, @return etc.']
+      ],
+      quiz: [
+        { tipo: 'vf', pergunta: 'Comentários não alteram o comportamento do programa.', correta: 0,
+          explicacao: 'Verdadeiro: são ignorados pelo compilador e servem só para quem lê o código.' },
+        { tipo: 'multipla', pergunta: 'Qual é o comentário de uma linha em Java?', opcoes: ['#', '//', '--', ';'], correta: 1,
+          explicacao: '// comenta até o fim da linha. # é comentário em PHP, mas não em Java.' },
+        { tipo: 'vf', pergunta: 'Os comentários ficam guardados no arquivo .class para a JVM consultar.', correta: 1,
+          explicacao: 'Falso: não vão para o bytecode. Dá para conferir com javap.' },
+        { tipo: 'multipla', pergunta: 'Qual abertura cria um comentário Javadoc?', opcoes: ['//', '/*', '/**', '///*'], correta: 2,
+          explicacao: '/** (duas estrelas) abre um Javadoc. /* é um comentário de múltiplas linhas comum.' },
+        { tipo: 'multipla', pergunta: 'No IntelliJ, com o cursor sobre println, qual atalho mostra a documentação do método?', opcoes: ['Ctrl+B', 'Ctrl+Q', 'Shift+F6', 'Ctrl+F9'], correta: 1,
+          explicacao: 'Ctrl+Q abre a Quick Documentation. Ctrl+B vai até a declaração, Shift+F6 renomeia e Ctrl+F9 compila.' },
+        { tipo: 'vf', pergunta: 'Nos comentários /* */, cada linha do meio precisa começar com *.', correta: 1,
+          explicacao: 'Falso: os * do meio são opcionais. Só a abertura /* e o fechamento */ contam.' },
+        { tipo: 'multipla', pergunta: 'Segundo a aula, qual comentário comum é justificável?', opcoes: ['// imprime o nome, acima de um println', '// soma a e b, acima de return a + b', '// regra do cliente X: data negativa é aceita para registros importados', '// fim do método'], correta: 2,
+          explicacao: 'Só esse explica uma decisão que o código não mostra (regra de negócio). Os outros repetem o óbvio.' },
+        { tipo: 'multipla', pergunta: 'O que acontece ao compilar "/* a /* b */ c */"?', opcoes: ['Compila, é tudo comentário', 'Erro: o primeiro */ fecha o comentário e " c */" sobra como código', 'Vira Javadoc', 'Só um aviso do compilador'], correta: 1,
+          explicacao: 'Comentários de bloco não aninham. O primeiro */ encerra o comentário, e o que sobra não é Java válido.' },
+        { tipo: 'discursiva', pergunta: 'Por que o Clean Code desaconselha comentários, e por que o Javadoc é uma exceção?',
+          explicacao: 'Porque um comentário que explica o que o código faz indica código pouco claro (melhor melhorar nomes e estrutura), e comentários tendem a ficar desatualizados e a mentir. O Javadoc é diferente: documenta o contrato público (o que o método faz, parâmetros, retorno) para quem usa a classe sem ler a implementação, e aparece na IDE (Ctrl+Q) e na documentação gerada.' },
+        { tipo: 'discursiva', pergunta: 'Compare o Javadoc com o PHPDoc que você usa no Laravel.',
+          explicacao: 'A sintaxe é praticamente a mesma (/** */ com @param, @return, @throws), já que o PHPDoc se inspirou no Javadoc. No PHP o docblock também serve para declarar tipos que a linguagem não expressa (generics, arrays tipados), lidos por PHPStan/Psalm e pela IDE. Em Java os tipos já estão na assinatura, então o Javadoc foca no comportamento, e a JDK traz a ferramenta javadoc para gerar a documentação em HTML.' }
+      ]
+    };
+  </script>
+  <script src="../js/app.js"></script>
+</body>
+</html>

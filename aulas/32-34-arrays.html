@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>32–34 · Arrays</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="topo">
+      <a class="voltar" href="../index.html">← Todas as aulas</a>
+      <h1>32–34 · Arrays</h1>
+      <p>Declaração, índices, valores padrão, length e o que acontece na memória · <a href="https://www.youtube.com/playlist?list=PL62G310vn6nFIsOCC0H-C2infYgwm8SWW" target="_blank" rel="noopener">playlist</a></p>
+    </header>
+
+    <nav class="abas">
+      <a href="#resumo">Resumo</a>
+      <a href="#flashcards">Flashcards</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#estudo">Material de estudo</a>
+    </nav>
+
+    <p class="aviso">Junta as aulas 32, 33 e 34 (Arrays pt 01 a 03). Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. Os nomes dos personagens da aula 34 não dão para entender no áudio, então os exemplos usam outros. Na aula 33 o valor padrão do <code>char</code> é descrito como "espaço em branco"; aqui ele aparece com o nome certo, o caractere nulo <code>'\u0000'</code>. A inicialização com chaves (<code>{21, 15, 11}</code>), o <code>Arrays.toString</code> e a cópia de referência não estão nos vídeos: são complementos marcados como "extra". A inicialização é o tema da aula 38.</p>
+
+    <section id="resumo">
+      <h2>Resumo</h2>
+      <p>Para guardar três idades, até agora seria preciso criar <code>idade1</code>, <code>idade2</code> e <code>idade3</code>, e depois três <code>println</code>. Isso não escala. Um <strong>array</strong> (vetor) guarda <strong>vários valores do mesmo tipo</strong> sob um único nome, cada um numa posição numerada. O conselho do William vale para as três aulas: <strong>desenhe</strong> no papel o que acontece na memória. As classes do curso são <code>Aula07Arrays01</code> e <code>02</code>.</p>
+
+      <h3>32 · Declarar, criar e acessar</h3>
+<pre><code>int[] idades;              // variável do tipo referência (ainda não aponta para nada)
+idades = new int[3];       // cria o objeto na memória: 3 posições, índices 0, 1 e 2
+idades[0] = 21;
+idades[1] = 15;
+idades[2] = 11;
+System.out.println(idades[0]); // 21
+System.out.println(idades);    // algo como [I@1b6d3586 (a referência, não os valores)</code></pre>
+      <ul>
+        <li><code>int[]</code> se lê "array de int". <code>int idades[]</code> também compila, mas o recomendado é o colchete <strong>junto do tipo</strong>: batendo o olho, você já sabe que é um array. Por ser uma coleção, use nome <strong>no plural</strong>.</li>
+        <li><strong>Array é um objeto, e a variável é do tipo referência.</strong> Ela não guarda os valores: ela <em>aponta</em> para um objeto na memória, que tem as posições. Por isso o <code>println(idades)</code> mostra uma referência e não os números.</li>
+        <li>Sem <code>new</code>, a variável local não está inicializada e não compila. Ela pode receber <code>null</code> ("não aponta para nada"), mas só tipos de referência aceitam <code>null</code>. <code>int x = null;</code> não compila.</li>
+        <li><strong>O tamanho é obrigatório</strong> no <code>new</code>: <code>new int[3]</code>, porque o Java precisa saber quantas posições reservar.</li>
+        <li><strong>O índice começa em 0.</strong> Com 3 posições, os índices vão de 0 a 2. É a piada dos três desenvolvedores no bar: o garçom pergunta quantos são, e um levanta 0, outro 1, outro 2.</li>
+        <li>Acessar uma posição que não existe (<code>idades[3]</code>), seja para ler ou para gravar, lança <strong><code>ArrayIndexOutOfBoundsException</code></strong>. O código compila, mas quebra <strong>na execução</strong>.</li>
+      </ul>
+
+      <h3>33 · Tipos e valores padrão</h3>
+      <ul>
+        <li>Cada posição segue as regras do tipo do array. Num <code>int[]</code>, <code>idades[0] = 10.5F;</code> não compila, porque um float não entra num int sem cast.</li>
+        <li><code>new</code> com tipo primitivo só aparece em array (<code>new int[3]</code>). O <code>new</code> em geral fica para a parte de orientação a objetos.</li>
+        <li>Toda posição de um array novo já nasce com um <strong>valor padrão</strong>:</li>
+      </ul>
+<pre><code>Tipo do array                      Valor padrão
+byte, short, int, long             0
+float, double                      0.0
+char                               '\u0000' (caractere nulo: imprime "em branco")
+boolean                            false
+String e outros tipos referência   null</code></pre>
+      <ul>
+        <li>Os valores padrão valem para <strong>arrays</strong> e para variáveis declaradas <strong>fora dos métodos</strong> (atributos, vistos em OO). <strong>Variáveis locais não têm valor padrão</strong>: precisam ser inicializadas antes do uso, como você viu no <code>if</code>.</li>
+      </ul>
+
+      <h3>34 · Percorrer com for, length e tamanho fixo</h3>
+<pre><code>String[] nomes = new String[3];
+nomes[0] = "Goku";
+nomes[1] = "Kirito";
+nomes[2] = "Naruto";
+
+for (int i = 0; i &lt; nomes.length; i++) {
+    System.out.println(nomes[i]);
+}</code></pre>
+      <ul>
+        <li>O <code>for</code> é o parceiro natural do array: o índice do laço é o índice das posições.</li>
+        <li>Com o número fixo (<code>i &lt; 3</code>), aumentar o array obriga a lembrar de mudar o laço também. Se o laço for longe demais (<code>i &lt; 4</code> com 3 posições), imprime os três e depois quebra com <code>ArrayIndexOutOfBoundsException</code>.</li>
+        <li>A solução é <strong><code>nomes.length</code></strong>, uma propriedade que todo array tem e que dá o tamanho dele. O laço passa a se ajustar sozinho. Ela existe porque o array é um <strong>objeto</strong>: digite <code>nomes.</code> e a IDE mostra o que o objeto oferece.</li>
+        <li><strong>O tamanho é fixo.</strong> Um array não cresce em tempo de execução. Para mudar o tamanho, só alterando o código e compilando de novo. No dia a dia você vai usar as <strong>coleções</strong> (como <code>ArrayList</code>), que crescem sozinhas. Elas vêm mais para frente no curso.</li>
+        <li>Posições não preenchidas continuam com o valor padrão. Um <code>String[4]</code> com 3 nomes imprime o quarto como <code>null</code>.</li>
+        <li><strong>Reatribuir cria outro objeto:</strong> <code>nomes = new String[5];</code> não "aumenta" o array antigo. Cria um array <em>novo</em>, vazio, e a variável passa a apontar para ele. O antigo perde a referência, não dá mais para recuperá-lo, e o <strong>garbage collector</strong> (coletor de lixo) do Java libera essa memória.</li>
+      </ul>
+<pre><code>nomes ──X──▶ [Goku | Kirito | Naruto]      ← sem referência: o GC recolhe
+   └───────▶ [null | null | null | null | null]</code></pre>
+
+      <h3>Atenção</h3>
+      <ul>
+        <li><strong>O último índice é <code>length - 1</code></strong>, não <code>length</code>. No laço, use <code>i &lt; nomes.length</code>, nunca <code>&lt;=</code>.</li>
+        <li><strong><code>length</code> sem parênteses</strong> no array. Na String é <code>texto.length()</code>, com parênteses, porque é um método. Nas coleções é <code>lista.size()</code>. Três jeitos diferentes, e é pegadinha de prova.</li>
+        <li>Índice fora do limite <strong>compila</strong> e só quebra ao rodar. O compilador não verifica.</li>
+        <li><strong>Extra:</strong> para ver o conteúdo de um array, use <code>System.out.println(Arrays.toString(idades));</code>, que imprime <code>[21, 15, 11]</code>. Precisa de <code>import java.util.Arrays;</code> no topo do arquivo.</li>
+        <li><strong>Extra:</strong> dá para criar e preencher de uma vez: <code>int[] idades = {21, 15, 11};</code>. O tamanho vem da lista. É o tema da aula 38.</li>
+        <li><strong>Extra: <code>int[] b = a;</code> não copia o array.</strong> Copia a <em>referência</em>, e as duas variáveis passam a apontar para o mesmo objeto. <code>b[0] = 99;</code> muda também <code>a[0]</code>. Para copiar de verdade, use <code>a.clone()</code> ou <code>Arrays.copyOf(a, a.length)</code>.</li>
+        <li><strong>Extra:</strong> <code>new int[0]</code> é válido (array vazio). Tamanho negativo compila e lança <code>NegativeArraySizeException</code> ao rodar.</li>
+      </ul>
+
+      <h3>Paralelo com PHP</h3>
+      <ul>
+        <li><strong>O array do PHP é outra coisa.</strong> No PHP ele é um mapa ordenado que cresce sozinho, aceita chaves string (<code>$u['nome']</code>) e mistura tipos. O array do Java tem <strong>tamanho fixo</strong>, <strong>um só tipo</strong> e <strong>índices inteiros</strong> de 0 a length-1. O equivalente do array PHP de lista é o <code>ArrayList</code>, e o do associativo é o <code>HashMap</code> (coleções, mais à frente).</li>
+        <li><strong>Não existe <code>$a[] = x</code>:</strong> não há "append" em array Java. Todas as posições já existem desde o <code>new</code>.</li>
+        <li><strong>Tamanho:</strong> <code>count($a)</code> no PHP e <code>a.length</code> no Java.</li>
+        <li><strong>Índice inexistente:</strong> no PHP dá um <em>warning</em> e devolve <code>null</code>. No Java lança exceção e o programa para.</li>
+        <li><strong>Cópia:</strong> no PHP, <code>$b = $a</code> <em>copia</em> o array (alterar <code>$b</code> não mexe em <code>$a</code>). No Java, <code>b = a</code> faz as duas variáveis apontarem para o <em>mesmo</em> array. O comportamento Java lembra os <em>objetos</em> do PHP, não os arrays.</li>
+        <li><strong>Imprimir:</strong> o <code>print_r($a)</code> equivale a <code>Arrays.toString(a)</code>. O <code>println(a)</code> sozinho mostra só a referência.</li>
+      </ul>
+    </section>
+
+    <section id="flashcards">
+      <h2>Flashcards</h2>
+      <p style="color:var(--muted);margin-top:-6px">Toque no cartão para virar.</p>
+      <div id="flashcards-app"></div>
+    </section>
+
+    <section id="quiz">
+      <h2>Quiz</h2>
+      <div id="quiz-app"></div>
+    </section>
+
+    <section id="estudo">
+      <h2>Material de estudo</h2>
+
+      <h3>Mapa mental</h3>
+<pre><code>Arrays
+├── Por quê (32)
+│   └── vários valores do mesmo tipo sob um nome (no lugar de idade1, idade2...)
+├── Declarar e criar (32)
+│   ├── int[] idades;            → variável tipo referência
+│   ├── idades = new int[3];     → objeto com 3 posições (tamanho obrigatório)
+│   ├── índices 0..length-1
+│   ├── fora do limite → ArrayIndexOutOfBoundsException (execução)
+│   └── println(idades) → referência, não os valores
+├── Valores padrão (33)
+│   ├── números 0 / 0.0 · char '\u0000' · boolean false · referência null
+│   └── locais NÃO têm padrão; arrays e atributos têm
+└── Percorrer (34)
+    ├── for (int i = 0; i &lt; nomes.length; i++)
+    ├── length é propriedade (sem parênteses)
+    ├── tamanho fixo → coleções (ArrayList) depois
+    └── nomes = new String[5] → objeto novo; o velho vai para o GC</code></pre>
+
+      <h3>Prática no seu WSL (15 minutos)</h3>
+<pre><code>cd ~/java-lab
+cat > src/academy/devdojo/maratonajava/introducao/Aula07Arrays01.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.introducao;
+
+import java.util.Arrays;
+
+public class Aula07Arrays01 {
+    public static void main(String[] args) {
+        int[] idades = new int[3];
+        System.out.println(Arrays.toString(idades));     // ?
+        idades[0] = 21;
+        idades[1] = 15;
+        idades[2] = 11;
+
+        int soma = 0;
+        for (int i = 0; i &lt; idades.length; i++) {
+            soma += idades[i];
+        }
+        System.out.println("Média: " + (double) soma / idades.length); // ?
+
+        boolean[] flags = new boolean[2];
+        String[] nomes = new String[2];
+        System.out.println(flags[0] + " " + nomes[1]);  // ?
+
+        int[] copia = idades;
+        copia[0] = 99;
+        System.out.println(idades[0]);                  // ?
+
+        System.out.println(idades[3]);                  // ?
+    }
+}
+EOF
+javac -d out src/academy/devdojo/maratonajava/introducao/Aula07Arrays01.java
+java -cp out academy.devdojo.maratonajava.introducao.Aula07Arrays01</code></pre>
+      <details>
+        <summary>Ver a saída esperada</summary>
+<pre><code>[0, 0, 0]
+Média: 15.666666666666666
+false null
+99
+Exception in thread "main" java.lang.ArrayIndexOutOfBoundsException: Index 3 out of bounds for length 3</code></pre>
+      </details>
+      <p><strong>Exercícios:</strong></p>
+      <ol>
+        <li>Crie um <code>double[] notas</code> com 4 notas, calcule a média e imprima a maior nota (percorrendo com <code>for</code>).</li>
+        <li>Imprima um <code>String[]</code> de trás para frente (de <code>length - 1</code> até 0).</li>
+        <li>Desenhe no papel a memória antes e depois de <code>nomes = new String[5];</code> e confira com o diagrama da aula 34.</li>
+        <li>Crie <code>int[] b = a.clone();</code>, altere <code>b</code> e verifique que <code>a</code> não muda. Compare com <code>int[] b = a;</code>.</li>
+      </ol>
+
+      <h3>Glossário</h3>
+      <ul>
+        <li><strong>Array (vetor)</strong>: objeto de tamanho fixo que guarda vários valores do mesmo tipo.</li>
+        <li><strong>Índice</strong>: número da posição, de 0 até <code>length - 1</code>.</li>
+        <li><strong>Variável de referência</strong>: variável que aponta para um objeto na memória em vez de guardar o valor.</li>
+        <li><strong><code>null</code></strong>: "não aponta para nenhum objeto". Só tipos de referência aceitam.</li>
+        <li><strong>Valor padrão</strong>: valor inicial automático das posições de um array (0, 0.0, '\u0000', false, null).</li>
+        <li><strong><code>length</code></strong>: propriedade com o tamanho do array.</li>
+        <li><strong><code>ArrayIndexOutOfBoundsException</code></strong>: exceção ao acessar um índice que não existe.</li>
+        <li><strong>Garbage collector</strong>: parte da JVM que libera a memória de objetos sem referência.</li>
+      </ul>
+
+      <h3>Revisão espaçada</h3>
+      <ul class="revisao">
+        <li><span class="dia">Dia 1</span><span>Todos os flashcards + a prática com previsões.</span></li>
+        <li><span class="dia">Dia 3</span><span>Quiz + exercícios 1 e 2.</span></li>
+        <li><span class="dia">Dia 7</span><span>Exercícios 3 e 4 (desenhar a memória) + a tabela de valores padrão de memória.</span></li>
+        <li><span class="dia">Dia 14</span><span>Flashcards que errou + questões discursivas.</span></li>
+      </ul>
+
+      <h3>Para aprofundar</h3>
+      <ul>
+        <li>Por que o índice começa em 0? (dica: deslocamento a partir do endereço inicial)</li>
+        <li>O que significa o <code>[I@1b6d3586</code> que aparece ao imprimir um <code>int[]</code>?</li>
+        <li>Quando o garbage collector roda de fato, e dá para forçá-lo?</li>
+        <li>Como o <code>ArrayList</code> consegue "crescer" se por baixo ele usa um array de tamanho fixo?</li>
+        <li>O que é o <code>String[] args</code> do <code>main</code>? Teste <code>java ... Aula07Arrays01 a b c</code> e imprima <code>args.length</code>.</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    window.AULA = {
+      flashcards: [
+        ["Para que serve um array?", "Guardar vários valores do mesmo tipo sob um único nome, em posições numeradas"],
+        ["Como declarar um array de int?", "int[] idades; (o colchete junto do tipo é o recomendado)"],
+        ["int idades[] também compila?", "Sim, mas o recomendado é int[] idades"],
+        ["Array é primitivo ou referência?", "Referência: o array é um objeto e a variável aponta para ele"],
+        ["Como criar um array de 3 ints?", "idades = new int[3];"],
+        ["O tamanho é obrigatório no new?", "Sim: new int[3]"],
+        ["Quais os índices de um array de 3 posições?", "0, 1 e 2"],
+        ["O que acontece ao acessar idades[3] num array de 3?", "ArrayIndexOutOfBoundsException na execução"],
+        ["O que println(idades) mostra?", "A referência do objeto (algo como [I@1b6d3586), não os valores"],
+        ["Que tipos podem receber null?", "Só tipos de referência (arrays, String, objetos). int x = null não compila"],
+        ["Valor padrão de int[], double[] e boolean[]?", "0, 0.0 e false"],
+        ["Valor padrão de char[]?", "'\\u0000', o caractere nulo (aparece em branco)"],
+        ["Valor padrão de String[]?", "null"],
+        ["Variáveis locais têm valor padrão?", "Não: só arrays e atributos têm. Locais precisam ser inicializadas"],
+        ["Num int[], idades[0] = 10.5F compila?", "Não: cada posição segue as regras do tipo int"],
+        ["Como saber o tamanho de um array?", "nomes.length (propriedade, sem parênteses)"],
+        ["length, length() e size(): onde se usa cada um?", "Array: length. String: length(). Coleções: size()"],
+        ["Como é o laço padrão para percorrer um array?", "for (int i = 0; i < nomes.length; i++)"],
+        ["Qual o último índice válido?", "length - 1"],
+        ["Um array pode crescer depois de criado?", "Não: o tamanho é fixo. Para listas dinâmicas, use coleções (ArrayList)"],
+        ["O que faz nomes = new String[5] num array que já existia?", "Cria outro array; o antigo perde a referência e vai para o garbage collector"],
+        ["O que é o garbage collector?", "A parte da JVM que libera a memória de objetos sem referência"],
+        ["int[] b = a; copia o array?", "Não: copia a referência. Os dois apontam para o mesmo array"],
+        ["Como imprimir o conteúdo de um array?", "Arrays.toString(a) (import java.util.Arrays)"],
+        ["Qual a maior diferença entre array PHP e array Java?", "Java: tamanho fixo, um tipo, índice int. PHP: mapa dinâmico com qualquer chave"]
+      ],
+      quiz: [
+        { tipo: 'vf', pergunta: 'Em Java, o primeiro índice de um array é 0.', correta: 0,
+          explicacao: 'Verdadeiro: com N posições, os índices vão de 0 a N-1.' },
+        { tipo: 'multipla', pergunta: 'Qual a forma recomendada de declarar um array de String?', opcoes: ['String nomes[];', 'String[] nomes;', 'array<String> nomes;', 'String nomes = [];'], correta: 1,
+          explicacao: 'String[] nomes; com os colchetes junto do tipo. A primeira também compila, mas não é a recomendada.' },
+        { tipo: 'multipla', pergunta: 'Qual o valor de idades[1] logo após int[] idades = new int[3];?', opcoes: ['null', '0', 'Lixo de memória', 'Erro de compilação'], correta: 1,
+          explicacao: 'Posições de int[] nascem com 0. Seria null num String[].' },
+        { tipo: 'vf', pergunta: 'Acessar idades[3] num array de 3 posições causa erro de compilação.', correta: 1,
+          explicacao: 'Falso: compila normalmente e lança ArrayIndexOutOfBoundsException na execução.' },
+        { tipo: 'multipla', pergunta: 'Como obter o tamanho do array nomes?', opcoes: ['nomes.length()', 'nomes.size()', 'nomes.length', 'count(nomes)'], correta: 2,
+          explicacao: 'Array tem a propriedade length, sem parênteses. length() é da String e size() é das coleções.' },
+        { tipo: 'multipla', pergunta: 'Qual o valor padrão das posições de um boolean[]?', opcoes: ['true', 'false', 'null', '0'], correta: 1,
+          explicacao: 'boolean → false. Números → 0/0.0, char → \\u0000, referências → null.' },
+        { tipo: 'vf', pergunta: 'Depois de criado com new String[3], um array pode receber uma quarta posição em tempo de execução.', correta: 1,
+          explicacao: 'Falso: o tamanho do array é fixo. Para listas que crescem, use coleções como ArrayList.' },
+        { tipo: 'multipla', pergunta: 'int[] a = {1, 2, 3}; int[] b = a; b[0] = 99; — quanto vale a[0]?', opcoes: ['1', '99', '0', 'Erro de compilação'], correta: 1,
+          explicacao: 'b = a copia a referência, não o array. As duas variáveis apontam para o mesmo objeto.' },
+        { tipo: 'discursiva', pergunta: 'Explique, desenhando mentalmente a memória, o que acontece em: String[] nomes = new String[3]; nomes[0] = "Goku"; nomes = new String[5];',
+          explicacao: 'A primeira linha cria um objeto array com 3 posições (null) e a variável nomes passa a apontar para ele. A segunda grava "Goku" na posição 0 desse objeto. A terceira cria outro objeto com 5 posições (todas null) e aponta nomes para ele. O primeiro array, com "Goku", fica sem nenhuma referência, não pode mais ser acessado e é liberado pelo garbage collector. O array não cresceu: foi trocado.' },
+        { tipo: 'discursiva', pergunta: 'No Laravel você faz $itens[] = $novo; e count($itens). Por que isso não funciona com arrays Java e o que usar no lugar?',
+          explicacao: 'O array Java tem tamanho fixo, definido no new, e não tem operação de adicionar: todas as posições já existem. O tamanho é itens.length (propriedade). Para uma lista que cresce, o equivalente é uma coleção como ArrayList (lista.add(novo), lista.size()), vista mais à frente no curso. E, diferente do PHP, atribuir um array a outra variável não copia o conteúdo: copia a referência.' }
+      ]
+    };
+  </script>
+  <script src="../js/app.js"></script>
+</body>
+</html>

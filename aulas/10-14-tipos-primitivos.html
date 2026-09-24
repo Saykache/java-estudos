@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>10–14 · Tipos primitivos</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="topo">
+      <a class="voltar" href="../index.html">← Todas as aulas</a>
+      <h1>10–14 · Tipos primitivos</h1>
+      <p>Variáveis, os 8 primitivos, literais e casting, String e o primeiro exercício · <a href="https://www.youtube.com/playlist?list=PL62G310vn6nFIsOCC0H-C2infYgwm8SWW" target="_blank" rel="noopener">playlist</a></p>
+    </header>
+
+    <nav class="abas">
+      <a href="#resumo">Resumo</a>
+      <a href="#flashcards">Flashcards</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#estudo">Material de estudo</a>
+    </nav>
+
+    <p class="aviso">Junta as aulas 10 (convenções de variáveis), 11 (declaração e tamanho em memória), 12 (casting), 13 (String) e 14 (exercício). Feito a partir das transcrições automáticas. Três correções em relação ao vídeo: o caso do YouTube foi o contador de <em>visualizações</em> de "Gangnam Style" (não de likes); o <code>boolean</code> não tem tamanho definido pela especificação (a aula diz 1 bit); e os valores do exercício foram reconstruídos, porque o áudio não deixa claro. A prática no WSL é um complemento.</p>
+
+    <section id="resumo">
+      <h2>Resumo</h2>
+      <p>Um <strong>tipo primitivo</strong> guarda na memória um <strong>valor simples</strong>, como um número, um caractere ou verdadeiro/falso. Java tem <strong>8 primitivos</strong>, todos em letra minúscula e todos palavras reservadas. Em Java toda variável tem um tipo fixo, declarado antes do nome. Esse tipo define <strong>quanto espaço</strong> a variável ocupa e, por isso, <strong>que valores cabem</strong> nela.</p>
+
+      <h3>10 · Variáveis e convenções</h3>
+      <ul>
+        <li>Para manter a ordem das aulas, o William renomeou as classes para <code>Aula01OlaDevDojo</code>, <code>Aula02TiposPrimitivos</code> e assim por diante (<code>Shift+F6</code>). Ele mesmo avisa que <strong>número em nome de classe é má prática</strong>: é só para organizar o curso.</li>
+        <li><code>psvm</code> + Tab cria o <code>main</code>. Não tem problema usar atalhos desde o começo.</li>
+        <li>Sintaxe: <code>tipo nome = valor;</code> Por exemplo, <code>int idade = 10;</code>. O <code>=</code> guarda o valor no espaço de memória que o nome da variável representa.</li>
+        <li><strong>Classes</strong> usam <code>PascalCase</code> (<code>TiposPrimitivos</code>). <strong>Variáveis</strong> usam <code>camelCase</code>: a primeira palavra em minúsculo e as seguintes com a inicial maiúscula (<code>idadeDoPai</code>, <code>idadeDoPaiNaHoraDoCadastro</code>).</li>
+        <li>Recomendação da aula: dê nomes <strong>em inglês</strong>. É o padrão do mercado e prepara você para equipes internacionais.</li>
+        <li><code>println(idade)</code> imprime o <strong>valor</strong> da variável. <code>println("idade")</code> imprime o <strong>texto literal</strong> "idade".</li>
+        <li>Para juntar texto e variável, use o <code>+</code>: <code>"A idade é " + idade + " anos"</code>. Separar com vírgula dá erro de compilação. O <code>printf</code>, que aceita vírgulas, fica para depois.</li>
+      </ul>
+
+      <h3>11 · Os 8 primitivos e o tamanho</h3>
+<pre><code>Tipo     Tamanho   Guarda                   Faixa / exemplo
+byte     1 byte    inteiro                  -128 a 127
+short    2 bytes   inteiro                  -32.768 a 32.767
+int      4 bytes   inteiro (o padrão)       ~ -2,1 bi a 2,1 bi
+long     8 bytes   inteiro grande           ~ ±9,2 quintilhões
+float    4 bytes   decimal                  2500.5F
+double   8 bytes   decimal (o padrão)       2000.0
+char     2 bytes   um caractere (Unicode)   'M'
+boolean  —         true ou false            true</code></pre>
+      <ul>
+        <li>Menos o <code>boolean</code>, todos são <strong>numéricos</strong>, inclusive o <code>char</code>. O que muda entre eles é quanto cabe.</li>
+        <li><strong>Por que o byte vai de -128 a 127?</strong> 1 byte são 8 bits. Um bit indica o sinal, então sobram 7 para o valor: 2⁷ = 128 combinações. O lado negativo tem um valor a mais porque o zero fica do lado positivo. <code>byte b = 128;</code> dá erro, e <code>byte b = -128;</code> compila.</li>
+        <li><code>boolean</code> aceita <strong>só</strong> <code>true</code> ou <code>false</code>. Em Java não vale 0 ou 1. <code>true</code> e <code>false</code> são reservados e não podem ser nome de variável.</li>
+        <li><code>char</code> usa <strong>aspas simples</strong> e guarda <strong>um</strong> caractere. Tem 2 bytes para caber o Unicode, incluindo caracteres asiáticos. Como é um número por baixo:
+          <ul>
+            <li><code>char c = 65;</code> imprime <code>A</code> e <code>char c = 87;</code> imprime <code>W</code> (valores da tabela ASCII);</li>
+            <li><code>char c = 'A';</code> imprime <code>A</code> (escape Unicode).</li>
+          </ul>
+        </li>
+        <li>Hoje memória é barata e raramente vale economizar com <code>byte</code>/<code>short</code>. Mesmo assim, pense na <strong>escala</strong>: em 2014 o YouTube precisou trocar o contador de visualizações de 32 para 64 bits porque "Gangnam Style" passou de 2.147.483.647. Por outro lado, <code>long</code> para idade é exagero.</li>
+        <li>No IntelliJ: <code>Ctrl+D</code> duplica a linha e <code>Ctrl+Espaço</code> completa o código.</li>
+      </ul>
+
+      <h3>12 · Literais e casting</h3>
+      <ul>
+        <li><strong>Literal</strong> é um valor escrito direto no código. Número inteiro escrito assim é <code>int</code> por padrão, e número com ponto é <code>double</code>.</li>
+        <li><code>float f = 2000.0;</code> <strong>não compila</strong>, porque é um double tentando entrar num float. Use o sufixo <code>F</code>: <code>2000.0F</code>. O <code>f</code> minúsculo também funciona, mas a convenção é maiúsculo. O <code>D</code> (double) existe, mas raramente é usado.</li>
+        <li><code>L</code> marca um literal <code>long</code>: <code>10000000000L</code>. Prefira maiúsculo, porque <code>l</code> parece <code>1</code>. <code>int x = 1L;</code> dá erro, já que é um long indo para um int.</li>
+        <li><strong>A exceção:</strong> um literal inteiro que <em>cabe</em> vai direto para <code>byte</code>/<code>short</code> (<code>byte b = 127;</code>, <code>short s = 32767;</code>). Passou do limite, ele é tratado como int e dá erro.</li>
+        <li><strong>A analogia do balde:</strong> jogar um balde de água (<code>long</code>) num copo (<code>int</code>) pode transbordar. Por isso o compilador não deixa.</li>
+        <li><strong>Cast</strong> é forçar a conversão com o tipo entre parênteses:
+          <ul>
+            <li><code>(int) 10000000000L</code> → número "estranho": os bits que sobram são <strong>cortados</strong>, sem aviso.</li>
+            <li><code>(float) 2500.0</code> → <code>2500.0</code>: coube, então funciona.</li>
+            <li><code>(long) 155.23</code> → <code>155</code>: a parte decimal é <strong>descartada</strong>, sem arredondar.</li>
+          </ul>
+        </li>
+        <li>Conselho da aula: cast em geral é <strong>má prática</strong>. Na maioria das vezes é melhor trocar o tipo da variável.</li>
+      </ul>
+
+      <h3>13 · String</h3>
+      <ul>
+        <li><code>String</code> <strong>não é primitivo</strong>. É uma <strong>classe</strong>, um tipo de <em>referência</em>, e por isso tem <strong>S maiúsculo</strong>. <code>string</code> minúsculo dá erro.</li>
+        <li>Usa <strong>aspas duplas</strong>: <code>String nome = "William";</code>. Aceita textos longos e acentos.</li>
+        <li>Concatena com <code>+</code>, igual aos primitivos: <code>"Oi, meu nome é " + nome</code>.</li>
+        <li><code>sout</code> + Tab gera o <code>System.out.println()</code>, e <code>Ctrl+Shift+F10</code> roda a classe aberta.</li>
+        <li><strong>Language level 8:</strong> o curso usa a JDK 15, mas configura o projeto para aceitar só recursos do Java 8. O motivo é que muitas vagas usavam 8 ou 11, e misturar versões confunde. O caminho é <code>F4</code> (Project Structure) → Project → <em>Language level</em> = 8, e o mesmo em Modules. Com isso, o <code>var</code> (Java 10, que deixa omitir o tipo) passa a dar erro.</li>
+      </ul>
+
+      <h3>14 · Exercício + debug</h3>
+      <ul>
+        <li>O exercício: criar variáveis para <strong>nome, endereço, salário e data de recebimento</strong> e imprimir: <em>"Eu &lt;nome&gt;, morando no endereço &lt;endereço&gt;, confirmo que recebi o salário de &lt;salário&gt;, na data &lt;data&gt;"</em>.</li>
+        <li>Na resolução, <code>salario</code> é <code>double</code>. O tipo certo para dinheiro é <strong><code>BigDecimal</code></strong>, que ainda não foi visto. A data fica numa <code>String</code>, porque os tipos de data também vêm depois.</li>
+        <li>Nomes que explicam o conteúdo: <code>dataRecebimentoSalario</code> e não <code>data</code>. <strong>O nome é a documentação</strong>, na mesma linha da aula 09.</li>
+        <li>Dá para montar a frase numa variável (<code>String relatorio = ...</code>) e imprimir depois, ou montar direto no <code>println</code>. Com a variável, você pode <strong>reusar</strong> a frase.</li>
+        <li><strong>Debug no IntelliJ:</strong>
+          <ul>
+            <li>clique na margem para pôr um <strong>breakpoint</strong> e rode com <code>Shift+F9</code> (o ícone do inseto);</li>
+            <li><code>F8</code> executa linha a linha (<em>Step Over</em>), e o painel mostra o valor de cada variável na memória;</li>
+            <li><code>F9</code> continua até o fim (<em>Resume</em>), e o quadrado vermelho para;</li>
+            <li>o Run normal (<code>Shift+F10</code>) <strong>ignora</strong> os breakpoints.</li>
+          </ul>
+        </li>
+      </ul>
+
+      <h3>Atenção</h3>
+      <ul>
+        <li><code>Shift+F10</code> roda a classe <strong>selecionada no menu de cima</strong>, que pode não ser a que está aberta. <code>Ctrl+Shift+F10</code> roda a classe aberta no editor.</li>
+        <li><code>long x = 10000000000;</code> <strong>não compila</strong>, mesmo a variável sendo long. O literal é int e não cabe num int. Precisa do <code>L</code>.</li>
+        <li><code>float f = 2.5;</code> não compila: falta o <code>F</code>.</li>
+        <li>Cast não arredonda: <code>(int) 9.99</code> dá <code>9</code>.</li>
+        <li>Passar do limite num cálculo não dá erro, <strong>dá a volta</strong>: <code>2147483647 + 1</code> vira <code>-2147483648</code> num int.</li>
+        <li><code>'A'</code> (aspas simples) é <code>char</code> e <code>"A"</code> (aspas duplas) é <code>String</code>. <code>char c = "A";</code> dá erro, e <code>'AB'</code> também.</li>
+        <li>Na concatenação, a leitura é da esquerda para a direita: <code>"Total: " + 10 + 5</code> dá <code>"Total: 105"</code>. Para somar antes, use parênteses: <code>"Total: " + (10 + 5)</code>.</li>
+        <li><code>Boolean</code> com B maiúsculo "também funciona", mas é outra coisa: uma classe <em>wrapper</em>, assunto de aulas futuras.</li>
+        <li>Sobre versões: hoje (2026) o mercado roda principalmente <strong>17 e 21</strong>, e ainda existe muito Java 8/11 legado. Seguir o curso em nível 8 não atrapalha. Só lembre que <code>var</code>, <code>switch</code> com seta, <code>record</code> etc. são de versões mais novas.</li>
+      </ul>
+
+      <h3>Paralelo com PHP</h3>
+      <ul>
+        <li><strong>Concatenação:</strong> no PHP é <code>.</code> e no Java é <code>+</code>. <code>"1" + 2</code> dá <code>3</code> no PHP e <code>"12"</code> no Java. É a pegadinha número um de quem vem do PHP.</li>
+        <li><strong>Tipos:</strong> o PHP tem só <code>int</code> (64 bits, igual ao <code>long</code>), <code>float</code> (que na verdade é um <code>double</code>), <code>bool</code> e <code>string</code>. Não existe <code>byte</code>, <code>short</code> nem <code>char</code>. E a variável PHP muda de tipo, enquanto a do Java nasce e morre com o mesmo tipo.</li>
+        <li><strong>Estouro:</strong> no PHP um int grande demais vira float sozinho. No Java ele dá a volta para o negativo, sem avisar.</li>
+        <li><strong>Cast:</strong> a sintaxe é igual! <code>(int) 155.23</code> dá <code>155</code> nas duas linguagens.</li>
+        <li><strong>Booleanos:</strong> no PHP <code>if (1)</code> e <code>true == 1</code> funcionam. No Java, <code>boolean</code> não se mistura com número.</li>
+        <li><strong><code>var</code>:</strong> parece o <code>$x = 10</code> do PHP, mas não é. O compilador <em>deduz</em> o tipo e ele fica fixo: <code>var x = 10; x = "oi";</code> dá erro.</li>
+        <li><strong>Nomes:</strong> <code>camelCase</code> em variáveis também é o que o Laravel usa. Nada muda aqui.</li>
+      </ul>
+    </section>
+
+    <section id="flashcards">
+      <h2>Flashcards</h2>
+      <p style="color:var(--muted);margin-top:-6px">Toque no cartão para virar.</p>
+      <div id="flashcards-app"></div>
+    </section>
+
+    <section id="quiz">
+      <h2>Quiz</h2>
+      <div id="quiz-app"></div>
+    </section>
+
+    <section id="estudo">
+      <h2>Material de estudo</h2>
+
+      <h3>Mapa mental</h3>
+<pre><code>Tipos primitivos
+├── Variáveis (10)
+│   ├── tipo nome = valor;
+│   ├── camelCase (classe: PascalCase), nomes em inglês
+│   └── println(var) = valor · println("var") = texto · + concatena
+├── Os 8 (11)
+│   ├── Inteiros: byte(1) short(2) int(4) long(8)
+│   ├── Decimais: float(4) double(8)
+│   ├── char(2): 'A', 65, 'A'
+│   └── boolean: só true/false
+├── Literais e cast (12)
+│   ├── inteiro → int · decimal → double
+│   ├── sufixos: F (float), L (long), D (double)
+│   ├── byte/short aceitam literal que caiba
+│   └── (tipo) valor → corta bits / descarta decimais
+├── String (13)
+│   ├── Classe (referência), S maiúsculo, aspas duplas
+│   └── Language level 8 (var só no Java 10+)
+└── Exercício (14)
+    ├── Nomes descritivos = documentação
+    ├── Dinheiro de verdade: BigDecimal
+    └── Debug: breakpoint, Shift+F9, F8, F9</code></pre>
+
+      <h3>Prática no seu WSL (15 minutos)</h3>
+<pre><code>mkdir -p ~/java-lab/src/academy/devdojo/maratonajava/introducao
+cd ~/java-lab
+
+cat > src/academy/devdojo/maratonajava/introducao/Aula02TiposPrimitivos.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.introducao;
+
+public class Aula02TiposPrimitivos {
+    public static void main(String[] args) {
+        int idade = 10;
+        long grande = 10000000000L;
+        double salario = 2000.0;
+        float salarioFloat = 2500.0F;
+        byte idadeByte = 127;
+        char letra = 65;
+        char unicode = 'A';
+        boolean verdadeiro = true;
+        String nome = "William";
+
+        System.out.println("A idade é " + idade + " anos");
+        System.out.println(letra + " " + unicode);
+        System.out.println((int) grande);        // bits cortados
+        System.out.println((long) 155.23);       // 155
+        System.out.println(2147483647 + 1);      // dá a volta
+        System.out.println("Total: " + 10 + 5);  // 105
+        System.out.println("Total: " + (10 + 5));// 15
+    }
+}
+EOF
+
+javac -d out src/academy/devdojo/maratonajava/introducao/Aula02TiposPrimitivos.java
+java -cp out academy.devdojo.maratonajava.introducao.Aula02TiposPrimitivos</code></pre>
+      <p><strong>Provoque os erros de compilação</strong> (um por vez) e leia a mensagem: <code>byte b = 128;</code>, <code>float f = 2.5;</code>, <code>long x = 10000000000;</code>, <code>char c = "A";</code>, <code>string s = "oi";</code>, <code>boolean b = 1;</code>.</p>
+      <p><strong>Language level pelo terminal:</strong> acrescente <code>var teste = 1;</code> no <code>main</code> e compile com <code>javac --release 8 -d out ...</code>. O erro é o mesmo que o IntelliJ mostra com o language level em 8. Sem o <code>--release 8</code>, compila.</p>
+
+      <h3>Exercício da aula 14</h3>
+      <p>Tente antes de abrir a resolução.</p>
+      <details>
+        <summary>Ver uma resolução</summary>
+<pre><code>package academy.devdojo.maratonajava.introducao;
+
+public class Aula03TiposPrimitivosExercicio {
+    public static void main(String[] args) {
+        String nome = "Kirito";
+        String endereco = "Avenida das Nações, 100";
+        double salario = 4312.50;
+        String dataRecebimentoSalario = "21/03/2021";
+
+        String relatorio = "Eu " + nome + ", morando no endereço " + endereco
+                + ", confirmo que recebi o salário de " + salario
+                + ", na data " + dataRecebimentoSalario;
+        System.out.println(relatorio);
+    }
+}</code></pre>
+      </details>
+      <p><strong>Desafio extra:</strong> ponha um breakpoint na linha do <code>relatorio</code> e vá apertando <code>F8</code>. Veja quando cada variável aparece no painel de debug.</p>
+
+      <h3>Glossário</h3>
+      <ul>
+        <li><strong>Tipo primitivo</strong>: tipo básico que guarda o valor direto na memória. Java tem 8.</li>
+        <li><strong>Tipo de referência</strong>: tipo que aponta para um objeto, como <code>String</code>. Os detalhes vêm na parte de OO.</li>
+        <li><strong>camelCase / PascalCase</strong>: <code>idadeDoPai</code> (variáveis, métodos) / <code>TiposPrimitivos</code> (classes).</li>
+        <li><strong>Literal</strong>: valor escrito direto no código (<code>10</code>, <code>2.5F</code>, <code>'A'</code>, <code>"oi"</code>).</li>
+        <li><strong>Cast</strong>: conversão forçada, <code>(tipo) valor</code>. Pode perder informação.</li>
+        <li><strong>Overflow</strong>: passar do limite do tipo, o que faz o valor "dar a volta".</li>
+        <li><strong>ASCII / Unicode</strong>: tabelas que ligam números a caracteres (65 = A).</li>
+        <li><strong>Language level</strong>: versão da linguagem que o compilador aceita (<code>javac --release</code>).</li>
+        <li><strong>BigDecimal</strong>: classe para decimais exatos, a indicada para dinheiro.</li>
+        <li><strong>Breakpoint</strong>: ponto onde o debug pausa a execução.</li>
+      </ul>
+
+      <h3>Revisão espaçada</h3>
+      <ul class="revisao">
+        <li><span class="dia">Dia 1</span><span>Todos os flashcards + a prática do WSL (inclusive os erros de compilação).</span></li>
+        <li><span class="dia">Dia 3</span><span>Quiz sem olhar o resumo + refazer o exercício da aula 14 do zero.</span></li>
+        <li><span class="dia">Dia 7</span><span>Escrever de memória a tabela dos 8 tipos (tamanho e o que guardam).</span></li>
+        <li><span class="dia">Dia 14</span><span>Flashcards que errou + questões discursivas.</span></li>
+      </ul>
+
+      <h3>Para aprofundar</h3>
+      <ul>
+        <li>Por que <code>0.1 + 0.2</code> não dá exatamente <code>0.3</code> com double, e como o <code>BigDecimal</code> resolve?</li>
+        <li>O que é complemento de dois e por que ele explica o <code>2147483647 + 1</code>?</li>
+        <li>O que são as classes wrapper (<code>Integer</code>, <code>Boolean</code>...) e o que é autoboxing?</li>
+        <li>O que <code>Math.addExact</code> faz de diferente de um <code>+</code> comum?</li>
+        <li>Por que <code>String</code> é imutável em Java? (vem mais à frente no curso)</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    window.AULA = {
+      flashcards: [
+        ["Quantos tipos primitivos Java tem?", "8: byte, short, int, long, float, double, char e boolean"],
+        ["Qual a convenção de nome para variáveis?", "camelCase: primeira palavra minúscula e as seguintes com inicial maiúscula (idadeDoPai)"],
+        ["Qual a convenção de nome para classes?", "PascalCase: toda palavra com inicial maiúscula (TiposPrimitivos)"],
+        ["Qual a diferença entre println(idade) e println(\"idade\")?", "Sem aspas imprime o valor da variável; com aspas imprime o texto literal"],
+        ["Como juntar texto e variável no println?", "Com + (\"A idade é \" + idade). Vírgula dá erro"],
+        ["Qual a diferença entre Shift+F10 e Ctrl+Shift+F10?", "Shift+F10 roda a configuração selecionada; Ctrl+Shift+F10 roda a classe aberta"],
+        ["Quanto ocupam byte, short, int e long?", "1, 2, 4 e 8 bytes"],
+        ["Quanto ocupam float e double?", "4 e 8 bytes"],
+        ["Qual a faixa do byte e por quê?", "-128 a 127: 8 bits, sendo 1 para o sinal"],
+        ["Quais valores o boolean aceita?", "Só true ou false (nada de 0 ou 1)"],
+        ["Como declarar um char?", "Com aspas simples e um caractere só: char c = 'M';"],
+        ["O que imprime char c = 65;?", "A (valor 65 da tabela ASCII)"],
+        ["Como escrever um char em Unicode?", "'\\u0041' (que é o A)"],
+        ["Qual o tipo padrão de um literal inteiro? E de um decimal?", "int e double"],
+        ["Por que float f = 2.5; não compila?", "2.5 é double; precisa do sufixo F (2.5F)"],
+        ["Para que serve o sufixo L?", "Marca um literal long (10000000000L). Use maiúsculo, porque l parece 1"],
+        ["Por que byte b = 127; compila se 127 é int?", "Exceção: literal inteiro que cabe vai direto para byte/short"],
+        ["O que é cast?", "Forçar a conversão de tipo: (int) valor"],
+        ["O que acontece em (int) de um long que não cabe?", "Os bits que sobram são cortados e sai um número imprevisível"],
+        ["Quanto dá (long) 155.23?", "155: os decimais são descartados, sem arredondar"],
+        ["String é primitivo?", "Não: é uma classe (tipo de referência), com S maiúsculo e aspas duplas"],
+        ["O que é o language level no IntelliJ?", "A versão da linguagem aceita; o curso usa 8 (var, do Java 10, passa a dar erro)"],
+        ["Qual o tipo indicado para dinheiro?", "BigDecimal (double tem imprecisão)"],
+        ["Atalhos de debug do IntelliJ?", "Shift+F9 inicia o debug, F8 passa linha a linha, F9 continua"],
+        ["Qual a principal diferença de concatenação entre PHP e Java?", "PHP usa . e Java usa +. \"1\" + 2 dá \"12\" no Java"]
+      ],
+      quiz: [
+        { tipo: 'vf', pergunta: 'Todos os tipos primitivos de Java são escritos em letras minúsculas.', correta: 0,
+          explicacao: 'Verdadeiro: byte, short, int, long, float, double, char e boolean. String, com S maiúsculo, não é primitivo.' },
+        { tipo: 'multipla', pergunta: 'Qual nome de variável segue a convenção do Java?', opcoes: ['IdadeDoPai', 'idade_do_pai', 'idadeDoPai', 'IDADEDOPAI'], correta: 2,
+          explicacao: 'Variáveis usam camelCase. PascalCase (IdadeDoPai) é para classes.' },
+        { tipo: 'multipla', pergunta: 'Qual declaração NÃO compila?', opcoes: ['byte b = -128;', 'byte b = 127;', 'byte b = 128;', 'short s = 32767;'], correta: 2,
+          explicacao: 'O byte vai de -128 a 127. O 128 não cabe, então é tratado como int e dá erro.' },
+        { tipo: 'vf', pergunta: 'Em Java, "boolean ativo = 1;" é válido, porque 1 representa verdadeiro.', correta: 1,
+          explicacao: 'Falso: boolean aceita só true ou false. Diferente do PHP e do C.' },
+        { tipo: 'multipla', pergunta: 'O que imprime: char c = 87; System.out.println(c);', opcoes: ['87', 'W', 'c', 'Erro de compilação'], correta: 1,
+          explicacao: 'char é numérico por baixo, e 87 é o W na tabela ASCII.' },
+        { tipo: 'multipla', pergunta: 'Qual linha compila?', opcoes: ['float f = 2000.0;', 'long x = 10000000000;', 'float f = 2000.0F;', 'int i = 1L;'], correta: 2,
+          explicacao: 'Literal decimal é double, então precisa do F para ir num float. 10000000000 sem L é um int que não cabe. 1L é long e não entra em int sem cast.' },
+        { tipo: 'multipla', pergunta: 'Qual o resultado de (long) 155.99?', opcoes: ['156', '155', '155.99', 'Erro de compilação'], correta: 1,
+          explicacao: 'O cast de decimal para inteiro descarta a parte decimal sem arredondar.' },
+        { tipo: 'multipla', pergunta: 'O que imprime: System.out.println("Total: " + 10 + 5);', opcoes: ['Total: 15', 'Total: 105', 'Erro de compilação', 'Total: 10 5'], correta: 1,
+          explicacao: 'Lê da esquerda para a direita: "Total: " + 10 vira String, e depois + 5 concatena. Para somar, use "Total: " + (10 + 5).' },
+        { tipo: 'discursiva', pergunta: 'Explique o que acontece em int x = (int) 10000000000L; e por que a aula considera cast uma má prática.',
+          explicacao: 'O long ocupa 8 bytes e o int, 4. O cast obriga o valor a caber: os bits mais altos são cortados e o resultado é um número sem relação com o original (1410065408), sem erro nem aviso. É má prática porque esconde perda de dados. Em geral é melhor escolher o tipo certo desde o início (usar long).' },
+        { tipo: 'discursiva', pergunta: 'Você tem um sistema de pedidos em PHP e vai reescrevê-lo em Java. Que tipos usaria para quantidade de itens, preço, código do status ("A", "C") e "pago?", e que diferença de comportamento em relação ao PHP deve vigiar?',
+          explicacao: 'Quantidade: int (ou long se puder passar de 2,1 bilhões). Preço: BigDecimal, nunca double. Status: char, ou String/enum (enum vem depois). Pago: boolean. Diferenças: o tipo é fixo e verificado na compilação; + com String concatena (no PHP é .); estouro de int dá a volta em vez de virar float; boolean não aceita 0/1.' }
+      ]
+    };
+  </script>
+  <script src="../js/app.js"></script>
+</body>
+</html>

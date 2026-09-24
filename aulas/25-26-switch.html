@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>25–26 · Switch</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="topo">
+      <a class="voltar" href="../index.html">← Todas as aulas</a>
+      <h1>25–26 · Switch</h1>
+      <p>switch, case, break, default, fall-through e o exercício dia útil × fim de semana · <a href="https://www.youtube.com/playlist?list=PL62G310vn6nFIsOCC0H-C2infYgwm8SWW" target="_blank" rel="noopener">playlist</a></p>
+    </header>
+
+    <nav class="abas">
+      <a href="#resumo">Resumo</a>
+      <a href="#flashcards">Flashcards</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#estudo">Material de estudo</a>
+    </nav>
+
+    <p class="aviso">Junta as aulas 25 (switch) e 26 (exercício). Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. O curso usa o switch "clássico" do Java 8. A seção <strong>"O switch moderno"</strong> (setas, switch como expressão), a lista completa de tipos aceitos e os itens "extra" não estão nos vídeos: são complementos, porque o mercado hoje usa Java 17/21.</p>
+
+    <section id="resumo">
+      <h2>Resumo</h2>
+      <p>O <code>switch</code> é uma estrutura condicional para <strong>escolhas simples a partir de um único valor</strong>: o dia da semana pelo número, o sexo pela letra. Fazer isso com <code>if / else if</code> até o 7 deixaria o código "gigantesco e feio". O <code>switch</code> compara a variável com cada <code>case</code> e fica mais fácil de ler. O curso cria a classe <code>Aula05EstruturasCondicionais05</code>.</p>
+
+      <h3>25 · A estrutura</h3>
+<pre><code>byte dia = 5;
+switch (dia) {
+    case 1:
+        System.out.println("Domingo");
+        break;
+    case 2:
+        System.out.println("Segunda");
+        break;
+    // ... 3 a 6
+    case 7:
+        System.out.println("Sábado");
+        break;
+    default:
+        System.out.println("Opção inválida");
+        break;
+}</code></pre>
+      <ul>
+        <li><code>switch</code> é palavra reservada. Entre os parênteses vai o valor a comparar, e cada <code>case valor:</code> diz o que fazer quando ele bate.</li>
+        <li><strong>Tipos que a aula cita:</strong> <code>char</code>, <code>byte</code>, <code>short</code>, <code>int</code> e <code>String</code>. Um <code>long</code>, <code>float</code>, <code>double</code> ou <code>boolean</code> dá <strong>erro de compilação</strong>.</li>
+        <li><strong>O <code>break</code> é essencial.</strong> Sem ele, depois de achar o <code>case</code> certo o Java <strong>continua executando os de baixo</strong>, sem testar mais nada. Com <code>dia = 5</code> e sem breaks, sai <em>Quinta, Sexta, Sábado</em>. O nome disso é <em>fall-through</em>.</li>
+        <li>Com o <code>break</code>, a execução sai do bloco do <code>switch</code> na hora. No debug (<code>Shift+F9</code>, <code>F8</code>) dá para ver o pulo direto para o <code>case 5</code> e depois para fora do bloco.</li>
+        <li><strong><code>default</code></strong> é a opção padrão: roda quando nenhum <code>case</code> bateu. Sem ele, <code>dia = 10</code> simplesmente não imprime nada.</li>
+        <li>O <code>default</code> <strong>pode ficar em qualquer posição</strong>, mas o costume é deixá-lo por último. Se ele ficar no topo e sem <code>break</code>, cai no <code>case</code> seguinte: com <code>dia = 10</code>, a aula mostra "Opção inválida" <em>e</em> "Domingo".</li>
+        <li>O valor do <code>case</code> precisa ser do <strong>mesmo tipo</strong> do switch:
+          <ul>
+            <li><code>char sexo = 'M'</code> → <code>case 'M':</code> (aspas simples)</li>
+            <li><code>String sexo = "M"</code> → <code>case "M":</code> (aspas duplas)</li>
+          </ul>
+        </li>
+        <li>Depois dos dois pontos você pode abrir um bloco (<code>case 'M': { ... }</code>). É válido, mas raro, e o William diz que quase nunca viu.</li>
+        <li>O William comenta que o switch mudou do Java 12 em diante, mas o curso fica no Java 8, que é o que "a maioria das empresas usa". Hoje isso mudou: veja "O switch moderno" abaixo.</li>
+      </ul>
+
+      <h3>26 · Exercício: dia útil ou fim de semana</h3>
+      <p>Dado um número de 1 a 7 (1 = domingo), imprimir se é dia útil ou final de semana. A solução da aula <strong>usa o fall-through a seu favor</strong>, empilhando os <code>case</code>:</p>
+<pre><code>byte dia = 7;
+switch (dia) {
+    case 1:
+    case 7:
+        System.out.println("Final de semana");
+        break;
+    case 2:
+    case 3:
+    case 4:
+    case 5:
+    case 6:
+        System.out.println("Dia útil");
+        break;
+    default:
+        System.out.println("Opção inválida");
+        break;
+}</code></pre>
+      <ul>
+        <li>O <code>case 1</code> não tem nada nem <code>break</code>, então "cai" no <code>case 7</code> e os dois imprimem "Final de semana".</li>
+        <li>O <code>default</code> não era pedido, mas o William coloca por boa prática.</li>
+        <li>A lição: <strong>cada desenvolvedor resolve de um jeito</strong>. Dava para fazer com <code>if</code>, com 7 <code>case</code> separados ou assim. Se é "bonito" ou não depende da equipe. Mais para frente, orientação a objetos e padrões de projeto dão mais opções.</li>
+      </ul>
+
+      <h3>O switch moderno (Java 14+)</h3>
+      <p>Não está no vídeo, mas é o que você vai encontrar em código Java 17/21. Tem várias vantagens: <strong>setas</strong> no lugar de <code>:</code>, <strong>vários valores num case</strong>, <strong>nenhum fall-through</strong> (não precisa de <code>break</code>) e o switch pode <strong>devolver um valor</strong>.</p>
+<pre><code>// switch com setas (sem break, sem fall-through)
+switch (dia) {
+    case 1, 7 -&gt; System.out.println("Final de semana");
+    case 2, 3, 4, 5, 6 -&gt; System.out.println("Dia útil");
+    default -&gt; System.out.println("Opção inválida");
+}
+
+// switch como expressão: devolve um valor
+String tipo = switch (dia) {
+    case 1, 7 -&gt; "Final de semana";
+    case 2, 3, 4, 5, 6 -&gt; "Dia útil";
+    default -&gt; "Opção inválida"; // obrigatório: a expressão precisa cobrir todos os casos
+};</code></pre>
+      <ul>
+        <li>Com o language level em 8, como no curso, isso não compila. Para testar no terminal, use <code>javac --release 17</code> (ou nada, se sua JDK for 17+).</li>
+        <li>No Java 21 o switch também aceita <em>pattern matching</em> (<code>case Integer i when i &gt; 10 -&gt;</code>). Isso fica para quando chegarmos em OO.</li>
+      </ul>
+
+      <h3>Atenção</h3>
+      <ul>
+        <li><strong>Esquecer o <code>break</code></strong> é o erro clássico: compila sem aviso e executa os cases de baixo.</li>
+        <li><code>switch</code> clássico não aceita <code>long</code>, <code>float</code>, <code>double</code> nem <code>boolean</code>. Para faixas (<code>salario &gt; 5000</code>), use <code>if</code>. O <code>case</code> compara só <strong>igualdade</strong>, e <code>case &gt; 5:</code> não existe.</li>
+        <li><strong>Extra:</strong> o valor do <code>case</code> tem que ser uma <strong>constante</strong> conhecida na compilação (literal ou <code>final</code>). <code>case x:</code> com uma variável comum não compila, e dois <code>case</code> com o mesmo valor também não.</li>
+        <li><strong>Extra:</strong> switch em <code>String</code> diferencia maiúsculas: <code>"m"</code> não bate com <code>case "M"</code>. E se a String for <code>null</code>, lança <code>NullPointerException</code>.</li>
+        <li><strong>Extra:</strong> a lista completa de tipos do switch clássico: <code>char</code>, <code>byte</code>, <code>short</code>, <code>int</code>, os <em>wrappers</em> deles (<code>Character</code>, <code>Byte</code>, <code>Short</code>, <code>Integer</code>), <code>String</code> e <code>enum</code> (aulas 80–83).</li>
+        <li><code>case 'M'</code> com um <code>switch</code> sobre <code>String</code> não compila, porque o tipo do case precisa bater.</li>
+      </ul>
+
+      <h3>Paralelo com PHP</h3>
+      <ul>
+        <li><strong>Fall-through e break:</strong> iguais nas duas linguagens.</li>
+        <li><strong>Comparação:</strong> o <code>switch</code> do PHP compara com <code>==</code> (frouxo), então <code>switch ("1")</code> bate com <code>case 1</code>. Em Java os tipos têm que bater, senão não compila.</li>
+        <li><strong>Tipos:</strong> no PHP qualquer valor serve, até <code>switch (true)</code> com condições nos cases, um truque comum para faixas. Em Java isso não existe: para faixas, use <code>if</code>.</li>
+        <li><strong><code>match</code> do PHP 8 ≈ switch com setas do Java:</strong> nos dois não há fall-through, o resultado é um valor e dá para listar vários valores (<code>1, 7 =&gt;</code> no PHP e <code>case 1, 7 -&gt;</code> no Java). A diferença está no caso não previsto: o <code>match</code> lança <code>UnhandledMatchError</code> na <em>execução</em>, e o Java exige cobrir todos os casos (<code>default</code>) já na <em>compilação</em>.</li>
+      </ul>
+    </section>
+
+    <section id="flashcards">
+      <h2>Flashcards</h2>
+      <p style="color:var(--muted);margin-top:-6px">Toque no cartão para virar.</p>
+      <div id="flashcards-app"></div>
+    </section>
+
+    <section id="quiz">
+      <h2>Quiz</h2>
+      <div id="quiz-app"></div>
+    </section>
+
+    <section id="estudo">
+      <h2>Material de estudo</h2>
+
+      <h3>Mapa mental</h3>
+<pre><code>Switch
+├── Quando usar
+│   └── escolha simples por igualdade de um valor (dia, letra)
+├── Estrutura (25)
+│   ├── switch (valor) { case X: ... break; default: ... }
+│   ├── tipos: char, byte, short, int, String (+ wrappers, enum)
+│   ├── NÃO: long, float, double, boolean
+│   ├── sem break → fall-through (executa os de baixo)
+│   ├── default: nenhum case bateu (qualquer posição)
+│   └── tipo do case = tipo do switch ('M' × "M")
+├── Exercício (26)
+│   └── cases empilhados: case 1: case 7: → fim de semana
+└── Moderno (Java 14+)
+    ├── case 1, 7 -&gt; ...   (sem break)
+    └── String t = switch (x) { ... default -&gt; ...; };</code></pre>
+
+      <h3>Prática no seu WSL (15 minutos)</h3>
+<pre><code>cd ~/java-lab
+cat > src/academy/devdojo/maratonajava/introducao/Aula05EstruturasCondicionais05.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.introducao;
+
+public class Aula05EstruturasCondicionais05 {
+    public static void main(String[] args) {
+        byte dia = 5;
+        switch (dia) {             // 1) rode assim, sem breaks: o que sai?
+            case 1: System.out.println("Domingo");
+            case 2: System.out.println("Segunda");
+            case 3: System.out.println("Terça");
+            case 4: System.out.println("Quarta");
+            case 5: System.out.println("Quinta");
+            case 6: System.out.println("Sexta");
+            case 7: System.out.println("Sábado");
+        }
+
+        char sexo = 'F';
+        switch (sexo) {
+            case 'M':
+                System.out.println("Masculino");
+                break;
+            case 'F':
+                System.out.println("Feminino");
+                break;
+            default:
+                System.out.println("Opção inválida");
+        }
+    }
+}
+EOF
+javac -d out src/academy/devdojo/maratonajava/introducao/Aula05EstruturasCondicionais05.java
+java -cp out academy.devdojo.maratonajava.introducao.Aula05EstruturasCondicionais05</code></pre>
+      <details>
+        <summary>Ver a saída esperada</summary>
+<pre><code>Quinta
+Sexta
+Sábado
+Feminino</code></pre>
+      </details>
+      <p><strong>Experimentos:</strong></p>
+      <ol>
+        <li>Coloque <code>break;</code> em todos os cases e rode de novo.</li>
+        <li>Troque <code>byte dia</code> por <code>long dia</code> e leia o erro de compilação.</li>
+        <li>Mude <code>char sexo = 'F'</code> para <code>String sexo = "F"</code> sem mexer nos cases. Qual o erro? Corrija.</li>
+        <li>Faça o exercício da aula 26 de três jeitos: com <code>if</code>, com cases empilhados e com o switch de setas (<code>javac --release 17</code>).</li>
+      </ol>
+
+      <h3>Glossário</h3>
+      <ul>
+        <li><strong>switch</strong>: estrutura que escolhe um trecho a executar comparando um valor com cada <code>case</code>.</li>
+        <li><strong>case</strong>: um valor possível e o código que roda quando ele bate.</li>
+        <li><strong>break</strong>: sai do bloco do switch (e dos laços, mais à frente).</li>
+        <li><strong>default</strong>: o caso padrão, quando nenhum <code>case</code> bateu.</li>
+        <li><strong>Fall-through</strong>: continuar executando os cases seguintes por falta de <code>break</code>.</li>
+        <li><strong>Constante de compilação</strong>: valor fixo conhecido pelo compilador (literal ou <code>final</code>), o único aceito no case.</li>
+        <li><strong>Switch expression</strong>: switch (Java 14+) que devolve um valor, com <code>-&gt;</code>.</li>
+      </ul>
+
+      <h3>Revisão espaçada</h3>
+      <ul class="revisao">
+        <li><span class="dia">Dia 1</span><span>Todos os flashcards + a prática e os experimentos 1 a 3.</span></li>
+        <li><span class="dia">Dia 3</span><span>Quiz + o exercício da aula 26 sem consultar.</span></li>
+        <li><span class="dia">Dia 7</span><span>Experimento 4 (três soluções) e comparar a leitura de cada uma.</span></li>
+        <li><span class="dia">Dia 14</span><span>Flashcards que errou + questões discursivas.</span></li>
+      </ul>
+
+      <h3>Para aprofundar</h3>
+      <ul>
+        <li>O que é <code>yield</code> dentro de um switch expression e quando precisa dele?</li>
+        <li>Por que o switch em String usa <code>hashCode()</code> e <code>equals()</code> por baixo?</li>
+        <li>Como um switch sobre <code>enum</code> consegue verificar se todos os valores foram cobertos?</li>
+        <li>Quando um switch grande é sinal de que o código precisa de polimorfismo? (aulas 90–94)</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    window.AULA = {
+      flashcards: [
+        ["Para que serve o switch?", "Para escolhas simples por igualdade de um valor, no lugar de uma longa cadeia de else if"],
+        ["Quais tipos o switch aceita, segundo a aula?", "char, byte, short, int e String"],
+        ["Quais tipos o switch NÃO aceita?", "long, float, double e boolean"],
+        ["O que faz o break dentro do switch?", "Sai do bloco do switch na hora"],
+        ["O que acontece se um case não tiver break?", "Fall-through: executa os cases de baixo sem testá-los"],
+        ["Com dia = 5 e sem nenhum break (1 a 7), o que imprime?", "Quinta, Sexta e Sábado"],
+        ["Para que serve o default?", "Roda quando nenhum case bateu"],
+        ["O default precisa ser o último?", "Não, pode estar em qualquer posição, mas o costume é deixá-lo por último"],
+        ["default no topo, sem break, com valor inválido: o que acontece?", "Executa o default e cai no case seguinte"],
+        ["switch sobre char: como escrever o case?", "Com aspas simples: case 'M':"],
+        ["switch sobre String: como escrever o case?", "Com aspas duplas: case \"M\":"],
+        ["Pode abrir chaves depois de case X:?", "Pode (case X: { ... }), mas é raro"],
+        ["Como tratar vários valores com o mesmo código no switch clássico?", "Empilhando: case 1: case 7: código; break;"],
+        ["O case aceita condições como case > 5:?", "Não: o case só compara igualdade. Para faixas, use if"],
+        ["O valor do case pode ser uma variável comum?", "Não: precisa ser uma constante de compilação (literal ou final)"],
+        ["O switch em String diferencia maiúsculas?", "Sim: \"m\" não bate com case \"M\""],
+        ["O que acontece no switch com uma String null?", "NullPointerException"],
+        ["Como fica o case com vários valores no switch moderno?", "case 1, 7 -> ... (Java 14+)"],
+        ["O switch com -> tem fall-through?", "Não, e não precisa de break"],
+        ["O que é switch expression?", "Um switch que devolve valor: String t = switch (x) { ... };"],
+        ["Por que o default é obrigatório no switch expression sobre int?", "Porque a expressão precisa cobrir todos os casos possíveis"],
+        ["Qual a diferença de comparação entre o switch do PHP e o do Java?", "PHP usa == (frouxo). Java exige tipos compatíveis, senão não compila"],
+        ["Qual o equivalente Java do match do PHP 8?", "O switch com setas / switch expression"]
+      ],
+      quiz: [
+        { tipo: 'vf', pergunta: 'Sem break, depois de encontrar o case certo o switch continua executando os cases de baixo.', correta: 0,
+          explicacao: 'Verdadeiro: é o fall-through. Os cases seguintes executam sem que seus valores sejam testados.' },
+        { tipo: 'multipla', pergunta: 'Qual tipo NÃO pode ser usado no switch?', opcoes: ['char', 'String', 'int', 'double'], correta: 3,
+          explicacao: 'long, float, double e boolean não são aceitos. char, byte, short, int e String sim.' },
+        { tipo: 'multipla', pergunta: 'Qual palavra define o caso padrão, executado quando nenhum case bate?', opcoes: ['else', 'default', 'otherwise', 'case _'], correta: 1,
+          explicacao: 'default. O else é do if.' },
+        { tipo: 'vf', pergunta: 'O default precisa obrigatoriamente ser o último item do switch.', correta: 1,
+          explicacao: 'Falso: pode estar em qualquer posição. Se não for o último e não tiver break, cai no case seguinte.' },
+        { tipo: 'multipla', pergunta: 'byte dia = 2; switch com case 1 a 7 imprimindo o nome do dia, SEM nenhum break. Quantas linhas são impressas?', opcoes: ['1', '2', '6', '7'], correta: 2,
+          explicacao: 'Entra no case 2 e cai por todos até o 7: Segunda, Terça, Quarta, Quinta, Sexta, Sábado (6 linhas).' },
+        { tipo: 'multipla', pergunta: 'String sexo = "M"; switch (sexo) { case \'M\': ... } — o que acontece?', opcoes: ['Imprime normalmente', 'Não entra em nenhum case', 'Erro de compilação: o tipo do case não bate com String', 'NullPointerException'], correta: 2,
+          explicacao: "'M' é char e o switch é sobre String. O case precisa ser \"M\"." },
+        { tipo: 'multipla', pergunta: 'Na solução da aula 26, o que faz "case 1: case 7: System.out.println(\"Final de semana\"); break;"?', opcoes: ['Erro: case vazio não compila', 'Só o 7 imprime "Final de semana"', 'O 1 cai no 7 e os dois imprimem "Final de semana"', 'O 1 imprime duas vezes'], correta: 2,
+          explicacao: 'O case 1 está vazio e sem break, então cai no código do case 7. É o fall-through usado a favor.' },
+        { tipo: 'vf', pergunta: 'É possível escrever case salario > 5000: dentro de um switch.', correta: 1,
+          explicacao: 'Falso: o case só aceita constantes e compara igualdade. Para faixas, use if/else if.' },
+        { tipo: 'discursiva', pergunta: 'Quando o switch é melhor que uma cadeia de if/else if, e quando não serve?',
+          explicacao: 'O switch é melhor quando há muitas opções comparando UM valor por igualdade contra constantes (dia 1..7, letra, comando em String): fica mais curto e legível. Não serve para faixas ou condições compostas (salario > 5000, idade >= 15 && idade < 18), nem para long, float, double ou boolean. Aí o certo é if/else if.' },
+        { tipo: 'discursiva', pergunta: 'Reescreva o exercício da aula 26 como switch expression (Java 14+) guardando o resultado numa String, e compare com o match do PHP 8.',
+          explicacao: 'String tipo = switch (dia) { case 1, 7 -> "Final de semana"; case 2, 3, 4, 5, 6 -> "Dia útil"; default -> "Opção inválida"; }; Como o match do PHP, não tem fall-through, devolve um valor e aceita vários valores por caso. Diferenças: o Java exige tipos compatíveis e cobertura total (default) na compilação, enquanto o match compara com === e só falha na execução (UnhandledMatchError).' }
+      ]
+    };
+  </script>
+  <script src="../js/app.js"></script>
+</body>
+</html>

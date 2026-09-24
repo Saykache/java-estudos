@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>03–07 · Configurando o ambiente</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="topo">
+      <a class="voltar" href="../index.html">← Todas as aulas</a>
+      <h1>03–07 · Configurando o ambiente</h1>
+      <p>JDK, variáveis de ambiente, compilação manual e IDE · <a href="https://www.youtube.com/playlist?list=PL62G310vn6nFIsOCC0H-C2infYgwm8SWW" target="_blank" rel="noopener">playlist</a></p>
+    </header>
+
+    <nav class="abas">
+      <a href="#resumo">Resumo</a>
+      <a href="#flashcards">Flashcards</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#estudo">Material de estudo</a>
+    </nav>
+
+    <p class="aviso">Junta as aulas 03 (download da JDK 15), 04 (variáveis de ambiente), 05 (compilação manual), 06 e 07 (IntelliJ). Montado a partir dos temas, sem as transcrições. As aulas usam Windows e JDK 15; aqui os comandos são para Ubuntu/WSL e uma versão LTS atual.</p>
+
+    <section id="resumo">
+      <h2>Resumo</h2>
+      <p>Antes de programar, você precisa de três coisas: a <strong>JDK</strong> instalada, o sistema sabendo <strong>onde ela está</strong> (variáveis de ambiente) e um lugar para escrever código (<strong>IDE</strong>). Compilar uma vez na mão, com <code>javac</code> e <code>java</code>, mostra o que a IDE faz por trás quando você aperta "Run".</p>
+
+      <h3>03 · Instalando a JDK</h3>
+      <ul>
+        <li>Para programar, instale a <strong>JDK</strong>, não só o runtime.</li>
+        <li>Prefira uma versão <strong>LTS</strong> (Long-Term Support), como a 17 ou a 21, que recebem correções por anos. A JDK 15 do curso não é LTS; tudo o que o curso ensina funciona nas versões mais novas.</li>
+        <li><strong>OpenJDK</strong> é a implementação aberta. Temurin (Adoptium), Oracle JDK, Amazon Corretto etc. são distribuições dela.</li>
+        <li>Para conferir a instalação: <code>java -version</code> e <code>javac -version</code>.</li>
+      </ul>
+
+      <h3>04 · Variáveis de ambiente</h3>
+      <ul>
+        <li><strong>PATH</strong>: lista de pastas onde o sistema procura comandos. Se a pasta <code>bin</code> da JDK não está no PATH, o terminal responde "javac: command not found".</li>
+        <li><strong>JAVA_HOME</strong>: aponta para a pasta raiz da JDK. Ferramentas como Maven, Gradle e IDEs usam essa variável.</li>
+        <li>No Windows, você configura em "Variáveis de ambiente" e reabre o terminal. No Linux, coloca no <code>~/.bashrc</code> e roda <code>source ~/.bashrc</code>.</li>
+        <li>Instalando pelo <code>apt</code>, o PATH já fica certo. O JAVA_HOME você define na mão.</li>
+      </ul>
+
+      <h3>05 · Compilação manual</h3>
+      <ul>
+        <li><code>javac Arquivo.java</code> gera <code>Arquivo.class</code>, e <code>java Arquivo</code> executa (sem extensão).</li>
+        <li>O nome da <strong>classe pública</strong> tem que ser igual ao nome do arquivo.</li>
+        <li>O ponto de entrada é o método <code>public static void main(String[] args)</code>.</li>
+        <li><code>javac -d out</code> separa os <code>.class</code> em outra pasta, e <code>java -cp out</code> diz onde procurá-los (classpath).</li>
+      </ul>
+
+      <h3>06–07 · IDE</h3>
+      <ul>
+        <li>O curso usa o <strong>IntelliJ IDEA Community</strong>, que é gratuito.</li>
+        <li>A IDE compila, executa, depura e completa código sozinha, mas por baixo roda o mesmo <code>javac</code>/<code>java</code>.</li>
+        <li>No IntelliJ: <em>New Project</em>, escolher a JDK (SDK), criar uma classe em <code>src</code> e rodar pelo ▶ ao lado do <code>main</code>.</li>
+        <li>Atalhos úteis: <code>psvm</code> + Tab cria o <code>main</code>, e <code>sout</code> + Tab cria o <code>System.out.println()</code>.</li>
+      </ul>
+
+      <h3>Atenção</h3>
+      <ul>
+        <li>Classe <code>Ola</code> dentro de <code>ola.java</code> (com letra minúscula) dá erro. Java diferencia maiúsculas de minúsculas.</li>
+        <li><code>java Ola.class</code> dá erro. O comando recebe o nome da <strong>classe</strong>, não do arquivo.</li>
+        <li>Mudou o PATH e o comando continua sem funcionar? Abra um terminal novo ou rode <code>source ~/.bashrc</code>.</li>
+        <li>O JAVA_HOME aponta para a raiz da JDK, <strong>sem</strong> o <code>/bin</code>. O PATH recebe o <code>$JAVA_HOME/bin</code>.</li>
+        <li>A JDK instalada no Windows não aparece no WSL, e vice-versa. São sistemas separados.</li>
+      </ul>
+
+      <h3>Paralelo com PHP</h3>
+      <p>É como instalar o PHP CLI e garantir que <code>php</code> esteja no PATH. A diferença é o passo extra de compilar: no PHP você roda <code>php script.php</code> direto. No Java, compila com <code>javac</code> e depois executa. Desde o Java 11 também dá para rodar direto com <code>java Script.java</code>, mas só para programas de um arquivo.</p>
+    </section>
+
+    <section id="flashcards">
+      <h2>Flashcards</h2>
+      <p style="color:var(--muted);margin-top:-6px">Toque no cartão para virar.</p>
+      <div id="flashcards-app"></div>
+    </section>
+
+    <section id="quiz">
+      <h2>Quiz</h2>
+      <div id="quiz-app"></div>
+    </section>
+
+    <section id="estudo">
+      <h2>Material de estudo</h2>
+
+      <h3>Mapa mental</h3>
+<pre><code>Configurando o ambiente
+├── JDK (03)
+│   ├── Versão LTS (17, 21…)
+│   ├── Distribuições: OpenJDK, Temurin, Oracle…
+│   └── Conferir: java -version / javac -version
+├── Variáveis (04)
+│   ├── PATH → onde achar os comandos (…/bin)
+│   └── JAVA_HOME → raiz da JDK (usada por ferramentas)
+├── Compilação manual (05)
+│   ├── javac [-d out] Arquivo.java
+│   ├── java [-cp out] NomeDaClasse
+│   └── Classe pública = nome do arquivo
+└── IDE (06–07)
+    ├── IntelliJ Community (ou VS Code + extensões Java)
+    ├── Projeto → SDK → src → classe → ▶
+    └── Atalhos: psvm, sout</code></pre>
+
+      <h3>Prática no seu WSL (10 minutos)</h3>
+<pre><code># 1. Instalar e conferir
+sudo apt update
+sudo apt install openjdk-21-jdk
+java -version
+javac -version
+
+# 2. Descobrir a pasta da JDK e definir o JAVA_HOME
+readlink -f $(which javac)      # ex.: /usr/lib/jvm/java-21-openjdk-amd64/bin/javac
+echo 'export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64' >> ~/.bashrc
+echo 'export PATH="$JAVA_HOME/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+echo $JAVA_HOME</code></pre>
+
+<pre><code># 3. Compilar na mão, separando fonte e compilado
+mkdir -p ~/java-lab/src ~/java-lab/out && cd ~/java-lab
+cat > src/Ola.java &lt;&lt;'EOF'
+public class Ola {
+    public static void main(String[] args) {
+        System.out.println("Olá do WSL!");
+    }
+}
+EOF
+javac -d out src/Ola.java    # o .class vai para out/
+java -cp out Ola             # executa procurando em out/
+java src/Ola.java            # atalho: compila e roda na memória</code></pre>
+
+      <p><strong>IDE no WSL:</strong> como você já usa VS Code com WSL, instalar a extensão <em>Extension Pack for Java</em> na janela conectada ao WSL resolve. Se preferir seguir o curso à risca, o IntelliJ no Windows também abre projetos que estão no WSL.</p>
+
+      <h3>Glossário</h3>
+      <ul>
+        <li><strong>LTS</strong>: versão com suporte estendido, a indicada para estudo e produção.</li>
+        <li><strong>PATH</strong>: pastas onde o shell procura executáveis.</li>
+        <li><strong>JAVA_HOME</strong>: caminho da raiz da JDK, lido por ferramentas.</li>
+        <li><strong>Classpath (-cp)</strong>: onde a JVM procura os <code>.class</code>.</li>
+        <li><strong>IDE</strong>: ambiente integrado para editar, compilar, executar e depurar.</li>
+        <li><strong>SDK</strong>: no IntelliJ, é a JDK escolhida para o projeto.</li>
+      </ul>
+
+      <h3>Revisão espaçada</h3>
+      <ul class="revisao">
+        <li><span class="dia">Dia 1</span><span>Todos os flashcards + a prática do WSL.</span></li>
+        <li><span class="dia">Dia 3</span><span>Quiz sem olhar o resumo.</span></li>
+        <li><span class="dia">Dia 7</span><span>Compilar um arquivo novo com <code>-d</code> e <code>-cp</code> sem consultar.</span></li>
+        <li><span class="dia">Dia 14</span><span>Flashcards que errou + questões discursivas.</span></li>
+      </ul>
+
+      <h3>Para aprofundar</h3>
+      <ul>
+        <li>O que é o SDKMAN e por que ele facilita ter várias JDKs instaladas?</li>
+        <li>Como o <code>update-alternatives</code> escolhe qual <code>java</code> o Ubuntu usa?</li>
+        <li>O que muda no <code>javac</code>/<code>java</code> quando a classe está dentro de um pacote? (tema da aula 08)</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    window.AULA = {
+      flashcards: [
+        ['Para programar em Java, instalo a JDK ou só o runtime?', 'A JDK: ela traz o compilador (javac)'],
+        ['O que significa LTS?', 'Long-Term Support: versão com suporte e correções por vários anos'],
+        ['Como conferir se a JDK está instalada?', 'java -version e javac -version'],
+        ['Para que serve o PATH?', 'Diz ao sistema em quais pastas procurar comandos como javac'],
+        ['Para que serve o JAVA_HOME?', 'Indica a raiz da JDK para ferramentas como Maven, Gradle e IDEs'],
+        ['O JAVA_HOME inclui o /bin?', 'Não. Aponta para a raiz; o PATH recebe $JAVA_HOME/bin'],
+        ['Onde definir variáveis de ambiente no Ubuntu/WSL?', 'No ~/.bashrc, depois rodar source ~/.bashrc'],
+        ['Qual regra liga a classe pública ao arquivo?', 'O arquivo tem que ter o mesmo nome da classe pública'],
+        ['Qual a assinatura do ponto de entrada?', 'public static void main(String[] args)'],
+        ['O que faz javac -d out?', 'Grava os .class na pasta out'],
+        ['O que faz java -cp out Ola?', 'Executa a classe Ola procurando os .class em out'],
+        ['Por que "java Ola.class" dá erro?', 'O java recebe o nome da classe, não do arquivo'],
+        ['Como rodar um único arquivo sem javac (Java 11+)?', 'java Ola.java'],
+        ['Qual IDE o curso usa?', 'IntelliJ IDEA Community (gratuita)'],
+        ['Atalho do IntelliJ para criar o main?', 'psvm + Tab'],
+        ['Atalho do IntelliJ para System.out.println?', 'sout + Tab']
+      ],
+      quiz: [
+        { tipo: 'vf', pergunta: 'Para compilar programas Java, basta ter o runtime (JRE) instalado.', correta: 1,
+          explicacao: 'Falso: o compilador javac vem na JDK.' },
+        { tipo: 'multipla', pergunta: 'Qual comando confirma que o compilador está disponível?', opcoes: ['java -compile', 'javac -version', 'jdk --check', 'java Ola.class'], correta: 1,
+          explicacao: 'javac -version. As outras opções não existem ou fazem outra coisa.' },
+        { tipo: 'multipla', pergunta: 'O terminal responde "javac: command not found". A causa mais provável é:', opcoes: ['A classe não tem main', 'A pasta bin da JDK não está no PATH (ou a JDK não está instalada)', 'O arquivo tem acentos', 'O JAVA_HOME aponta para /bin'], correta: 1,
+          explicacao: 'Se o comando não é encontrado, o shell não achou o executável nas pastas do PATH.' },
+        { tipo: 'vf', pergunta: 'A classe pública "Ola" pode ficar em um arquivo chamado ola.java.', correta: 1,
+          explicacao: 'Falso: o nome precisa ser igual, inclusive maiúsculas e minúsculas: Ola.java.' },
+        { tipo: 'multipla', pergunta: 'Qual valor está correto para JAVA_HOME?', opcoes: ['/usr/lib/jvm/java-21-openjdk-amd64/bin', '/usr/lib/jvm/java-21-openjdk-amd64', '/usr/bin/java', '~/.bashrc'], correta: 1,
+          explicacao: 'A raiz da JDK. O /bin vai no PATH; /usr/bin/java é um executável, não uma pasta de JDK.' },
+        { tipo: 'multipla', pergunta: 'Depois de "javac -d out src/Ola.java", como executar?', opcoes: ['java Ola', 'java out/Ola.class', 'java -cp out Ola', 'javac -run Ola'], correta: 2,
+          explicacao: 'O -cp out diz à JVM onde estão os .class. Só "java Ola" procura na pasta atual e não acha.' },
+        { tipo: 'vf', pergunta: 'Depois de editar o ~/.bashrc, a mudança vale no mesmo terminal sem fazer mais nada.', correta: 1,
+          explicacao: 'Falso: é preciso rodar source ~/.bashrc ou abrir um terminal novo.' },
+        { tipo: 'multipla', pergunta: 'Por que preferir uma versão LTS para estudar?', opcoes: ['Porque é a única gratuita', 'Porque recebe suporte e correções por mais tempo', 'Porque não precisa de JAVA_HOME', 'Porque roda sem JVM'], correta: 1,
+          explicacao: 'LTS tem suporte longo e é o que a maioria das empresas usa.' },
+        { tipo: 'discursiva', pergunta: 'Qual a diferença entre PATH e JAVA_HOME?',
+          explicacao: 'O PATH é lido pelo shell para achar comandos (precisa incluir a pasta bin da JDK). O JAVA_HOME é uma convenção lida por ferramentas (Maven, Gradle, IDEs) e aponta para a raiz da JDK.' },
+        { tipo: 'discursiva', pergunta: 'Por que vale a pena compilar na mão pelo menos uma vez, se a IDE faz isso sozinha?',
+          explicacao: 'Para entender o que a IDE faz por trás (javac, classpath, pasta de saída) e saber diagnosticar erros de ambiente, build e execução fora da IDE, como em servidores e pipelines de CI.' }
+      ]
+    };
+  </script>
+  <script src="../js/app.js"></script>
+</body>
+</html>

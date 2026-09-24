@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>02 · Como Java Funciona</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="topo">
+      <a class="voltar" href="../index.html">← Todas as aulas</a>
+      <h1>02 · Como Java Funciona</h1>
+      <p>Maratona Java Virado no Jiraya · <a href="https://youtu.be/JasmdiTyduI" target="_blank" rel="noopener">assistir a aula</a></p>
+    </header>
+
+    <nav class="abas">
+      <a href="#resumo">Resumo</a>
+      <a href="#flashcards">Flashcards</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#estudo">Material de estudo</a>
+    </nav>
+
+    <p class="aviso">Material montado a partir do tema da aula, sem a transcrição do vídeo. Pode haver detalhes que o professor aborda de outro jeito.</p>
+
+    <section id="resumo">
+      <h2>Resumo</h2>
+      <p>Java é compilado <strong>e</strong> interpretado. Você escreve código em <code>.java</code>, o compilador <code>javac</code> transforma em <strong>bytecode</strong> (<code>.class</code>), e a <strong>JVM</strong> executa esse bytecode em qualquer sistema operacional que tenha uma JVM instalada. É daí que vem o lema <em>"Write once, run anywhere"</em>.</p>
+
+      <h3>Conceitos-chave</h3>
+      <ul>
+        <li><strong>Código-fonte (.java)</strong>: o que você escreve.</li>
+        <li><strong>javac</strong>: compilador; gera bytecode, não código de máquina.</li>
+        <li><strong>Bytecode (.class)</strong>: código intermediário, independente de plataforma.</li>
+        <li><strong>JVM</strong>: máquina virtual que carrega, verifica e executa o bytecode.</li>
+        <li><strong>JIT (Just-In-Time)</strong>: compila trechos muito usados em código nativo durante a execução.</li>
+        <li><strong>JDK</strong>: kit do desenvolvedor, com compilador, ferramentas e JVM.</li>
+        <li><strong>JRE</strong>: só o necessário para rodar (JVM + bibliotecas).</li>
+      </ul>
+
+      <h3>Atenção</h3>
+      <ul>
+        <li>O bytecode é portável; a <strong>JVM não é</strong>. Cada sistema tem a sua.</li>
+        <li>JVM ≠ JRE ≠ JDK: o JDK contém o JRE, que contém a JVM.</li>
+        <li>Desde o Java 11 a Oracle não distribui mais o JRE separado; na prática você instala o JDK.</li>
+      </ul>
+
+      <h3>Paralelo com PHP</h3>
+      <p>O PHP também compila para um código intermediário (opcodes), que o OPcache guarda em memória, e o PHP 8 tem JIT. A diferença é que no Java a compilação é uma etapa explícita (<code>javac</code>) e o <code>.class</code> é um arquivo que você distribui.</p>
+    </section>
+
+    <section id="flashcards">
+      <h2>Flashcards</h2>
+      <p style="color:var(--muted);margin-top:-6px">Toque no cartão para virar.</p>
+      <div id="flashcards-app"></div>
+    </section>
+
+    <section id="quiz">
+      <h2>Quiz</h2>
+      <div id="quiz-app"></div>
+    </section>
+
+    <section id="estudo">
+      <h2>Material de estudo</h2>
+
+      <h3>Mapa mental</h3>
+<pre><code>Como Java funciona
+├── Escrita: Ola.java
+├── Compilação: javac → Ola.class (bytecode)
+├── Execução: java Ola
+│   └── JVM
+│       ├── Class Loader (carrega)
+│       ├── Verificador de bytecode (segurança)
+│       ├── Interpretador + JIT (executa)
+│       └── Garbage Collector (memória)
+└── Ferramentas: JDK ⊃ JRE ⊃ JVM</code></pre>
+
+      <h3>Glossário</h3>
+      <ul>
+        <li><strong>Bytecode</strong>: instruções para a JVM, não para o processador.</li>
+        <li><strong>Class Loader</strong>: parte da JVM que carrega os <code>.class</code> na memória.</li>
+        <li><strong>Garbage Collector</strong>: libera automaticamente a memória de objetos não usados.</li>
+        <li><strong>.jar</strong>: arquivo compactado que agrupa vários <code>.class</code> e recursos.</li>
+      </ul>
+
+      <h3>Prática (5 minutos)</h3>
+<pre><code>// Ola.java
+public class Ola {
+    public static void main(String[] args) {
+        System.out.println("Olá, Java!");
+    }
+}</code></pre>
+<pre><code>sudo apt install openjdk-21-jdk   # no WSL/Ubuntu
+javac Ola.java                    # gera Ola.class
+java Ola                          # executa (sem extensão)</code></pre>
+
+      <h3>Revisão espaçada</h3>
+      <ul class="revisao">
+        <li><span class="dia">Dia 1</span><span>Todos os flashcards.</span></li>
+        <li><span class="dia">Dia 3</span><span>Quiz sem olhar o resumo.</span></li>
+        <li><span class="dia">Dia 7</span><span>Explicar o mapa mental em voz alta, sem consultar.</span></li>
+        <li><span class="dia">Dia 14</span><span>Flashcards que errou + questões discursivas.</span></li>
+      </ul>
+
+      <h3>Para aprofundar</h3>
+      <ul>
+        <li>O que é um arquivo <code>.jar</code> e como ele se relaciona com os <code>.class</code>?</li>
+        <li>Por que o Java verifica o bytecode antes de executar?</li>
+        <li>Como o <code>java Ola.java</code> (sem <code>javac</code>) funciona desde o Java 11?</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    window.AULA = {
+      flashcards: [
+        ['O que o javac gera?', 'Bytecode, em arquivos .class'],
+        ['O que executa o bytecode?', 'A JVM'],
+        ['O que significa "Write once, run anywhere"?', 'O mesmo bytecode roda em qualquer SO com JVM'],
+        ['O bytecode depende do sistema operacional?', 'Não; a JVM é que depende'],
+        ['O que é o JIT?', 'Compilador que transforma bytecode muito usado em código nativo em tempo de execução'],
+        ['O que é o JDK?', 'Kit de desenvolvimento: compilador, ferramentas e JVM'],
+        ['O que é o JRE?', 'Ambiente para rodar Java: JVM + bibliotecas'],
+        ['Relação entre JDK, JRE e JVM?', 'JDK contém o JRE, que contém a JVM'],
+        ['Extensão do código-fonte Java?', '.java'],
+        ['Extensão do bytecode?', '.class'],
+        ['Comando para compilar Ola.java?', 'javac Ola.java'],
+        ['Comando para executar a classe compilada?', 'java Ola (sem extensão)'],
+        ['O que o Garbage Collector faz?', 'Libera automaticamente a memória de objetos não usados']
+      ],
+      quiz: [
+        { tipo: 'vf', pergunta: 'O javac gera código de máquina específico do Windows quando roda no Windows.', correta: 1,
+          explicacao: 'Falso: gera bytecode, igual em qualquer sistema.' },
+        { tipo: 'multipla', pergunta: 'Qual arquivo é gerado pela compilação?', opcoes: ['.jar', '.class', '.exe', '.java'], correta: 1,
+          explicacao: '.class. O .jar é um pacote de .class; .exe é nativo; .java é o fonte.' },
+        { tipo: 'vf', pergunta: 'Para apenas executar um programa Java, não é preciso o compilador.', correta: 0,
+          explicacao: 'Verdadeiro: basta a JVM (runtime); o compilador fica no JDK.' },
+        { tipo: 'multipla', pergunta: 'Quem executa o bytecode?', opcoes: ['O sistema operacional', 'O javac', 'A JVM', 'O IDE'], correta: 2,
+          explicacao: 'A JVM. O SO executa a JVM, não o bytecode diretamente.' },
+        { tipo: 'multipla', pergunta: 'Qual alternativa descreve corretamente a hierarquia?', opcoes: ['JVM ⊃ JRE ⊃ JDK', 'JDK ⊃ JRE ⊃ JVM', 'JRE ⊃ JDK ⊃ JVM', 'São independentes'], correta: 1,
+          explicacao: 'O JDK contém o JRE, que contém a JVM.' },
+        { tipo: 'vf', pergunta: 'O mesmo .class gerado no Linux roda no macOS sem recompilar.', correta: 0,
+          explicacao: 'Verdadeiro: essa é a portabilidade do bytecode.' },
+        { tipo: 'multipla', pergunta: 'Qual o papel do JIT?', opcoes: ['Traduzir .java em .class', 'Coletar lixo', 'Compilar bytecode frequente em código nativo durante a execução', 'Verificar a sintaxe'], correta: 2,
+          explicacao: 'Compilar bytecode frequente em nativo. Traduzir .java é o javac; coletar lixo é o Garbage Collector.' },
+        { tipo: 'multipla', pergunta: 'Por que se diz que Java é "compilado e interpretado"?', opcoes: ['Porque usa dois compiladores', 'Porque compila para bytecode e a JVM o executa', 'Porque o IDE interpreta o código', 'Porque é igual ao JavaScript'], correta: 1,
+          explicacao: 'O javac compila para bytecode e a JVM executa esse bytecode.' },
+        { tipo: 'discursiva', pergunta: 'Explique por que o bytecode é portável, mas a JVM não.',
+          explicacao: 'O bytecode é uma instrução para a JVM, não para o processador. Cada JVM é feita para um SO/arquitetura e traduz o bytecode para aquela máquina.' },
+        { tipo: 'discursiva', pergunta: 'Qual a vantagem do JIT em relação a só interpretar o bytecode?',
+          explicacao: 'O código muito executado vira nativo e roda bem mais rápido nas próximas vezes, sem ser retraduzido a cada execução.' }
+      ]
+    };
+  </script>
+  <script src="../js/app.js"></script>
+</body>
+</html>
