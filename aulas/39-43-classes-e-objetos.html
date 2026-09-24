@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>39–43 · Classes e objetos</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="topo">
+      <a class="voltar" href="../index.html">← Todas as aulas</a>
+      <h1>39–43 · Classes e objetos</h1>
+      <p>Início da orientação a objetos: classe, objeto, atributos, variável de referência, coesão · <a href="https://www.youtube.com/playlist?list=PL62G310vn6nFIsOCC0H-C2infYgwm8SWW" target="_blank" rel="noopener">playlist</a></p>
+    </header>
+
+    <nav class="abas">
+      <a href="#resumo">Resumo</a>
+      <a href="#flashcards">Flashcards</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#estudo">Material de estudo</a>
+    </nav>
+
+    <p class="aviso">Junta as aulas 39 e 40 (introdução a classes), 41 (coesão), 42 (exercício) e 43 (referência de objetos). Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. Os nomes e valores dos exemplos (estudantes, carros) foram trocados onde o áudio não deixa claro. A comparação com <code>==</code>, o efeito de alterar um objeto por duas variáveis e os itens marcados como "extra" não estão nos vídeos.</p>
+
+    <section id="resumo">
+      <h2>Resumo</h2>
+      <p>A parte introdutória acabou, e agora entra "o que realmente importa": <strong>orientação a objetos</strong> (OO). Até aqui, <code>String nome</code>, <code>int idade</code> e <code>char sexo</code> eram variáveis soltas, sem nada que dissesse que pertencem à <em>mesma</em> pessoa. A OO foi criada para <strong>mapear o mundo real para o computacional</strong>: dados relacionados ficam agrupados num único <strong>objeto</strong>, criado a partir de um molde, a <strong>classe</strong>.</p>
+
+      <h3>Organização do projeto</h3>
+<pre><code>academy.devdojo.maratonajava
+└── javacore                     ← o "núcleo" do Java começa aqui
+    └── Aintroducaoclasses
+        ├── dominio              ← classes que representam o mundo real (Estudante, Professor, Carro)
+        └── test                 ← classes com main que testam o domínio (EstudanteTeste01...)</code></pre>
+      <ul>
+        <li>O <code>A</code> maiúsculo no começo de <code>Aintroducaoclasses</code> serve só para manter os pacotes do curso em ordem. O William frisa: "<strong>nunca, nunca faça isso na vida real</strong>". Pacote é sempre minúsculo.</li>
+        <li>Classes de <strong>domínio</strong> (em inglês, <em>model</em>) representam o negócio e geralmente <strong>não têm <code>main</code></strong>. Quem executa são as classes de teste.</li>
+      </ul>
+
+      <h3>39 · Classe, objeto e variável de referência</h3>
+<pre><code>// dominio/Estudante.java
+public class Estudante {
+    public String nome;   // atributos: as características
+    public int idade;
+    public char sexo;
+}
+
+// test/EstudanteTeste01.java
+import academy.devdojo.maratonajava.javacore.Aintroducaoclasses.dominio.Estudante;
+
+public class EstudanteTeste01 {
+    public static void main(String[] args) {
+        Estudante estudante = new Estudante();
+        estudante.nome = "Luffy";
+        estudante.idade = 18;
+        estudante.sexo = 'M';
+        System.out.println(estudante.nome + " " + estudante.idade + " " + estudante.sexo);
+        System.out.println(estudante); // algo como ...dominio.Estudante@1b6d3586
+    }
+}</code></pre>
+      <ul>
+        <li><strong>Classe</strong> é o <em>template</em>, a "forma" que dá origem aos objetos. Ela define <strong>atributos</strong> (características, como nome, idade e sexo) e <strong>comportamentos</strong> (métodos, nas próximas aulas).</li>
+        <li><strong>Objeto</strong> é uma instância criada a partir da classe, com <strong><code>new</code></strong>. Cada <code>new</code> cria um espaço <em>novo</em> na memória com os atributos da classe dentro.</li>
+        <li><code>Estudante estudante = new Estudante();</code> se lê assim: uma <strong>variável de referência</strong> do tipo <code>Estudante</code> aponta para um <strong>objeto</strong> do tipo <code>Estudante</code>. Com polimorfismo, mais à frente, os dois tipos podem ser diferentes.</li>
+        <li>A variável de referência é como um <strong>controle remoto</strong>: com ela e o ponto (<code>estudante.nome</code>) você acessa os "espacinhos" do objeto.</li>
+        <li>Imprimir a variável sozinha mostra a <strong>referência</strong>, não os dados. Isso vale até a aula 76 (<code>toString</code>).</li>
+        <li>Classe de outro pacote precisa de <strong><code>import</code></strong>. A alternativa é escrever o nome completo (<code>academy...dominio.Estudante</code>), que funciona mas é "muito verboso". O IntelliJ importa sozinho com <code>Alt+Enter</code>.</li>
+        <li>O <code>public</code> na frente dos atributos é um <em>modificador de acesso</em>. Ele fica sem explicação por enquanto e volta nas aulas 54–56.</li>
+        <li>Renomear a classe <code>Pessoa</code> para <code>Estudante</code> foi feito com <code>Shift+F6</code>, que troca todas as referências.</li>
+      </ul>
+
+      <h3>40 · Valores padrão e dois objetos</h3>
+      <ul>
+        <li><code>new Estudante();</code> sem guardar em variável cria o objeto, mas <strong>não há como acessá-lo</strong>. É para isso que existe a variável de referência.</li>
+        <li><strong>Atributos têm valor padrão</strong>, diferente das variáveis locais: <code>int</code> → 0, <code>char</code> → <code>'\u0000'</code>, <code>String</code> → <code>null</code>. É a mesma tabela dos arrays (aula 33). Dá para imprimir sem inicializar.</li>
+        <li>Dá para dar um valor inicial na própria classe (<code>public String nome = "Zoro";</code>), mas <strong>cuidado</strong>: <em>todos</em> os objetos criados nascem com esse nome.</li>
+        <li>Cada objeto tem os <strong>seus</strong> valores. Com <code>estudante</code> e <code>estudante2</code>, fazer <code>estudante.nome = "Sanji"</code> muda só o primeiro, e o segundo continua "Zoro".</li>
+        <li>Preste atenção em <strong>qual variável</strong> você está usando. Escrever <code>estudante</code> onde era <code>estudante2</code> compila e roda, só que altera o objeto errado.</li>
+      </ul>
+
+      <h3>41 · Coesão</h3>
+      <ul>
+        <li><strong>Coesão</strong> é o propósito de uma classe. <strong>Alta coesão é bom</strong>: cada classe tem <strong>um</strong> propósito, de preferência um só.</li>
+        <li><strong>Jeito errado:</strong> colocar <code>nomeProfessor</code>, <code>idadeProfessor</code> e <code>sexoProfessor</code> dentro de <code>Estudante</code>. Compila, mas mistura dois conceitos do mundo real. Toda mudança em professor passa a mexer em estudante, e com 300 classes "você mexe aqui e quebra tudo".</li>
+        <li><strong>Jeito certo:</strong> uma classe <code>Professor</code> própria. Estudante e professor podem se <em>relacionar</em> (associação, aulas 64–67), mas não são a mesma coisa.</li>
+        <li><strong>Outro exemplo de baixa coesão:</strong> pôr um <code>main</code> dentro de <code>Estudante</code>. A classe de domínio passaria a representar o estudante <em>e</em> executar o teste. Mantenha domínio e teste separados.</li>
+        <li>O desafio da aula é imprimir todos os dados do professor numa linha, concatenando com <code>+</code> e espaços: <code>professor.nome + " " + professor.idade + " " + professor.sexo</code>.</li>
+      </ul>
+
+      <h3>42 · Exercício: classe Carro</h3>
+      <p>Criar a classe <code>Carro</code> (em <code>dominio</code>) com <code>nome</code>, <code>modelo</code> e <code>ano</code>, criar dois objetos diferentes e imprimir os valores (em <code>CarroTeste01</code>, dentro de <code>test</code>).</p>
+<pre><code>Carro carro1 = new Carro();
+Carro carro2 = new Carro();
+carro1.nome = "Fusca";
+carro1.modelo = "1300";
+carro1.ano = 1969;
+carro2.nome = "Mustang";
+carro2.modelo = "GT 500";
+carro2.ano = 1968;
+System.out.println("Carro 1\n" + carro1.nome + " " + carro1.modelo + " " + carro1.ano);</code></pre>
+      <ul>
+        <li>O enunciado escreve "Modelo" com M maiúsculo de propósito: o atributo tem que seguir a convenção, <code>modelo</code>.</li>
+        <li>O costume do William: primeiro criar os objetos, depois preencher um, depois o outro. A ordem não importa para o Java, mas organiza o código.</li>
+        <li><code>"\n"</code> dentro da String pula uma linha.</li>
+        <li>São <strong>dois espaços diferentes na memória</strong>: um com o Fusca, outro com o Mustang, cada um apontado pela sua variável.</li>
+      </ul>
+
+      <h3>43 · Trocando referências</h3>
+<pre><code>carro1 = carro2;   // carro1 passa a apontar para o MESMO objeto de carro2
+
+carro1 ─┐
+        ├──▶ [Mustang | GT 500 | 1968]
+carro2 ─┘
+             [Fusca | 1300 | 1969]      ← sem referência: perdido, vai para o GC</code></pre>
+      <ul>
+        <li>A variável de referência pode <strong>passar a apontar para outro objeto</strong> do mesmo tipo. <code>carro1 = carro2</code> não copia os dados: faz as duas variáveis apontarem para o <strong>mesmo</strong> objeto.</li>
+        <li>O Fusca ficou <strong>sem nenhuma referência</strong>: não há como voltar a ele, e o garbage collector recolhe a memória. Só daria para salvá-lo se uma terceira variável ainda apontasse para ele.</li>
+        <li>Invertendo (<code>carro2 = carro1</code>, antes de perder o Fusca), os dois passam a imprimir o Fusca e é o Mustang que se perde.</li>
+        <li>Só dá para atribuir entre tipos compatíveis: <code>carro1 = professor;</code> <strong>não compila</strong>. As regras exatas ("mesma linha de herança") vêm com polimorfismo.</li>
+        <li><code>Ctrl+Alt+O</code> remove os <code>import</code> que não estão sendo usados.</li>
+      </ul>
+
+      <h3>Atenção</h3>
+      <ul>
+        <li><strong>Extra: depois de <code>carro1 = carro2</code>, alterar por um altera "os dois".</strong> <code>carro1.nome = "Opala";</code> faz <code>carro2.nome</code> também virar "Opala", porque é um objeto só. É a mesma armadilha do <code>int[] b = a</code> da aula 34.</li>
+        <li><strong>Extra: <code>==</code> em objetos compara referências, não conteúdo.</strong> Dois carros com os mesmos dados, criados com dois <code>new</code>, dão <code>carro1 == carro2</code> → <code>false</code>. Depois de <code>carro1 = carro2</code> dá <code>true</code>. Comparar conteúdo é com <code>equals</code>, mais à frente, e é por isso que String não se compara com <code>==</code>.</li>
+        <li><strong>Extra: variável de referência pode valer <code>null</code>.</strong> <code>Carro c = null; c.nome = "x";</code> compila e lança <code>NullPointerException</code> ao rodar.</li>
+        <li>Atributo tem valor padrão e variável local não. <code>Estudante e; e.nome = "x";</code> dentro do <code>main</code> não compila (variável não inicializada).</li>
+        <li>Atributos <code>public</code> acessados direto de fora funcionam para aprender, mas não são a prática profissional. O certo (<code>private</code> + get/set) vem nas aulas 54–56.</li>
+        <li>O nome do arquivo precisa bater com a classe pública: <code>Estudante.java</code> para <code>public class Estudante</code>.</li>
+      </ul>
+
+      <h3>Paralelo com PHP</h3>
+      <ul>
+        <li><strong>Sintaxe:</strong> <code>class Estudante { public string $nome; }</code> vira <code>public class Estudante { public String nome; }</code>. O <code>new</code> é igual. Para acessar, <code>$e-&gt;nome</code> vira <code>e.nome</code>.</li>
+        <li><strong><code>use</code> × <code>import</code>:</strong> <code>use App\Models\Estudante;</code> equivale a <code>import academy...dominio.Estudante;</code>. O FQCN funciona nos dois.</li>
+        <li><strong>Objetos são compartilhados nos dois:</strong> em PHP, <code>$b = $a</code> com <em>objeto</em> também faz as duas variáveis apontarem para o mesmo objeto. O comportamento da aula 43 é idêntico. Para copiar, o PHP tem <code>clone $a</code>. A diferença é que arrays PHP são copiados e arrays Java não (aula 34).</li>
+        <li><strong>Valor padrão:</strong> no PHP, uma propriedade <em>tipada</em> sem valor fica "não inicializada", e ler dá <code>Error</code>. Uma sem tipo vale <code>null</code>. Em Java, todo atributo nasce com o padrão do tipo (0, false, null).</li>
+        <li><strong>Eloquent × Java:</strong> no Laravel, os atributos de um Model aparecem "por mágica" a partir das colunas do banco. Em Java, cada atributo é declarado explicitamente na classe. As classes de <code>dominio</code> fazem o papel dos Models.</li>
+        <li><strong>Coesão = SRP:</strong> é o mesmo princípio que você aplica ao tirar lógica de um Controller gordo para um Service ou Action.</li>
+      </ul>
+    </section>
+
+    <section id="flashcards">
+      <h2>Flashcards</h2>
+      <p style="color:var(--muted);margin-top:-6px">Toque no cartão para virar.</p>
+      <div id="flashcards-app"></div>
+    </section>
+
+    <section id="quiz">
+      <h2>Quiz</h2>
+      <div id="quiz-app"></div>
+    </section>
+
+    <section id="estudo">
+      <h2>Material de estudo</h2>
+
+      <h3>Mapa mental</h3>
+<pre><code>Classes e objetos
+├── Por que OO (39)
+│   └── agrupar dados relacionados · mapear o mundo real
+├── Classe × objeto (39)
+│   ├── classe = template (atributos + comportamentos)
+│   ├── objeto = instância criada com new
+│   └── Estudante e = new Estudante() → referência → objeto
+├── Acesso (39–40)
+│   ├── e.nome = "..." (a variável é o "controle remoto")
+│   ├── println(e) → referência
+│   ├── atributos têm valor padrão (0, '\u0000', null)
+│   └── valor na classe = todos os objetos nascem com ele
+├── Organização (39–41)
+│   ├── dominio (sem main) × test (com main)
+│   ├── import · Alt+Enter · Ctrl+Alt+O
+│   └── coesão: uma classe, um propósito
+└── Referências (42–43)
+    ├── cada new = espaço novo na memória
+    ├── c1 = c2 → mesma referência, não cópia
+    └── objeto sem referência → perdido → GC</code></pre>
+
+      <h3>Prática no seu WSL (20 minutos)</h3>
+      <p>Agora são dois pacotes e duas classes. Para compilar todas de uma vez, use o <code>find</code>.</p>
+<pre><code>cd ~/java-lab
+B=src/academy/devdojo/maratonajava/javacore/Aintroducaoclasses
+mkdir -p $B/dominio $B/test
+
+cat > $B/dominio/Carro.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Aintroducaoclasses.dominio;
+
+public class Carro {
+    public String nome;
+    public String modelo;
+    public int ano;
+}
+EOF
+
+cat > $B/test/CarroTeste01.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Aintroducaoclasses.test;
+
+import academy.devdojo.maratonajava.javacore.Aintroducaoclasses.dominio.Carro;
+
+public class CarroTeste01 {
+    public static void main(String[] args) {
+        Carro carro1 = new Carro();
+        Carro carro2 = new Carro();
+        System.out.println(carro1.nome + " " + carro1.ano);   // ?
+        carro1.nome = "Fusca";
+        carro2.nome = "Mustang";
+        System.out.println(carro1 == carro2);                  // ?
+        carro1 = carro2;
+        System.out.println(carro1 == carro2);                  // ?
+        carro1.nome = "Opala";
+        System.out.println(carro2.nome);                       // ?
+    }
+}
+EOF
+
+javac -d out $(find src -name '*.java')
+java -cp out academy.devdojo.maratonajava.javacore.Aintroducaoclasses.test.CarroTeste01</code></pre>
+      <details>
+        <summary>Ver a saída esperada</summary>
+<pre><code>null 0
+false
+true
+Opala</code></pre>
+      </details>
+      <p><strong>Exercícios:</strong></p>
+      <ol>
+        <li>Refaça a aula 42 sem olhar: <code>Carro</code> com nome, modelo e ano, dois objetos e a impressão de ambos.</li>
+        <li>Crie <code>Professor</code> (nome, idade, sexo) e <code>ProfessorTeste01</code> imprimindo tudo numa linha.</li>
+        <li>Desenhe no papel a memória antes e depois de <code>carro1 = carro2</code> e diga qual objeto ficou sem referência.</li>
+        <li>Pense num Model seu do Laravel (por exemplo <code>Pedido</code>) e escreva a classe Java equivalente só com atributos. Algum atributo pertence a outra classe (baixa coesão)?</li>
+      </ol>
+
+      <h3>Glossário</h3>
+      <ul>
+        <li><strong>Orientação a objetos</strong>: paradigma que modela o sistema como objetos que agrupam dados e comportamentos.</li>
+        <li><strong>Classe</strong>: molde (template) que define atributos e métodos.</li>
+        <li><strong>Objeto / instância</strong>: algo concreto criado a partir de uma classe com <code>new</code>.</li>
+        <li><strong>Atributo</strong>: característica declarada na classe (variável fora dos métodos).</li>
+        <li><strong>Variável de referência</strong>: variável que aponta para um objeto, o "controle remoto".</li>
+        <li><strong>Classe de domínio (model)</strong>: representa algo do negócio ou do mundo real.</li>
+        <li><strong>Coesão</strong>: o quanto uma classe se mantém num propósito só. Alta coesão é bom.</li>
+        <li><strong><code>import</code></strong>: declara onde está uma classe de outro pacote.</li>
+      </ul>
+
+      <h3>Revisão espaçada</h3>
+      <ul class="revisao">
+        <li><span class="dia">Dia 1</span><span>Todos os flashcards + a prática com previsões.</span></li>
+        <li><span class="dia">Dia 3</span><span>Quiz + exercícios 1 e 2.</span></li>
+        <li><span class="dia">Dia 7</span><span>Exercícios 3 e 4 + explicar em voz alta classe × objeto × variável de referência.</span></li>
+        <li><span class="dia">Dia 14</span><span>Flashcards que errou + questões discursivas.</span></li>
+      </ul>
+
+      <h3>Para aprofundar</h3>
+      <ul>
+        <li>O que é o <code>@1b6d3586</code> que aparece ao imprimir um objeto? (dica: <code>hashCode</code>)</li>
+        <li>Qual a diferença entre <code>==</code> e <code>equals</code> para objetos?</li>
+        <li>Em que momento exato um objeto fica elegível para o garbage collector?</li>
+        <li>Coesão e acoplamento andam juntos: o que é "baixo acoplamento"?</li>
+        <li>Por que os atributos <code>public</code> são problemáticos? (encapsulamento, aulas 54–56)</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    window.AULA = {
+      flashcards: [
+        ["Por que a orientação a objetos foi criada?", "Para mapear o mundo real para o computacional, agrupando dados relacionados em objetos"],
+        ["O que é uma classe?", "Um template (molde) que define atributos e comportamentos dos objetos"],
+        ["O que é um objeto?", "Uma instância concreta criada a partir de uma classe, com new"],
+        ["O que são atributos?", "As características da classe (ex.: nome, idade, sexo)"],
+        ["O que acontece a cada new Estudante()?", "Um espaço novo é criado na memória com os atributos da classe"],
+        ["Como ler Estudante e = new Estudante();?", "Variável de referência do tipo Estudante apontando para um objeto Estudante"],
+        ["Qual a analogia da variável de referência?", "Um controle remoto para acessar o objeto"],
+        ["Como acessar um atributo?", "Com ponto: estudante.nome = \"Luffy\";"],
+        ["O que println(estudante) imprime?", "A referência (ex.: ...Estudante@1b6d3586), não os dados"],
+        ["Para que serve new Estudante() sem variável?", "Cria o objeto, mas sem referência não há como acessá-lo"],
+        ["Atributos têm valor padrão?", "Sim: 0, false, '\\u0000' ou null. Variáveis locais não"],
+        ["Risco de dar valor ao atributo na classe?", "Todos os objetos nascem com aquele valor"],
+        ["Alterar estudante.nome muda estudante2.nome?", "Não, se forem objetos diferentes (dois new)"],
+        ["O que são classes de domínio?", "Classes que representam o negócio/mundo real (model); em geral sem main"],
+        ["Por que separar dominio e test?", "Coesão: a classe de domínio representa; a de teste executa"],
+        ["O que é coesão?", "O propósito de uma classe. Alta coesão = um propósito por classe"],
+        ["Por que atributos de professor dentro de Estudante é ruim?", "Mistura dois conceitos: mudanças em um afetam o outro (baixa coesão)"],
+        ["Para que serve o import?", "Dizer onde está a classe de outro pacote (senão, nome completo)"],
+        ["O que o A em Aintroducaoclasses significa?", "Só ordenação do curso; nunca faça isso na vida real"],
+        ["O que faz carro1 = carro2?", "carro1 passa a apontar para o mesmo objeto de carro2 (não copia)"],
+        ["O que acontece com o objeto que ficou sem referência?", "Não dá mais para acessar; o garbage collector recolhe"],
+        ["carro1 = professor; compila?", "Não: tipos incompatíveis"],
+        ["Depois de c1 = c2, c1.nome = \"Opala\" muda c2.nome?", "Sim: é o mesmo objeto"],
+        ["O que == compara entre objetos?", "Se as referências apontam para o mesmo objeto, não o conteúdo"],
+        ["Atalhos: importar e limpar imports no IntelliJ?", "Alt+Enter importa; Ctrl+Alt+O remove imports não usados"]
+      ],
+      quiz: [
+        { tipo: 'vf', pergunta: 'Classe é o molde; objeto é a instância criada a partir dela com new.', correta: 0,
+          explicacao: 'Verdadeiro: a classe define os atributos, e cada new cria um objeto com seu próprio espaço na memória.' },
+        { tipo: 'multipla', pergunta: 'Em Estudante e = new Estudante();, o que é "e"?', opcoes: ['O objeto', 'A classe', 'Uma variável de referência que aponta para o objeto', 'Um atributo'], correta: 2,
+          explicacao: 'e é a variável de referência (o "controle remoto"). O objeto é o que o new criou na memória.' },
+        { tipo: 'multipla', pergunta: 'O que imprime System.out.println(new Estudante().idade); com public int idade; sem inicialização?', opcoes: ['Erro de compilação', 'null', '0', 'Lixo de memória'], correta: 2,
+          explicacao: 'Atributos têm valor padrão: int → 0. Variáveis locais é que não têm.' },
+        { tipo: 'vf', pergunta: 'Colocar nomeProfessor e idadeProfessor dentro da classe Estudante é uma boa forma de reaproveitar a classe.', correta: 1,
+          explicacao: 'Falso: é baixa coesão. Mistura dois conceitos, e mudanças em um afetam o outro. O certo é uma classe Professor.' },
+        { tipo: 'multipla', pergunta: 'Com public String nome = "Zoro"; na classe, e dois objetos criados, qual o nome de cada um logo após o new?', opcoes: ['null e null', '"Zoro" e null', '"Zoro" e "Zoro"', 'Erro de compilação'], correta: 2,
+          explicacao: 'O valor definido na classe vale para todo objeto criado a partir dela.' },
+        { tipo: 'multipla', pergunta: 'Carro c1 = new Carro(); Carro c2 = new Carro(); c1.nome = "Fusca"; c2.nome = "Mustang"; c1 = c2; — o que c1.nome imprime?', opcoes: ['Fusca', 'Mustang', 'null', 'Erro de compilação'], correta: 1,
+          explicacao: 'c1 = c2 faz c1 apontar para o mesmo objeto de c2. O Fusca fica sem referência.' },
+        { tipo: 'multipla', pergunta: 'Na mesma situação, depois de c1 = c2, o que acontece com o objeto "Fusca"?', opcoes: ['É copiado para c2', 'Continua acessível por c1', 'Fica sem referência e será recolhido pelo garbage collector', 'Vira null automaticamente em c2'], correta: 2,
+          explicacao: 'Sem nenhuma variável apontando para ele, não há como acessá-lo de novo, e o GC libera a memória.' },
+        { tipo: 'vf', pergunta: 'Colocar um main dentro de uma classe de domínio como Estudante não compila.', correta: 1,
+          explicacao: 'Falso: compila e roda. Mas é baixa coesão, porque a classe passa a representar o estudante e também executar testes.' },
+        { tipo: 'discursiva', pergunta: 'Explique a diferença entre classe, objeto e variável de referência usando o exemplo da aula (Estudante).',
+          explicacao: 'Estudante (a classe) é o molde que diz que todo estudante tem nome, idade e sexo. new Estudante() cria um objeto: um espaço na memória com esses três atributos. Estudante estudante = ... declara uma variável de referência, o "controle remoto" que aponta para esse objeto e permite acessá-lo com estudante.nome. Várias variáveis podem apontar para o mesmo objeto, e um objeto sem nenhuma referência é perdido.' },
+        { tipo: 'discursiva', pergunta: 'Em PHP, $b = $a com arrays e com objetos se comporta diferente. Como isso se compara ao Java?',
+          explicacao: 'No PHP, $b = $a com array copia os dados (alterar $b não muda $a), mas com objeto as duas variáveis passam a apontar para o mesmo objeto (para copiar, usa-se clone). Em Java, arrays e objetos se comportam igual: são tipos de referência, e b = a sempre faz as duas variáveis apontarem para o mesmo objeto. Alterar por uma aparece na outra. A aula 43 (carro1 = carro2) mostra exatamente isso.' }
+      ]
+    };
+  </script>
+  <script src="../js/app.js"></script>
+</body>
+</html>
