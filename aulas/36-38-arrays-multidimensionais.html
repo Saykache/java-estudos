@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>36–38 · Arrays multidimensionais</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="topo">
+      <a class="voltar" href="../index.html">← Todas as aulas</a>
+      <h1>36–38 · Arrays multidimensionais</h1>
+      <p>Array de arrays, for aninhado, foreach e as formas de inicializar · <a href="https://www.youtube.com/playlist?list=PL62G310vn6nFIsOCC0H-C2infYgwm8SWW" target="_blank" rel="noopener">playlist</a></p>
+    </header>
+
+    <nav class="abas">
+      <a href="#resumo">Resumo</a>
+      <a href="#flashcards">Flashcards</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#estudo">Material de estudo</a>
+    </nav>
+
+    <p class="aviso">Junta as aulas 36 (arrays multidimensionais), 37 (foreach) e 38 (inicialização). Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. A aula 35 não aparece na playlist. O <code>Arrays.deepToString</code> e os itens marcados como "extra" não estão nos vídeos.</p>
+
+    <section id="resumo">
+      <h2>Resumo</h2>
+      <p>Um <strong>array multidimensional</strong> é um <strong>array de arrays</strong>: cada posição do array "base" guarda a <em>referência</em> para outro array. O exemplo que abre a aula: um array com os 12 meses do ano, em que cada mês aponta para um array com os dias daquele mês (31, 28, 31, 30...). Os meses têm tamanhos diferentes, e é aí que esse tipo de array brilha. As classes do curso são <code>Aula08ArraysMultidimensionais01</code> e <code>02</code>. Mais uma vez, o conselho é <strong>desenhar no papel</strong>.</p>
+
+      <h3>36 · Declarar, acessar e percorrer</h3>
+<pre><code>int[][] dias = new int[3][3];   // 3 arrays de 3 posições cada
+dias[0][0] = 31;
+dias[0][1] = 28;
+dias[0][2] = 31;
+dias[1][0] = 30;
+dias[1][1] = 31;
+dias[1][2] = 30;
+System.out.println(dias[0]);     // referência (algo como [I@...): dias[0] é um array
+System.out.println(dias[0][1]);  // 28</code></pre>
+<pre><code>dias ─▶ [ ref | ref | ref ]
+           │     │     └──▶ [ 0 | 0 | 0 ]      ← dias[2] (não preenchido: valor padrão)
+           │     └────────▶ [30 |31 |30 ]      ← dias[1]
+           └──────────────▶ [31 |28 |31 ]      ← dias[0]</code></pre>
+      <ul>
+        <li>A sintaxe é um par de colchetes por dimensão: <code>int[][]</code>. Formas como <code>int dias[][]</code> ou <code>int[] dias[]</code> compilam, mas são <strong>extremamente não recomendadas</strong>, porque confundem.</li>
+        <li><strong>Só o tamanho da primeira dimensão (a base) é obrigatório.</strong> <code>new int[3][]</code> compila, e os arrays de dentro podem vir depois, cada um com seu tamanho. <code>new int[][3]</code> não compila.</li>
+        <li><code>dias[0]</code> é um <strong>array</strong>, e por isso o <code>println</code> mostra uma referência. Para chegar ao número são dois índices: <code>dias[linha][coluna]</code>.</li>
+        <li>Para percorrer, use <strong>dois <code>for</code>, um dentro do outro</strong>. O de dentro roda <strong>inteiro</strong> para cada volta do de fora: i=0 (j=0, 1, 2), i=1 (j=0, 1, 2)... O debug mostra essa ordem.</li>
+        <li>Numa curiosidade da aula: em algumas APIs de data do Java, janeiro também é o mês 0, e isso já confundiu muita gente.</li>
+      </ul>
+<pre><code>for (int i = 0; i &lt; dias.length; i++) {
+    for (int j = 0; j &lt; dias[i].length; j++) {   // dias[i].length, não dias[0].length
+        System.out.println(dias[i][j]);
+    }
+}</code></pre>
+
+      <h3>37 · A correção do length e o foreach</h3>
+      <ul>
+        <li>A aula começa com uma correção. Na 36, o laço de dentro usou <code>dias[0].length</code> e funcionou <strong>por coincidência</strong>, porque todos os arrays tinham 3 posições. O certo é <strong><code>dias[i].length</code></strong>, o tamanho do array da linha <em>atual</em>, já que cada um pode ter um tamanho diferente.</li>
+        <li>O <strong>foreach</strong> (<code>for</code> aprimorado) poupa o controle de índices: <code>for (Tipo variavel : array)</code>. A cada volta, a variável recebe o próximo elemento.</li>
+        <li>O detalhe está no tipo: os elementos de <code>dias</code> <strong>não são int</strong>, são <strong><code>int[]</code></strong>. Por isso o laço de fora declara um <code>int[]</code>, e só o de dentro declara um <code>int</code>.</li>
+      </ul>
+<pre><code>for (int[] arrBase : dias) {       // cada elemento de dias é um int[]
+    for (int num : arrBase) {        // cada elemento de arrBase é um int
+        System.out.print(num + " ");
+    }
+    System.out.println();
+}</code></pre>
+      <ul>
+        <li>A variável do foreach (<code>arrBase</code>, <code>num</code>) é temporária e só existe enquanto o laço roda. <code>arrBase</code> é uma <strong>referência</strong> que aponta, a cada volta, para <code>dias[0]</code>, <code>dias[1]</code> e <code>dias[2]</code>.</li>
+        <li>O William prefere o foreach, mas avisa: <strong>domine as duas versões</strong>. A com índice continua útil, por exemplo quando você precisa saber a posição.</li>
+      </ul>
+
+      <h3>38 · Inicialização: arrays irregulares e literais</h3>
+<pre><code>int[][] arrayInt = new int[3][];   // só a base: as 3 posições são null
+arrayInt[0] = new int[2];
+arrayInt[1] = new int[3];
+arrayInt[2] = new int[6];          // cada linha com um tamanho</code></pre>
+      <ul>
+        <li>Com <code>new int[3][]</code>, as posições da base guardam <em>referências</em>, e o valor padrão de referência é <strong><code>null</code></strong>. Tentar percorrer <code>arrayInt[0]</code> antes de criá-lo lança <strong><code>NullPointerException</code></strong>: você está usando algo que não existe.</li>
+        <li>Criando cada linha com seu próprio <code>new</code>, o resultado são linhas de tamanhos diferentes (2, 3 e 6). É o caso dos meses com números diferentes de dias.</li>
+        <li>Para imprimir linha a linha, use <code>System.out.print</code> (sem <code>ln</code>, não pula linha) e <code>"\n"</code> quando quiser a quebra.</li>
+      </ul>
+<pre><code>arrayInt[0] = new int[]{1, 2, 3};  // OK: array criado com valores
+// arrayInt[0] = {1, 2, 3};        // NÃO compila: {..} sozinho só vale na declaração
+
+int[] linha = {1, 2, 3};           // na declaração, pode
+arrayInt[1] = linha;               // e depois atribuir a referência
+
+// Tudo de uma vez: o Java conta as linhas e o tamanho de cada uma
+int[][] arrayInt2 = {{0, 0}, {1, 2, 3}, {1, 2, 3, 4, 5, 6}};</code></pre>
+      <ul>
+        <li>As regras de inicialização de arrays de uma dimensão valem aqui também. A diferença: <code>{1, 2, 3}</code> sozinho <strong>só funciona na declaração</strong>. Ao atribuir a uma posição, use <code>new int[]{1, 2, 3}</code>.</li>
+        <li>No literal <code>{{...}, {...}, {...}}</code>, o Java conta os grupos para saber o tamanho da base (3) e conta os itens de cada grupo para os arrays de dentro (2, 3 e 6).</li>
+        <li><code>Ctrl+Alt+L</code> formata o código e ajuda a enxergar as chaves.</li>
+        <li><strong>Na vida real</strong>, diz o William, você provavelmente <strong>quase não vai usar arrays multidimensionais</strong>. O mais comum são as <strong>coleções</strong>, como <code>Map</code> e listas, que aparecem mais à frente.</li>
+      </ul>
+
+      <h3>Atenção</h3>
+      <ul>
+        <li><strong><code>dias[0].length</code> × <code>dias[i].length</code>:</strong> o primeiro só funciona se todas as linhas tiverem o mesmo tamanho. Com linhas diferentes, dá erro de índice ou pula valores.</li>
+        <li><strong>foreach no array de fora usa <code>int[]</code>:</strong> <code>for (int x : dias)</code> não compila, porque cada elemento de <code>dias</code> é um array.</li>
+        <li><code>new int[3][]</code> deixa as linhas <code>null</code>. Se usar antes de criar, dá <code>NullPointerException</code>. <code>new int[3][3]</code> cria as linhas já preenchidas com 0.</li>
+        <li><code>arrayInt[0] = {1, 2, 3};</code> não compila. Use <code>new int[]{1, 2, 3}</code>.</li>
+        <li><strong>Extra: o foreach não altera o array.</strong> <code>for (int num : linha) { num = 0; }</code> muda só a cópia temporária. Para gravar, use o for com índice: <code>linha[j] = 0</code>.</li>
+        <li><strong>Extra:</strong> para ver tudo de uma vez, use <code>Arrays.deepToString(arrayInt2)</code>, que dá <code>[[0, 0], [1, 2, 3], [1, 2, 3, 4, 5, 6]]</code>. O <code>Arrays.toString</code> mostraria só as referências das linhas.</li>
+        <li><strong>Extra:</strong> linhas podem ser compartilhadas. Com <code>arrayInt[1] = linha;</code>, alterar <code>linha[0]</code> altera também <code>arrayInt[1][0]</code>, porque é o mesmo objeto (aula 34).</li>
+      </ul>
+
+      <h3>Paralelo com PHP</h3>
+      <ul>
+        <li><strong>Acesso:</strong> igual, <code>$m[0][1]</code> ou <code>m[0][1]</code>.</li>
+        <li><strong>foreach:</strong> <code>foreach ($m as $linha) { foreach ($linha as $n) ... }</code> vira <code>for (int[] linha : m) { for (int n : linha) ... }</code>. Em Java o tipo vem antes, os dois-pontos ficam no lugar do <code>as</code>, e <strong>não existe <code>$chave =&gt; $valor</code></strong>. Se precisar do índice, use o for comum.</li>
+        <li><strong>Criação automática:</strong> no PHP, <code>$m[1][] = 5;</code> cria a linha na hora. Em Java, uma linha que não foi criada é <code>null</code> e gera <code>NullPointerException</code>.</li>
+        <li><strong>Literais:</strong> o <code>[[0, 0], [1, 2, 3]]</code> do PHP equivale a <code>{{0, 0}, {1, 2, 3}}</code> em Java, mas <strong>só na declaração</strong>.</li>
+        <li><strong>Imprimir:</strong> <code>print_r($m)</code> equivale a <code>Arrays.deepToString(m)</code>.</li>
+        <li><strong>O que o PHP usa no lugar:</strong> no PHP, o array aninhado costuma ser usado para dados estruturados (<code>$usuarios[0]['nome']</code>). Em Java isso vira uma lista de <strong>objetos</strong> (<code>List&lt;Usuario&gt;</code>) ou um <code>Map</code>, e não array de arrays.</li>
+      </ul>
+    </section>
+
+    <section id="flashcards">
+      <h2>Flashcards</h2>
+      <p style="color:var(--muted);margin-top:-6px">Toque no cartão para virar.</p>
+      <div id="flashcards-app"></div>
+    </section>
+
+    <section id="quiz">
+      <h2>Quiz</h2>
+      <div id="quiz-app"></div>
+    </section>
+
+    <section id="estudo">
+      <h2>Material de estudo</h2>
+
+      <h3>Mapa mental</h3>
+<pre><code>Arrays multidimensionais
+├── Conceito (36)
+│   ├── array de arrays: a base guarda referências
+│   └── int[][] (evite int x[][] e int[] x[])
+├── Criar e acessar (36)
+│   ├── new int[3][3] · new int[3][] (só a base é obrigatória)
+│   ├── dias[0] → array · dias[0][1] → valor
+│   └── for aninhado: o de dentro roda inteiro a cada volta do de fora
+├── foreach (37)
+│   ├── for (int[] linha : dias) { for (int n : linha) }
+│   └── use dias[i].length, não dias[0].length
+└── Inicialização (38)
+    ├── new int[3][] → linhas null → NullPointerException se usar
+    ├── linhas irregulares: arrayInt[0] = new int[2] ...
+    ├── arrayInt[0] = new int[]{1,2,3}   ({..} sozinho só na declaração)
+    ├── {{0,0},{1,2,3},{1,2,3,4,5,6}}
+    └── na prática: coleções (Map, List)</code></pre>
+
+      <h3>Prática no seu WSL (15 minutos)</h3>
+<pre><code>cd ~/java-lab
+cat > src/academy/devdojo/maratonajava/introducao/Aula08ArraysMultidimensionais01.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.introducao;
+
+import java.util.Arrays;
+
+public class Aula08ArraysMultidimensionais01 {
+    public static void main(String[] args) {
+        int[][] arrayInt = {{0, 0}, {1, 2, 3}, {1, 2, 3, 4, 5, 6}};
+        System.out.println(arrayInt.length + " " + arrayInt[2].length);   // ?
+
+        for (int[] linha : arrayInt) {
+            for (int num : linha) {
+                System.out.print(num + " ");
+            }
+            System.out.println();
+        }                                                                  // ?
+
+        int[][] vazio = new int[2][];
+        System.out.println(vazio[0]);                                      // ?
+        vazio[0] = new int[]{7, 8};
+        vazio[1] = arrayInt[1];
+        arrayInt[1][0] = 99;
+        System.out.println(Arrays.deepToString(vazio));                    // ?
+    }
+}
+EOF
+javac -d out src/academy/devdojo/maratonajava/introducao/Aula08ArraysMultidimensionais01.java
+java -cp out academy.devdojo.maratonajava.introducao.Aula08ArraysMultidimensionais01</code></pre>
+      <details>
+        <summary>Ver a saída esperada</summary>
+<pre><code>3 6
+0 0
+1 2 3
+1 2 3 4 5 6
+null
+[[7, 8], [99, 2, 3]]</code></pre>
+      </details>
+      <p><strong>Exercícios:</strong></p>
+      <ol>
+        <li>Monte o exemplo da aula 36 completo: <code>int[][] diasDoAno = new int[12][];</code> com cada mês do tamanho certo (fevereiro com 28). Imprima quantos dias tem o ano somando os <code>length</code>.</li>
+        <li>Imprima a tabuada de 1 a 10 guardada num <code>int[10][10]</code> (preencha com for aninhado e imprima com foreach).</li>
+        <li>Some cada linha de <code>{{0, 0}, {1, 2, 3}, {1, 2, 3, 4, 5, 6}}</code> e imprima o total de cada uma.</li>
+        <li>Provoque o erro: percorra um <code>new int[3][]</code> sem criar as linhas e leia a <code>NullPointerException</code>.</li>
+      </ol>
+
+      <h3>Glossário</h3>
+      <ul>
+        <li><strong>Array multidimensional</strong>: array cujas posições guardam referências para outros arrays.</li>
+        <li><strong>Array base</strong>: a primeira dimensão, aquela cujo tamanho é obrigatório.</li>
+        <li><strong>Array irregular (jagged)</strong>: array de arrays com linhas de tamanhos diferentes.</li>
+        <li><strong>foreach / for aprimorado</strong>: <code>for (Tipo x : array)</code>, que percorre sem índice.</li>
+        <li><strong>Laço aninhado</strong>: laço dentro de outro. O de dentro completa todas as voltas a cada volta do de fora.</li>
+        <li><strong><code>NullPointerException</code></strong>: erro ao usar uma referência que é <code>null</code>.</li>
+        <li><strong>Inicializador de array</strong>: <code>{1, 2, 3}</code>, válido só na declaração. Fora dela, use <code>new int[]{...}</code>.</li>
+      </ul>
+
+      <h3>Revisão espaçada</h3>
+      <ul class="revisao">
+        <li><span class="dia">Dia 1</span><span>Todos os flashcards + a prática com previsões.</span></li>
+        <li><span class="dia">Dia 3</span><span>Quiz + exercícios 1 e 4.</span></li>
+        <li><span class="dia">Dia 7</span><span>Exercícios 2 e 3 + desenhar no papel o array da aula 38.</span></li>
+        <li><span class="dia">Dia 14</span><span>Flashcards que errou + questões discursivas.</span></li>
+      </ul>
+
+      <h3>Para aprofundar</h3>
+      <ul>
+        <li>Como seria um array de 3 dimensões (<code>int[][][]</code>) para guardar ano → mês → dia?</li>
+        <li>Por que janeiro é 0 em <code>java.util.Calendar</code>, mas 1 em <code>java.time.Month</code>?</li>
+        <li>Qual a diferença entre <code>Arrays.toString</code> e <code>Arrays.deepToString</code>?</li>
+        <li>Como um <code>Map&lt;String, List&lt;Integer&gt;&gt;</code> substituiria o array de meses e dias?</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    window.AULA = {
+      flashcards: [
+        ["O que é um array multidimensional?", "Um array de arrays: cada posição da base guarda a referência de outro array"],
+        ["Como declarar um array de duas dimensões de int?", "int[][] dias; (evite int dias[][] e int[] dias[])"],
+        ["Qual tamanho é obrigatório em new int[?][?]?", "Só o da primeira dimensão (a base): new int[3][] compila"],
+        ["new int[][3] compila?", "Não: a base precisa ter tamanho"],
+        ["O que dias[0] representa em int[][] dias?", "Um array (int[]); o println mostra a referência"],
+        ["Como acessar um valor num array de 2 dimensões?", "Com dois índices: dias[linha][coluna]"],
+        ["Como funciona o for aninhado?", "O laço de dentro roda inteiro a cada volta do de fora"],
+        ["No for de dentro, dias[0].length ou dias[i].length?", "dias[i].length: cada linha pode ter um tamanho"],
+        ["Qual a sintaxe do foreach?", "for (Tipo variavel : array)"],
+        ["No foreach sobre int[][] dias, qual o tipo da variável de fora?", "int[] (cada elemento é um array)"],
+        ["Como fica o foreach completo num int[][]?", "for (int[] linha : dias) { for (int n : linha) { ... } }"],
+        ["O que é a variável do foreach?", "Uma variável temporária que recebe cada elemento a cada volta"],
+        ["Alterar a variável do foreach altera o array?", "Não. Para gravar, use o for com índice"],
+        ["Valor padrão das linhas em new int[3][]?", "null (as posições são referências)"],
+        ["O que acontece ao percorrer uma linha null?", "NullPointerException"],
+        ["Como criar linhas de tamanhos diferentes?", "arrayInt[0] = new int[2]; arrayInt[1] = new int[3]; ..."],
+        ["arrayInt[0] = {1, 2, 3}; compila?", "Não: use arrayInt[0] = new int[]{1, 2, 3};"],
+        ["Onde {1, 2, 3} sozinho é permitido?", "Só na declaração: int[] linha = {1, 2, 3};"],
+        ["Como inicializar um int[][] com valores de uma vez?", "int[][] m = {{0, 0}, {1, 2, 3}, {1, 2, 3, 4, 5, 6}};"],
+        ["Em {{0,0},{1,2,3},{1,2,3,4,5,6}}, qual o tamanho da base e das linhas?", "Base 3; linhas 2, 3 e 6"],
+        ["Qual a diferença entre print e println?", "println pula linha no fim; print não"],
+        ["Como imprimir todo um array multidimensional?", "Arrays.deepToString(m)"],
+        ["Arrays multidimensionais são comuns no dia a dia?", "Pouco: normalmente usam-se coleções (Map, List)"],
+        ["Como fica o foreach aninhado do PHP em Java?", "foreach ($m as $l) foreach ($l as $n) → for (int[] l : m) for (int n : l)"],
+        ["O $m[1][] = 5 do PHP funciona em Java?", "Não: a linha precisa ser criada antes; senão, NullPointerException"]
+      ],
+      quiz: [
+        { tipo: 'vf', pergunta: 'Um array multidimensional em Java é um array cujas posições guardam referências para outros arrays.', correta: 0,
+          explicacao: 'Verdadeiro: é um array de arrays. A base guarda referências, e os números ficam nos arrays de dentro.' },
+        { tipo: 'multipla', pergunta: 'Qual declaração NÃO compila?', opcoes: ['int[][] a = new int[3][3];', 'int[][] a = new int[3][];', 'int[][] a = new int[][3];', 'int[][] a = {{1}, {2, 3}};'], correta: 2,
+          explicacao: 'O tamanho da primeira dimensão (base) é obrigatório. O das seguintes pode ficar para depois.' },
+        { tipo: 'multipla', pergunta: 'Em int[][] dias = new int[3][3];, o que é dias[1]?', opcoes: ['O número 0', 'Um array de int com 3 posições', 'null', 'Erro de compilação'], correta: 1,
+          explicacao: 'dias[1] é um int[]. O número aparece com dois índices, como dias[1][0].' },
+        { tipo: 'multipla', pergunta: 'No foreach sobre int[][] dias, qual laço de fora está correto?', opcoes: ['for (int d : dias)', 'for (int[] linha : dias)', 'for (int[][] linha : dias)', 'for (linha in dias)'], correta: 1,
+          explicacao: 'Cada elemento de um int[][] é um int[]. O laço de dentro, sobre a linha, usa int.' },
+        { tipo: 'vf', pergunta: 'Em int[][] a = new int[3][];, as posições a[0], a[1] e a[2] nascem como arrays vazios de tamanho 0.', correta: 1,
+          explicacao: 'Falso: nascem null, que é o valor padrão de referência. Usar a[0] antes de criá-lo lança NullPointerException.' },
+        { tipo: 'multipla', pergunta: 'Qual linha compila, dado int[][] a = new int[3][];?', opcoes: ['a[0] = {1, 2, 3};', 'a[0] = new int[]{1, 2, 3};', 'a[0] = [1, 2, 3];', 'a[0] = new int{1, 2, 3};'], correta: 1,
+          explicacao: 'Fora da declaração, o array precisa ser criado com new int[]{...}. O {..} sozinho só vale ao declarar.' },
+        { tipo: 'multipla', pergunta: 'Em int[][] m = {{0, 0}, {1, 2, 3}, {1, 2, 3, 4, 5, 6}};, quanto vale m.length + m[2].length?', opcoes: ['6', '9', '11', '3'], correta: 1,
+          explicacao: 'm.length é 3 (número de linhas) e m[2].length é 6. Total: 9.' },
+        { tipo: 'vf', pergunta: 'Usar dias[0].length como limite do laço de dentro é sempre correto.', correta: 1,
+          explicacao: 'Falso: só funciona se todas as linhas tiverem o tamanho da primeira. O certo é dias[i].length. Essa é a correção que abre a aula 37.' },
+        { tipo: 'discursiva', pergunta: 'Explique, desenhando na memória, o que acontece em int[][] a = new int[3][]; a[0] = new int[2]; a[2] = new int[6]; e o que ocorre ao percorrer a[1].',
+          explicacao: 'new int[3][] cria só a base: um array de 3 referências, todas null. a[0] passa a apontar para um int[] de 2 posições (0, 0) e a[2] para um int[] de 6 posições (zeros). a[1] continua null. Percorrer a[1] (a[1].length ou um foreach) lança NullPointerException, porque não existe array ali. Linhas de tamanhos diferentes formam um array irregular (jagged).' },
+        { tipo: 'discursiva', pergunta: 'No PHP você guardaria usuários como $usuarios[0][\'nome\']. Por que um String[][] não é a escolha ideal em Java e o que usar?',
+          explicacao: 'O array Java só aceita índices inteiros, tem tamanho fixo e um só tipo: não dá para ter a chave nome nem misturar texto com número. Um String[][] obrigaria a lembrar que a coluna 0 é o nome, a 1 é o e-mail... O caminho em Java é criar uma classe Usuario com atributos (orientação a objetos, a partir da aula 39) e guardar numa coleção como List<Usuario>, ou usar um Map para pares chave → valor. O próprio William diz que arrays multidimensionais são pouco usados na prática.' }
+      ]
+    };
+  </script>
+  <script src="../js/app.js"></script>
+</body>
+</html>
