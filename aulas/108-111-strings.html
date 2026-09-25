@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>108–111 · Strings</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="topo">
+      <a class="voltar" href="../index.html">← Todas as aulas</a>
+      <h1>108–111 · Classes utilitárias: Strings e StringBuilder</h1>
+      <p>Imutabilidade e String Constant Pool, métodos principais, desempenho da concatenação, StringBuilder e StringBuffer · <a href="https://www.youtube.com/playlist?list=PL62G310vn6nFIsOCC0H-C2infYgwm8SWW" target="_blank" rel="noopener">playlist</a></p>
+    </header>
+
+    <nav class="abas">
+      <a href="#resumo">Resumo</a>
+      <a href="#flashcards">Flashcards</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#estudo">Material de estudo</a>
+    </nav>
+
+    <p class="aviso">Junta as aulas 108 (Strings pt 01), 109 (pt 02), 110 (pt 03, desempenho) e 111 (pt 04, StringBuilder). Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. O código (pacote <code>javacore.Qstring</code>, "William Suane", "Luffy") foi conferido no <a href="https://github.com/devdojobr/maratona-java-virado-no-jiraya" target="_blank" rel="noopener">repositório do professor</a>. Os itens marcados como "extra" não estão nos vídeos.</p>
+
+    <section id="resumo">
+      <h2>Resumo</h2>
+      <p>Entender como a <code>String</code> funciona importa porque "a performance do seu sistema pode ser diretamente impactada". A ideia central: <strong>Strings em Java são imutáveis</strong>. Toda "alteração" cria <strong>outra</strong> String. Os literais moram na <strong>String Constant Pool</strong> e são reaproveitados. Para montar texto em grande quantidade existem as classes <strong>mutáveis</strong> <code>StringBuilder</code> e <code>StringBuffer</code>.</p>
+
+      <h3>108 · Imutabilidade e String Constant Pool</h3>
+<pre><code>String nome = "William";              // String constant pool
+String nome2 = "William";             // reaproveita o MESMO objeto do pool
+nome.concat(" Suane");                // cria "William Suane"... e ninguém guarda
+nome = nome.concat(" Suane");         // agora sim: nome aponta para a nova String (= nome += " Suane")
+System.out.println(nome);             // William Suane
+System.out.println(nome == nome2);    // false (antes do concat seria true)
+
+String nome3 = new String("William"); // 1 variável de referência, 2 objeto String no heap, 3 "William" no pool
+System.out.println(nome2 == nome3);            // false: objetos diferentes
+System.out.println(nome2 == nome3.intern());   // true: intern() devolve a referência do pool</code></pre>
+      <ul>
+        <li>O <strong>heap</strong> é onde moram os objetos. Dentro dele o Java reserva a <strong>String Constant Pool</strong> (piscina de Strings), com base no conceito de <em>string interning</em>: uma String literal é criada <strong>uma vez só</strong>, e o segundo <code>"William"</code> recebe a <strong>mesma referência</strong>.</li>
+        <li><strong><code>==</code> compara referências</strong> (é o mesmo objeto?). <strong><code>equals</code> compara o conteúdo</strong>. <code>nome == nome2</code> dá <code>true</code> aqui só porque os dois apontam para o mesmo literal do pool.</li>
+        <li><strong>Imutável:</strong> <code>nome.concat(" Suane")</code> não muda <code>nome</code>. Cria <code>" Suane"</code> e <code>"William Suane"</code> no pool, e, <strong>sem atribuir</strong> a uma variável, o resultado se perde. É preciso <code>nome = nome.concat(...)</code>.</li>
+        <li><code>new String("William")</code> cria um objeto <strong>fora</strong> do pool, que encapsula o valor do pool. O <code>intern()</code> devolve a representação canônica (a do pool). O William diz que nunca viu <code>new String</code> em produção: é "feio".</li>
+        <li><strong>Por que isso pesa:</strong> um documento de 5 mil palavras numa String. Mudar um caractere cria <strong>outra</strong> String quase do mesmo tamanho.</li>
+      </ul>
+
+      <h3>109 · Métodos principais</h3>
+<pre><code>String nome = "Luffy";
+String numeros = "012345";
+System.out.println(nome.charAt(0));                          // L
+System.out.println(nome.length());                           // 5
+System.out.println(nome.replace("f", "l"));                  // Lully
+System.out.println(nome.toLowerCase());                      // luffy
+System.out.println(nome.toUpperCase());                      // LUFFY
+System.out.println(numeros.length());                        // 6
+System.out.println(numeros.substring(0, 2));                 // 01  (o fim é exclusivo)
+System.out.println(numeros.substring(3, numeros.length()));  // 345 (= numeros.substring(3))
+System.out.println("  Luffy  ".trim());                      // "Luffy"</code></pre>
+      <ul>
+        <li><strong><code>charAt(i)</code></strong>: o <code>char</code> na posição <code>i</code> (começa em 0). Índice inexistente lança <code>StringIndexOutOfBoundsException</code>.</li>
+        <li><strong><code>length()</code></strong> é <strong>método</strong> na String. No array, <code>length</code> é <strong>atributo</strong> (sem parênteses). Tamanho 5, índices de 0 a 4.</li>
+        <li><strong><code>replace(a, b)</code></strong> troca <strong>todas</strong> as ocorrências.</li>
+        <li><strong><code>toLowerCase()</code>/<code>toUpperCase()</code></strong>: útil quando o sistema padroniza como grava (tudo maiúsculo, por exemplo).</li>
+        <li><strong><code>substring(inicio, fim)</code></strong>: o <strong>início é inclusivo e o fim é exclusivo</strong> (pega até <code>fim - 1</code>). Com um parâmetro só (sobrecarga), vai até o final. <code>substring(0, length() + 1)</code> lança exceção.</li>
+        <li><strong><code>trim()</code></strong> remove espaços do <strong>começo e do fim</strong>. É útil no login: o usuário pode digitar <code>" Luffy "</code>. Aplique antes de salvar e antes de comparar.</li>
+        <li>Todos esses métodos <strong>retornam uma String nova</strong>. <code>nome</code> continua "Luffy".</li>
+      </ul>
+
+      <h3>110 · Desempenho: String × StringBuilder × StringBuffer</h3>
+<pre><code>long inicio = System.currentTimeMillis();
+concatString(30_000);                         // _ separa milhares (sintaxe válida)
+long fim = System.currentTimeMillis();
+System.out.println("Tempo gasto para String " + (fim - inicio) + "ms");
+
+private static void concatString(int tamanho) {
+    String texto = "Ola meu nome é william";
+    for (int i = 0; i &lt; tamanho; i++) {
+        texto += i;                           // uma String NOVA a cada volta
+    }
+}
+
+private static void concatStringBuilder(int tamanho) {
+    StringBuilder sb = new StringBuilder(tamanho);   // já reserva a capacidade
+    for (int i = 0; i &lt; tamanho; i++) {
+        sb.append(i);                         // altera o MESMO objeto
+    }
+}
+// concatStringBuffer: igual, com StringBuffer</code></pre>
+      <ul>
+        <li>Com <code>+=</code> no laço, cada volta cria uma String nova (cada vez maior). Na máquina do William: 1 mil → 3 ms, 10 mil → 186 ms, <strong>100 mil → quase 10 segundos</strong>.</li>
+        <li>Com <code>StringBuilder</code>, 100 mil levou <strong>4 ms</strong>, e <strong>1 milhão</strong> ficou na casa das <strong>dezenas de ms</strong>.</li>
+        <li>Pense em sistemas grandes (governo, Amazon): segundos a mais por ação, multiplicados por milhões de usuários, é inaceitável ("esperar 15 segundos para saber se a compra foi aprovada").</li>
+        <li><strong><code>StringBuffer</code></strong> tem <strong>os mesmos métodos</strong> do <code>StringBuilder</code>, mas eles são <code>synchronized</code>: só uma <em>thread</em> por vez. É para ambientes com várias threads acessando o mesmo objeto. Isso custa um pouco (quase o dobro no teste), mas ainda é muito mais rápido que String.</li>
+        <li><strong>Quando usar cada um:</strong> para modelar o mundo real (atributo <code>nome</code> de <code>Pessoa</code>) use <strong><code>String</code></strong>, que é mais simples e legível. Use o <code>StringBuilder</code> quando <strong>sentir</strong> o impacto de muita concatenação. Evite a micro-otimização precoce: ela só adiciona complexidade.</li>
+        <li><code>System.currentTimeMillis()</code> devolve o horário atual em milissegundos. Datas vêm nas próximas aulas.</li>
+      </ul>
+
+      <h3>111 · StringBuilder</h3>
+<pre><code>String nome = "William Suane";
+nome.concat(" DevDojo");          // resultado perdido
+nome.substring(0, 3);             // resultado perdido
+System.out.println(nome);         // William Suane
+
+StringBuffer sb = new StringBuffer("William Suane");   // (StringBuilder funciona igual)
+sb.append(" DevDojo").append(" Academy");   // encadeia: append retorna o próprio objeto
+sb.reverse();                               // ymedacA ojoDveD enauS mailliW
+sb.reverse();                               // volta ao normal
+sb.delete(0, 3);                            // apaga as posições 0 a 2 (fim exclusivo)
+System.out.println(sb);                     // liam Suane DevDojo Academy</code></pre>
+      <ul>
+        <li><strong><code>StringBuilder</code> não é uma <code>String</code></strong> (<code>StringBuilder sb = "William";</code> não compila). É uma classe que manipula uma sequência de caracteres <strong>mutável</strong>, e quem muda é o próprio objeto.</li>
+        <li><strong>Construtores:</strong> vazio (<strong>capacidade 16</strong>), com uma capacidade (<code>new StringBuilder(30_000)</code>) ou com uma String/<code>CharSequence</code> inicial. Quando a capacidade estoura, ela cresce para <strong>o dobro + 2</strong> (16 → 34 → 70...). Passar o tamanho já evita realocações.</li>
+        <li><strong><code>append</code></strong> é o <code>concat</code> dele, <strong>sobrecarregado</strong> (aceita <code>int</code>, <code>boolean</code>, <code>Object</code>...). <code>System.out.println(sb)</code> chama o <strong><code>toString()</code></strong>, que devolve a String.</li>
+        <li><strong>Legibilidade:</strong> dezenas de <code>append</code> encadeados ficam difíceis de ler. O próprio IntelliJ sugere "trocar <code>append</code> por <code>+</code>" quando há concatenação simples.</li>
+        <li><strong>A pegadinha: olhe o tipo de retorno.</strong> <code>append</code>, <code>reverse</code>, <code>delete</code>, <code>insert</code> e <code>replace</code> retornam <code>StringBuilder</code> e <strong>alteram o objeto</strong>. <code>substring</code> retorna uma <strong><code>String</code> nova</strong> e <strong>não altera</strong> o builder.</li>
+        <li><code>delete(inicio, fim)</code> segue a mesma regra do <code>substring</code>: o fim é exclusivo.</li>
+      </ul>
+
+      <h3>Atenção</h3>
+      <ul>
+        <li><strong>Compare Strings com <code>equals</code></strong> (ou <code>equalsIgnoreCase</code>), nunca com <code>==</code>. O <code>==</code> só "funciona" com literais do pool, por coincidência.</li>
+        <li><strong>Método de String que "altera" precisa de atribuição:</strong> <code>nome.toUpperCase();</code> sozinho não faz nada. Escreva <code>nome = nome.toUpperCase();</code>.</li>
+        <li><strong><code>substring(3, 5)</code> pega os índices 3 e 4.</strong> O fim é exclusivo, e o tamanho do resultado é <code>fim - inicio</code>.</li>
+        <li><strong>Extra: outros métodos do dia a dia:</strong> <code>contains</code>, <code>startsWith</code>/<code>endsWith</code>, <code>indexOf</code>, <code>split</code>, <code>isEmpty</code>, <code>isBlank</code> (Java 11), <code>strip</code> (Java 11, entende espaços Unicode), <code>String.join</code>, <code>String.format</code>, <code>equalsIgnoreCase</code>.</li>
+        <li><strong>Extra:</strong> <code>"Wil" + "liam" == "William"</code> dá <code>true</code>, porque o compilador junta literais constantes em tempo de compilação. Com uma variável no meio, dá <code>false</code>.</li>
+        <li><strong>Extra: <code>+</code> fora de laço é tranquilo.</strong> O compilador já otimiza <code>a + b + c</code> numa linha. O problema é o <code>+=</code> <strong>dentro de laço</strong>.</li>
+      </ul>
+
+      <h3>Paralelo com PHP</h3>
+      <ul>
+        <li><strong>No PHP, strings são valores</strong> (copy-on-write), e <code>$s .= $i</code> num laço é rápido: o motor altera no lugar quando pode. Por isso não existe "StringBuilder" no PHP. Em Java, o <code>+=</code> em laço é o vilão.</li>
+        <li><strong>Equivalências:</strong> <code>strlen</code> ≈ <code>length()</code>, <code>$s[0]</code> ≈ <code>charAt(0)</code>, <code>str_replace</code> ≈ <code>replace</code>, <code>strtolower</code>/<code>strtoupper</code> ≈ <code>toLowerCase</code>/<code>toUpperCase</code>, <code>trim</code> ≈ <code>trim</code>, <code>strrev</code> ≈ <code>reverse</code>, <code>implode</code> ≈ <code>String.join</code>.</li>
+        <li><strong>Cuidado com o <code>substr</code>:</strong> no PHP é <code>substr($s, inicio, TAMANHO)</code>. No Java é <code>substring(inicio, FIM)</code> (índice final exclusivo). <code>substr("012345", 3, 2)</code> dá "34", e <code>"012345".substring(3, 2)</code> lança exceção.</li>
+        <li><strong>Comparação:</strong> no PHP, <code>===</code> compara o conteúdo da string. Em Java, <code>==</code> compara referências. Hábito do PHP é armadilha aqui: use <code>equals</code>.</li>
+        <li><strong>Laravel:</strong> <code>Str::of(' luffy ')-&gt;trim()-&gt;upper()-&gt;append('!')</code> encadeia como o <code>StringBuilder</code>, mas cada passo devolve um <strong>novo</strong> <code>Stringable</code> (imutável, como a String do Java).</li>
+      </ul>
+    </section>
+
+    <section id="flashcards">
+      <h2>Flashcards</h2>
+      <p style="color:var(--muted);margin-top:-6px">Toque no cartão para virar.</p>
+      <div id="flashcards-app"></div>
+    </section>
+
+    <section id="quiz">
+      <h2>Quiz</h2>
+      <div id="quiz-app"></div>
+    </section>
+
+    <section id="estudo">
+      <h2>Material de estudo</h2>
+
+      <h3>Mapa mental</h3>
+<pre><code>Strings
+├── Imutabilidade (108)
+│   ├── "alterar" = criar outra String → precisa atribuir
+│   ├── String Constant Pool (no heap): literal criado 1 vez, reaproveitado
+│   ├── == compara referência · equals compara conteúdo
+│   └── new String("x") → objeto fora do pool · intern() → referência do pool
+├── Métodos (109)
+│   ├── charAt · length() (array: length sem parênteses)
+│   ├── replace · toLowerCase · toUpperCase · trim
+│   └── substring(inicio, fim) → fim exclusivo; substring(inicio) → até o fim
+├── Desempenho (110)
+│   ├── += em laço: 100 mil ≈ 10 s
+│   ├── StringBuilder: 1 milhão em dezenas de ms
+│   ├── StringBuffer: mesmos métodos, synchronized (threads)
+│   └── modele com String; otimize quando sentir o problema
+└── StringBuilder (111)
+    ├── mutável · não é String · capacidade 16 (cresce ×2 + 2)
+    ├── append (encadeável) · reverse · delete · insert
+    ├── toString() para virar String
+    └── olhe o retorno: substring devolve String e não altera</code></pre>
+
+      <h3>Prática no seu WSL (20 minutos)</h3>
+<pre><code>cd ~/java-lab
+Q=src/academy/devdojo/maratonajava/javacore/Qstring
+mkdir -p $Q/test
+
+cat > $Q/test/StringTest01.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Qstring.test;
+
+public class StringTest01 {
+    public static void main(String[] args) {
+        String nome = "William";
+        String nome2 = "William";
+        System.out.println(nome == nome2);            // ?
+        nome = nome.concat(" Suane");
+        System.out.println(nome);                     // ?
+        System.out.println(nome == nome2);            // ?
+        String nome3 = new String("William");
+        System.out.println(nome2 == nome3);           // ?
+        System.out.println(nome2.equals(nome3));      // ?
+        System.out.println(nome2 == nome3.intern());  // ?
+
+        String luffy = "  Luffy  ";
+        System.out.println("[" + luffy.trim() + "]");               // ?
+        System.out.println(luffy.trim().replace("f", "l"));         // ?
+        String numeros = "012345";
+        System.out.println(numeros.substring(0, 2));                // ?
+        System.out.println(numeros.substring(3));                   // ?
+
+        StringBuilder sb = new StringBuilder("William Suane");
+        sb.append(" DevDojo").append(" Academy");
+        String pedaco = sb.substring(0, 7);
+        System.out.println(pedaco);                                 // ?
+        sb.delete(0, 3);
+        System.out.println(sb);                                     // ?
+        System.out.println(new StringBuilder("Luffy").reverse());   // ?
+    }
+}
+EOF
+
+cat > $Q/test/StringPerformanceTest01.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Qstring.test;
+
+public class StringPerformanceTest01 {
+    public static void main(String[] args) {
+        long inicio = System.currentTimeMillis();
+        concatString(30_000);
+        long fim = System.currentTimeMillis();
+        System.out.println("Tempo gasto para String " + (fim - inicio) + "ms");
+
+        inicio = System.currentTimeMillis();
+        concatStringBuilder(1_000_000);
+        fim = System.currentTimeMillis();
+        System.out.println("Tempo gasto para StringBuilder " + (fim - inicio) + "ms");
+
+        inicio = System.currentTimeMillis();
+        concatStringBuffer(1_000_000);
+        fim = System.currentTimeMillis();
+        System.out.println("Tempo gasto para StringBuffer " + (fim - inicio) + "ms");
+    }
+
+    private static void concatString(int tamanho) {
+        String texto = "Ola meu nome é william";
+        for (int i = 0; i &lt; tamanho; i++) {
+            texto += i;
+        }
+    }
+
+    private static void concatStringBuilder(int tamanho) {
+        StringBuilder sb = new StringBuilder(tamanho);
+        for (int i = 0; i &lt; tamanho; i++) {
+            sb.append(i);
+        }
+    }
+
+    private static void concatStringBuffer(int tamanho) {
+        StringBuffer sb = new StringBuffer(tamanho);
+        for (int i = 0; i &lt; tamanho; i++) {
+            sb.append(i);
+        }
+    }
+}
+EOF
+
+javac -d out $(find src -name '*.java')
+java -cp out academy.devdojo.maratonajava.javacore.Qstring.test.StringTest01
+java -cp out academy.devdojo.maratonajava.javacore.Qstring.test.StringPerformanceTest01</code></pre>
+      <details>
+        <summary>Ver a saída esperada</summary>
+<pre><code>true
+William Suane
+false
+false
+true
+true
+[Luffy]
+Lully
+01
+345
+William
+liam Suane DevDojo Academy
+yffuL
+Tempo gasto para String ...ms          ← centenas de ms ou mais
+Tempo gasto para StringBuilder ...ms   ← poucas dezenas de ms, mesmo com 1 milhão
+Tempo gasto para StringBuffer ...ms    ← parecido ou um pouco mais que o StringBuilder
+(os tempos variam com a máquina e a versão do Java)</code></pre>
+      </details>
+      <p><strong>Exercícios:</strong></p>
+      <ol>
+        <li>Escreva <code>String s = "java"; s.toUpperCase(); System.out.println(s);</code>. Explique a saída e corrija.</li>
+        <li>No teste de desempenho, rode <code>concatString</code> com 10 mil, 30 mil e 100 mil e anote os tempos. O crescimento é linear?</li>
+        <li>Escreva <code>isPalindromo(String s)</code> com <code>StringBuilder.reverse()</code> e <code>equalsIgnoreCase</code>. Teste com "Arara" e "Luffy".</li>
+        <li>Com <code>substring</code> e <code>indexOf</code>, extraia o domínio de <code>"luffy@onepiece.com"</code>.</li>
+        <li>Monte o CPF <code>"12345678900"</code> formatado como <code>"123.456.789-00"</code> com <code>StringBuilder.insert</code>.</li>
+      </ol>
+
+      <h3>Glossário</h3>
+      <ul>
+        <li><strong>Imutável</strong>: objeto que não muda depois de criado; operações devolvem um objeto novo.</li>
+        <li><strong>Heap</strong>: área de memória onde ficam os objetos.</li>
+        <li><strong>String Constant Pool</strong>: área do heap onde o Java guarda e reaproveita os literais de String.</li>
+        <li><strong>Interning / <code>intern()</code></strong>: usar uma única cópia canônica de cada String (a do pool).</li>
+        <li><strong>Índice exclusivo</strong>: o limite final não entra no resultado (<code>substring</code>, <code>delete</code>).</li>
+        <li><strong><code>StringBuilder</code></strong>: sequência de caracteres mutável, rápida, sem sincronização.</li>
+        <li><strong><code>StringBuffer</code></strong>: igual ao <code>StringBuilder</code>, mas com métodos <code>synchronized</code> (seguro entre threads).</li>
+        <li><strong>Capacidade</strong>: espaço reservado no builder; padrão 16, cresce para o dobro + 2.</li>
+        <li><strong>Micro-otimização</strong>: otimizar cedo demais algo que não é gargalo, trocando legibilidade por ganho irrelevante.</li>
+      </ul>
+
+      <h3>Revisão espaçada</h3>
+      <ul class="revisao">
+        <li><span class="dia">Dia 1</span><span>Todos os flashcards + a prática com previsões + desenhar o pool com nome, nome2 e nome3.</span></li>
+        <li><span class="dia">Dia 3</span><span>Quiz + exercícios 1 a 3.</span></li>
+        <li><span class="dia">Dia 7</span><span>Exercícios 4 e 5 + a tabela de equivalências Java × PHP de memória.</span></li>
+        <li><span class="dia">Dia 14</span><span>Flashcards que errou + questões discursivas.</span></li>
+      </ul>
+
+      <h3>Para aprofundar</h3>
+      <ul>
+        <li>O que mudou nas Strings no Java 9 (<em>Compact Strings</em>, <code>byte[]</code> em vez de <code>char[]</code>)?</li>
+        <li>Como o compilador transforma <code>a + b + c</code> (<code>StringBuilder</code> no Java 8, <code>invokedynamic</code>/<code>StringConcatFactory</code> no 9+)?</li>
+        <li>Por que a imutabilidade da String é importante para segurança e para o <code>hashCode</code> (chaves de <code>HashMap</code>)?</li>
+        <li>O que são <em>text blocks</em> (<code>"""</code>, Java 15) e o <code>formatted()</code>?</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    window.AULA = {
+      flashcards: [
+        ["Strings em Java são mutáveis ou imutáveis?", "Imutáveis: toda 'alteração' cria outra String"],
+        ["O que é a String Constant Pool?", "Área do heap onde os literais de String são guardados e reaproveitados"],
+        ["String a = \"William\"; String b = \"William\"; a == b?", "true: os dois apontam para o mesmo literal do pool"],
+        ["O que == compara em objetos? E equals?", "== compara referências; equals compara o conteúdo"],
+        ["nome.concat(\" Suane\"); sozinho altera nome?", "Não: a nova String é criada e perdida; precisa de nome = nome.concat(...)"],
+        ["nome = nome.concat(\" Suane\") equivale a quê?", "nome += \" Suane\""],
+        ["O que new String(\"William\") cria?", "Um objeto String fora do pool (que encapsula o \"William\" do pool) + a variável de referência"],
+        ["Para que serve intern()?", "Devolver a referência canônica da String no pool"],
+        ["\"Luffy\".charAt(0)?", "'L'; índices começam em 0"],
+        ["length da String e do array: qual a diferença?", "String: método length(); array: atributo length"],
+        ["\"Luffy\".replace(\"f\", \"l\")?", "\"Lully\": troca todas as ocorrências"],
+        ["\"012345\".substring(0, 2)?", "\"01\": o índice final é exclusivo"],
+        ["\"012345\".substring(3)?", "\"345\": com um parâmetro vai até o fim"],
+        ["O que trim() faz?", "Remove os espaços do começo e do fim"],
+        ["Por que += em laço é lento com String?", "Cada volta cria uma String nova e cada vez maior"],
+        ["Tempo do William com += em 100 mil voltas?", "Quase 10 segundos (StringBuilder: poucos ms)"],
+        ["StringBuilder é uma String?", "Não: é uma sequência de caracteres mutável; toString() gera a String"],
+        ["Capacidade padrão do StringBuilder?", "16 caracteres; cresce para o dobro + 2 (34, 70...)"],
+        ["Qual método do StringBuilder faz o papel do concat?", "append (sobrecarregado e encadeável)"],
+        ["Diferença entre StringBuilder e StringBuffer?", "Mesmos métodos; os do StringBuffer são synchronized (threads) e um pouco mais lentos"],
+        ["Quando usar StringBuilder?", "Quando muita concatenação impacta o desempenho; para modelar dados, String"],
+        ["sb.substring(0, 3) altera o StringBuilder?", "Não: retorna uma String nova; olhe o tipo de retorno"],
+        ["O que sb.delete(0, 3) faz em \"William Suane\"?", "Remove as posições 0 a 2: \"liam Suane\""],
+        ["sb.reverse() duas vezes?", "Volta ao original: reverse altera o próprio objeto"],
+        ["substr do PHP × substring do Java?", "PHP: (início, TAMANHO); Java: (início, FIM exclusivo)"]
+      ],
+      quiz: [
+        { tipo: 'vf', pergunta: 'Depois de String nome = "William"; nome.concat(" Suane");, a variável nome vale "William Suane".', correta: 1,
+          explicacao: 'Falso. Strings são imutáveis: concat devolve uma String nova, que se perde sem atribuição. nome continua "William".' },
+        { tipo: 'multipla', pergunta: 'String a = "William"; String b = new String("William"); O que imprimem a == b e a.equals(b)?', opcoes: ['true e true', 'false e true', 'true e false', 'false e false'], correta: 1,
+          explicacao: 'new String cria outro objeto (referência diferente), mas o conteúdo é o mesmo. Por isso Strings se comparam com equals.' },
+        { tipo: 'multipla', pergunta: 'O que retorna "012345".substring(3, 5)?', opcoes: ['"345"', '"34"', '"2345"', '"45"'], correta: 1,
+          explicacao: 'O início (3) é inclusivo e o fim (5) é exclusivo: índices 3 e 4.' },
+        { tipo: 'multipla', pergunta: 'Qual expressão devolve o tamanho de uma String s e de um array arr?', opcoes: ['s.length e arr.length', 's.length() e arr.length', 's.length() e arr.length()', 's.size() e arr.length'], correta: 1,
+          explicacao: 'Na String, length() é método. No array, length é atributo, sem parênteses.' },
+        { tipo: 'vf', pergunta: 'O trim() remove todos os espaços da String, inclusive os do meio.', correta: 1,
+          explicacao: 'Falso. trim remove só os espaços do começo e do fim: "  Luffy  " vira "Luffy", e "a b" continua "a b".' },
+        { tipo: 'multipla', pergunta: 'Por que concatenar com += dentro de um laço de 100 mil voltas é lento?', opcoes: ['Porque + é um operador sincronizado', 'Porque cada volta cria uma nova String, cada vez maior', 'Porque a String Constant Pool tem limite de tamanho', 'Porque o compilador desativa otimizações em laços'], correta: 1,
+          explicacao: 'Strings são imutáveis. Cada += copia o texto inteiro para uma String nova. O StringBuilder altera o mesmo objeto.' },
+        { tipo: 'multipla', pergunta: 'Qual a diferença entre StringBuilder e StringBuffer?', opcoes: ['StringBuffer é imutável', 'StringBuilder só aceita Strings no append', 'Os métodos do StringBuffer são synchronized (seguros entre threads) e um pouco mais lentos', 'Não há diferença nenhuma'], correta: 2,
+          explicacao: 'Os métodos são os mesmos. O StringBuffer é sincronizado para ambientes multithread, o que custa um pouco de desempenho.' },
+        { tipo: 'multipla', pergunta: 'StringBuilder sb = new StringBuilder("William Suane"); sb.substring(0, 3); sb.delete(0, 3); System.out.println(sb); O que imprime?', opcoes: ['Wil', 'liam Suane', 'William Suane', 'Suane'], correta: 1,
+          explicacao: 'substring retorna uma String nova e não altera o builder. delete(0, 3) altera: remove "Wil".' },
+        { tipo: 'discursiva', pergunta: 'Desenhe (em palavras) a memória depois de: String nome = "William"; String nome2 = "William"; String nome3 = new String("William"); e explique os resultados de nome == nome2, nome2 == nome3 e nome2 == nome3.intern().',
+          explicacao: 'Dentro do heap existe a String Constant Pool com um único "William". nome e nome2 apontam para ele, então nome == nome2 é true. new String("William") cria um objeto String no heap, fora do pool, que encapsula o valor do pool, e nome3 aponta para esse objeto. Assim nome2 == nome3 é false (objetos diferentes), embora equals seja true. nome3.intern() devolve a referência canônica do pool, a mesma de nome2, e por isso nome2 == nome3.intern() é true.' },
+        { tipo: 'discursiva', pergunta: 'Em PHP você faz $html .= "<li>$item</li>" num foreach sem medo. Explique por que em Java o equivalente com String é um problema, e como escrever.',
+          explicacao: 'No PHP, strings são valores com copy-on-write, e o .= em laço altera o buffer no lugar na maioria dos casos, então é barato. Em Java, String é imutável: html += "<li>" + item + "</li>" cria a cada volta uma String nova com todo o conteúdo anterior copiado. O custo cresce quadraticamente (100 mil voltas ≈ 10 s no teste do William). O certo é StringBuilder html = new StringBuilder(); for (String item : itens) html.append("<li>").append(item).append("</li>"); e no fim html.toString(). Fora de laços, + simples continua ótimo e mais legível.' }
+      ]
+    };
+  </script>
+  <script src="../js/app.js"></script>
+</body>
+</html>
