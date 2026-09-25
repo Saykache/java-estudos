@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>52–53 · Varargs</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="topo">
+      <a class="voltar" href="../index.html">← Todas as aulas</a>
+      <h1>52–53 · Varargs e exercício de métodos</h1>
+      <p>Arrays como parâmetro, varargs (<code>int...</code>) e o exercício do funcionário com média salarial · <a href="https://www.youtube.com/playlist?list=PL62G310vn6nFIsOCC0H-C2infYgwm8SWW" target="_blank" rel="noopener">playlist</a></p>
+    </header>
+
+    <nav class="abas">
+      <a href="#resumo">Resumo</a>
+      <a href="#flashcards">Flashcards</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#estudo">Material de estudo</a>
+    </nav>
+
+    <p class="aviso">Junta as aulas 52 (varargs) e 53 (exercício com métodos, classes e objetos). Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. O nome do funcionário e os valores dos salários foram trocados, porque o áudio não deixa claro. O varargs vazio, o <code>printf</code> e os itens marcados como "extra" não estão nos vídeos.</p>
+
+    <section id="resumo">
+      <h2>Resumo</h2>
+      <p>Métodos também podem receber <strong>arrays</strong>. O <strong>varargs</strong> (<em>variable arguments</em>) é uma sintaxe mais recente e "mais bonitinha" para isso: com <code>int... numeros</code>, quem chama passa quantos valores quiser, separados por vírgula, e o Java monta o array sozinho. A aula 53 é um exercício que junta tudo desde a 39 (classe, atributos, arrays e métodos) e termina com a primeira <code>NullPointerException</code> "de verdade" do curso e como se proteger dela.</p>
+
+      <h3>52 · Array como parâmetro</h3>
+<pre><code>// Calculadora
+public void somaArray(int[] numeros) {
+    int soma = 0;
+    for (int num : numeros) {
+        soma += num;
+    }
+    System.out.println(soma);
+}
+
+// CalculadoraTeste05
+int[] numeros = {1, 2, 3, 4, 5};
+calculadora.somaArray(numeros);                      // 15
+calculadora.somaArray(new int[]{1, 2, 3, 4, 5});     // também funciona</code></pre>
+      <ul>
+        <li>O parâmetro declara o array igual a uma variável: <code>int[] numeros</code>.</li>
+        <li>Dá para criar o array direto na chamada, mas o William prefere <strong>separar a inicialização</strong> numa variável antes de passar, porque fica mais legível.</li>
+      </ul>
+
+      <h3>52 · Varargs</h3>
+<pre><code>public void somaVarArgs(int... numeros) {       // tipo + ... + nome
+    int soma = 0;
+    for (int num : numeros) {
+        soma += num;
+    }
+    System.out.println(soma);
+}
+
+calculadora.somaVarArgs(1, 2, 3, 4, 5, 6, 7);   // 28 — valores soltos
+calculadora.somaVarArgs(numeros);               // também aceita um array pronto</code></pre>
+      <ul>
+        <li>A sintaxe é <strong><code>tipo... nome</code></strong>, com três pontos.</li>
+        <li><strong>Por baixo dos panos é um array.</strong> A JVM transforma os argumentos num <code>int[]</code>, e o debug mostra um array de 7 posições. O corpo do método é idêntico ao da versão com array.</li>
+        <li>A <strong>vantagem</strong> está só na chamada: você não precisa criar o array, basta passar os valores separados por vírgula. Continua aceitando um array pronto.</li>
+        <li><strong>Regra: o varargs tem que ser o último parâmetro.</strong> <code>(double valor, int... numeros)</code> compila: o primeiro argumento vai para <code>valor</code> e o resto vira o array. Com 1 a 7, a soma dá 27 (o 1 foi para <code>valor</code>).</li>
+        <li><code>(int... numeros, double valor)</code> <strong>não compila</strong>, porque o Java não saberia onde o array termina. Pelo mesmo motivo, só pode haver <strong>um</strong> varargs por método.</li>
+        <li>Até o <code>main</code> pode ser escrito assim: <code>public static void main(String... args)</code>.</li>
+      </ul>
+
+      <h3>53 · Exercício: funcionário com média salarial</h3>
+      <p><em>Crie uma classe <code>Funcionario</code> com nome, idade e salários (3 salários guardados num array). Crie dois métodos: um para imprimir os dados e outro para calcular e imprimir a média dos salários.</em></p>
+<pre><code>// dominio/Funcionario.java
+public class Funcionario {
+    public String nome;
+    public int idade;
+    public double[] salarios;
+
+    public void imprime() {
+        System.out.println(this.nome);
+        System.out.println(this.idade);
+        if (salarios == null) {
+            return;                      // guard clause: sem salários, para aqui
+        }
+        for (double salario : salarios) {
+            System.out.print(salario + " ");
+        }
+        imprimeMediaSalario();           // um método chamando outro do mesmo objeto
+    }
+
+    public void imprimeMediaSalario() {
+        if (salarios == null) {
+            return;                      // o método é public: pode ser chamado sozinho
+        }
+        double media = 0;                // variável local: precisa inicializar
+        for (double salario : salarios) {
+            media += salario;
+        }
+        media /= salarios.length;
+        System.out.println("\nMédia salarial: " + media);
+    }
+}
+
+// test/FuncionarioTeste01.java
+Funcionario funcionario = new Funcionario();
+funcionario.nome = "Ana";
+funcionario.idade = 23;
+funcionario.salarios = new double[]{1200, 987.32, 2000};
+funcionario.imprime();</code></pre>
+      <ul>
+        <li><strong>Resolva aos pouquinhos:</strong> primeiro a classe, depois o <code>imprime</code>, testa, e só então a média. "Primeiro chegue no resultado, depois melhore."</li>
+        <li>Os salários variam por mês (pense num vendedor com comissão). Por isso o array faz sentido. A classe não tem como limitar o array a 3: quem cria o objeto é que passa 3 valores.</li>
+        <li><code>System.out.println(funcionario.salarios)</code> mostra a <strong>referência</strong> do array. É preciso percorrê-lo.</li>
+        <li>Imprimir <code>salarios[0]</code>, <code>[1]</code> e <code>[2]</code> na mão "funciona", mas <strong>não escala</strong>: um quarto salário obrigaria a mexer no método. Com o foreach o método se adapta sozinho.</li>
+        <li><code>media</code> é variável local, então precisa começar com 0. A média é a soma dividida por <code>salarios.length</code>.</li>
+        <li><code>imprime()</code> chama <code>imprimeMediaSalario()</code> direto, sem variável de referência: os dois estão no mesmo objeto.</li>
+      </ul>
+
+      <h3>53 · A NullPointerException e as proteções</h3>
+      <ul>
+        <li>Se ninguém atribuir <code>salarios</code>, o atributo fica com o valor padrão de referência, <strong><code>null</code></strong>. Percorrê-lo lança <strong><code>NullPointerException</code></strong> na execução: você tentou usar algo que não existe.</li>
+        <li><strong>Aprenda a ler o stack trace:</strong> ele mostra a pilha de chamadas (<code>FuncionarioTeste01.main</code> → <code>imprime</code> → <code>imprimeMediaSalario</code>). As linhas azuis são clicáveis e levam direto à linha do erro.</li>
+        <li>A primeira correção foi <code>if (salarios != null) { ... }</code> envolvendo o laço. A versão final é uma <strong>guard clause</strong>: <code>if (salarios == null) return;</code> no começo, que deixa o resto do método sem aninhamento.</li>
+        <li>A validação fica nos <strong>dois</strong> métodos. <code>imprimeMediaSalario</code> é <code>public</code>, então alguém pode chamá-lo sem passar pelo <code>imprime</code>. Com <code>private</code> (próxima aula) só a própria classe o chamaria, mas ainda valeria manter a checagem.</li>
+        <li>No mundo real, o cliente "por descuido" vai esquecer de informar o salário, e seu código precisa estar preparado. Mais à frente, o jeito certo é <strong>impedir</strong> o objeto de existir sem salário (construtores e exceções).</li>
+        <li>Detalhe de sintaxe que o William mostra: um <code>if</code> sem chaves contendo um <code>for</code> funciona, porque o laço inteiro conta como uma instrução só. Funciona, mas "é bem feinho". Use chaves.</li>
+      </ul>
+
+      <h3>Atenção</h3>
+      <ul>
+        <li><strong>O varargs vai sempre por último e é só um.</strong> <code>(int... a, String b)</code> e <code>(int... a, int... b)</code> não compilam.</li>
+        <li><strong>Extra: varargs aceita zero argumentos.</strong> <code>somaVarArgs()</code> compila e recebe um array <strong>vazio</strong> (não <code>null</code>): a soma dá 0. Já o método com <code>int[]</code> exige que algo seja passado.</li>
+        <li><strong>Extra: média com array vazio.</strong> <code>new double[0]</code> passa pelo <code>if (salarios == null)</code> e a divisão vira 0.0 / 0 = <code>NaN</code>. Uma validação mais completa: <code>if (salarios == null || salarios.length == 0) return;</code> (o curto-circuito do <code>||</code> evita a NPE).</li>
+        <li><strong>Extra: você já usa varargs.</strong> <code>System.out.printf("%s tem %d anos%n", nome, idade)</code> e <code>String.format(...)</code> recebem <code>Object... args</code>. É por isso que aceitam quantos valores você quiser.</li>
+        <li><code>print</code> não pula linha e <code>println</code> pula. Por isso o <code>"\n"</code> antes de "Média salarial".</li>
+        <li>O array é passado por referência (aulas 49–50): se o método alterar <code>numeros[0]</code>, o array de quem chamou muda. Com varargs de valores soltos isso não importa, porque o array é criado na chamada.</li>
+      </ul>
+
+      <h3>Paralelo com PHP</h3>
+      <ul>
+        <li><strong>Mesma ideia, sintaxe parecida:</strong> <code>function soma(int ...$numeros)</code> no PHP e <code>void soma(int... numeros)</code> em Java. Nos dois, o variádico é o último parâmetro e chega como array.</li>
+        <li><strong>Passar um array pronto:</strong> o PHP exige o spread, <code>soma(...$lista)</code>. O Java aceita o array direto, <code>soma(lista)</code>.</li>
+        <li><strong>Somar:</strong> o PHP tem <code>array_sum($numeros)</code>. Em Java, por enquanto, é o laço. Mais à frente, <code>Arrays.stream(numeros).sum()</code> (programação funcional).</li>
+        <li><strong>null:</strong> <code>foreach (null as $s)</code> no PHP dá um <em>warning</em> e segue. Em Java, percorrer <code>null</code> derruba o programa com <code>NullPointerException</code>. O nullsafe do PHP (<code>?-&gt;</code>) não existe em Java: aqui a guarda é o <code>if (x == null)</code>.</li>
+        <li><strong>Guard clauses:</strong> o <code>if (! $this-&gt;salarios) return;</code> que você usa no Laravel é exatamente o padrão da versão final da aula.</li>
+      </ul>
+    </section>
+
+    <section id="flashcards">
+      <h2>Flashcards</h2>
+      <p style="color:var(--muted);margin-top:-6px">Toque no cartão para virar.</p>
+      <div id="flashcards-app"></div>
+    </section>
+
+    <section id="quiz">
+      <h2>Quiz</h2>
+      <div id="quiz-app"></div>
+    </section>
+
+    <section id="estudo">
+      <h2>Material de estudo</h2>
+
+      <h3>Mapa mental</h3>
+<pre><code>Varargs e exercício
+├── Array como parâmetro (52)
+│   ├── void somaArray(int[] numeros)
+│   └── chamada: somaArray(numeros) · somaArray(new int[]{...})
+├── Varargs (52)
+│   ├── void somaVarArgs(int... numeros)
+│   ├── por baixo dos panos: um array
+│   ├── chamada: somaVarArgs(1, 2, 3) ou somaVarArgs(array)
+│   ├── sempre o ÚLTIMO parâmetro · só um por método
+│   └── zero argumentos → array vazio
+└── Exercício Funcionario (53)
+    ├── nome, idade, double[] salarios
+    ├── imprime() + imprimeMediaSalario()
+    ├── println(array) → referência → percorra com foreach
+    ├── média: variável local = 0, soma, / length
+    ├── salarios null → NullPointerException (ler o stack trace)
+    └── guard clause: if (salarios == null) return;</code></pre>
+
+      <h3>Prática no seu WSL (20 minutos)</h3>
+<pre><code>cd ~/java-lab
+B=src/academy/devdojo/maratonajava/javacore/Bintroducaometodos
+mkdir -p $B/dominio $B/test
+
+cat > $B/test/VarargsTeste.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Bintroducaometodos.test;
+
+public class VarargsTeste {
+    static int soma(int... numeros) {
+        int soma = 0;
+        for (int num : numeros) {
+            soma += num;
+        }
+        return soma;
+    }
+
+    static double media(double valorInicial, double... valores) {
+        return valores.length == 0 ? valorInicial : soma2(valores) / valores.length;
+    }
+
+    static double soma2(double... valores) {
+        double s = 0;
+        for (double v : valores) s += v;
+        return s;
+    }
+
+    public static void main(String... args) {
+        System.out.println(soma(1, 2, 3, 4, 5, 6, 7));    // ?
+        System.out.println(soma(new int[]{10, 20}));      // ?
+        System.out.println(soma());                       // ?
+        System.out.println(media(-1));                    // ?
+        System.out.println(media(-1, 1200, 900, 2100));    // ?
+        System.out.printf("%s tem %d anos%n", "Ana", 23); // ?
+    }
+}
+EOF
+
+javac -d out $(find src -name '*.java')
+java -cp out academy.devdojo.maratonajava.javacore.Bintroducaometodos.test.VarargsTeste</code></pre>
+      <details>
+        <summary>Ver a saída esperada</summary>
+<pre><code>28
+30
+0
+-1.0
+1400.0
+Ana tem 23 anos</code></pre>
+      </details>
+      <p><strong>Exercícios:</strong></p>
+      <ol>
+        <li>Faça o exercício da aula 53 sem olhar a resolução: <code>Funcionario</code> em <code>dominio</code>, <code>FuncionarioTeste01</code> em <code>test</code>.</li>
+        <li>Comente a linha que atribui <code>salarios</code>, rode, e leia o stack trace de baixo para cima. Qual linha do seu código aparece primeiro?</li>
+        <li>Acrescente a guard clause nos dois métodos e confirme que a exceção sumiu. Depois teste com <code>new double[0]</code> e corrija o <code>NaN</code>.</li>
+        <li>Troque o atributo por um método <code>setSalarios(double... salarios)</code> que usa <code>this.salarios = salarios;</code> e chame com <code>funcionario.setSalarios(1200, 987.32, 2000);</code>.</li>
+      </ol>
+
+      <h3>Glossário</h3>
+      <ul>
+        <li><strong>Varargs</strong>: parâmetro de quantidade variável (<code>tipo... nome</code>), recebido como array.</li>
+        <li><strong>Argumentos variáveis</strong>: valores soltos, separados por vírgula, que o Java junta num array.</li>
+        <li><strong><code>NullPointerException</code> (NPE)</strong>: exceção ao usar uma referência <code>null</code> como se apontasse para um objeto.</li>
+        <li><strong>Stack trace</strong>: a lista de métodos que estavam sendo executados quando a exceção aconteceu.</li>
+        <li><strong>Guard clause</strong>: validação no início do método que sai cedo com <code>return</code>.</li>
+        <li><strong><code>NaN</code></strong>: "not a number", resultado de 0.0 / 0 com double.</li>
+        <li><strong><code>printf</code></strong>: impressão formatada (<code>%s</code>, <code>%d</code>, <code>%n</code>), que usa varargs.</li>
+      </ul>
+
+      <h3>Revisão espaçada</h3>
+      <ul class="revisao">
+        <li><span class="dia">Dia 1</span><span>Todos os flashcards + a prática com previsões.</span></li>
+        <li><span class="dia">Dia 3</span><span>Quiz + exercício 1 (Funcionario do zero).</span></li>
+        <li><span class="dia">Dia 7</span><span>Exercícios 2, 3 e 4 (NPE, stack trace e guard clauses).</span></li>
+        <li><span class="dia">Dia 14</span><span>Flashcards que errou + questões discursivas.</span></li>
+      </ul>
+
+      <h3>Para aprofundar</h3>
+      <ul>
+        <li>Como ler um stack trace com várias camadas e o "Caused by"?</li>
+        <li>Por que <code>List.of(1, 2, 3)</code> e <code>Arrays.asList(...)</code> usam varargs?</li>
+        <li>O que acontece ao misturar varargs e sobrecarga (<code>soma(int a, int b)</code> e <code>soma(int... n)</code>)? (aula 57)</li>
+        <li>Como o <code>Optional</code> (mais à frente) ajuda a evitar <code>NullPointerException</code>?</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    window.AULA = {
+      flashcards: [
+        ["Como declarar um parâmetro que recebe um array de int?", "int[] numeros"],
+        ["Como declarar um varargs de int?", "int... numeros"],
+        ["O que o varargs é por baixo dos panos?", "Um array: o Java transforma os argumentos em int[]"],
+        ["Qual a vantagem do varargs sobre o array?", "Na chamada: passar valores soltos, sem criar o array"],
+        ["Um método com int... aceita um int[] pronto?", "Sim"],
+        ["Onde o varargs deve ficar na lista de parâmetros?", "Sempre por último"],
+        ["Por que o varargs precisa ser o último?", "Senão o Java não saberia onde o array termina"],
+        ["Quantos varargs um método pode ter?", "Só um"],
+        ["(double valor, int... n) chamado com (1, 2, 3): o que vai para valor?", "O 1; o resto (2, 3) vira o array"],
+        ["O main pode ser escrito com varargs?", "Sim: public static void main(String... args)"],
+        ["O que chega num varargs chamado sem argumentos?", "Um array vazio (length 0), não null"],
+        ["O que println(funcionario.salarios) mostra?", "A referência do array, não os valores"],
+        ["Por que percorrer o array em vez de usar [0], [1], [2]?", "Para o método se adaptar a qualquer quantidade (escala)"],
+        ["Por que media começa com 0?", "É variável local: precisa ser inicializada"],
+        ["Como calcular a média de um array?", "Somar tudo e dividir por array.length"],
+        ["Um método pode chamar outro do mesmo objeto sem referência?", "Sim: imprimeMediaSalario() direto (ou this.imprimeMediaSalario())"],
+        ["Qual o valor padrão de um atributo double[]?", "null"],
+        ["O que acontece ao percorrer um array null?", "NullPointerException"],
+        ["O que é o stack trace?", "A pilha de chamadas no momento da exceção, com links para as linhas"],
+        ["Qual a proteção final usada na aula 53?", "Guard clause: if (salarios == null) return;"],
+        ["Por que validar também em imprimeMediaSalario?", "Porque é public e pode ser chamado sem passar pelo imprime"],
+        ["Qual o resultado da média de um array vazio de double?", "NaN (0.0 / 0)"],
+        ["Que métodos do dia a dia usam varargs?", "printf e String.format (Object... args)"],
+        ["Como passar um array para um variádico no PHP e no Java?", "PHP: soma(...$lista). Java: soma(lista) direto"],
+        ["Existe ?-> (nullsafe) em Java?", "Não: a proteção é if (x == null)"]
+      ],
+      quiz: [
+        { tipo: 'vf', pergunta: 'Dentro do método, um parâmetro varargs (int... numeros) é tratado como um array.', correta: 0,
+          explicacao: 'Verdadeiro: o Java junta os argumentos num int[]. Dá para usar numeros.length e foreach normalmente.' },
+        { tipo: 'multipla', pergunta: 'Qual declaração NÃO compila?', opcoes: ['void m(int... n)', 'void m(String s, int... n)', 'void m(int... n, String s)', 'void m(int[] n)'], correta: 2,
+          explicacao: 'O varargs precisa ser o último parâmetro. Senão, o Java não sabe onde o array termina.' },
+        { tipo: 'multipla', pergunta: 'Com void soma(int... n), qual chamada NÃO compila?', opcoes: ['soma(1, 2, 3)', 'soma(new int[]{1, 2})', 'soma()', 'soma(1.5, 2)'], correta: 3,
+          explicacao: '1.5 é double e não cabe em int. As outras são válidas, inclusive a chamada sem argumentos (array vazio).' },
+        { tipo: 'multipla', pergunta: 'void m(double valor, int... n) { ... } chamado com m(1, 2, 3, 4). Quanto vale n.length?', opcoes: ['4', '3', '1', '0'], correta: 1,
+          explicacao: 'O primeiro argumento vai para valor. Os demais (2, 3, 4) formam o array: length 3.' },
+        { tipo: 'vf', pergunta: 'Chamar um método varargs sem nenhum argumento faz o parâmetro chegar como null.', correta: 1,
+          explicacao: 'Falso: chega um array vazio (length 0). Por isso um foreach sobre ele não quebra.' },
+        { tipo: 'multipla', pergunta: 'Funcionario tem public double[] salarios; e ninguém atribuiu valor. O que acontece em for (double s : salarios)?', opcoes: ['O laço não executa nenhuma vez', 'NullPointerException', 'Erro de compilação', 'Percorre 3 zeros'], correta: 1,
+          explicacao: 'O valor padrão do atributo array é null. Percorrer null lança NullPointerException na execução.' },
+        { tipo: 'multipla', pergunta: 'Qual guarda protege contra null E contra array vazio sem risco de NPE?', opcoes: ['if (salarios.length == 0 || salarios == null) return;', 'if (salarios == null || salarios.length == 0) return;', 'if (salarios == null && salarios.length == 0) return;', 'if (salarios.length == null) return;'], correta: 1,
+          explicacao: 'Com ||, se salarios for null a segunda parte nem é avaliada (curto-circuito). Na ordem inversa, salarios.length estouraria a NPE antes.' },
+        { tipo: 'vf', pergunta: 'Colocar a validação só em imprime() basta, mesmo que imprimeMediaSalario() seja public.', correta: 1,
+          explicacao: 'Falso: um método public pode ser chamado direto de fora, sem passar pelo imprime. Por isso a aula valida nos dois.' },
+        { tipo: 'discursiva', pergunta: 'Qual a diferença entre receber int[] numeros e int... numeros? Quando cada um faz mais sentido?',
+          explicacao: 'Dentro do método não há diferença: os dois são um int[]. A diferença está na chamada. Com int[], quem chama precisa criar e passar um array. Com varargs, pode passar valores soltos (soma(1, 2, 3)), um array pronto ou nenhum argumento (array vazio). Varargs faz sentido quando é natural passar uma lista curta de valores na hora (como no printf). O array faz sentido quando os dados já existem como coleção. Regras do varargs: último parâmetro e só um por método.' },
+        { tipo: 'discursiva', pergunta: 'No exercício da aula 53, por que o código quebrou sem os salários e quais foram as duas formas de proteção mostradas? Qual você usaria num projeto real?',
+          explicacao: 'salarios é um atributo de referência (array) e sem atribuição vale null. O foreach sobre null lança NullPointerException, e o stack trace aponta a linha. A primeira proteção envolveu o laço num if (salarios != null) { ... }. A final foi a guard clause if (salarios == null) return; no início dos dois métodos, porque ambos são public. Num projeto real, a guard clause é mais legível. O ideal seria nem deixar o objeto existir sem salários (construtor obrigando o valor ou lançando exceção), o que o curso mostra mais à frente.' }
+      ]
+    };
+  </script>
+  <script src="../js/app.js"></script>
+</body>
+</html>
