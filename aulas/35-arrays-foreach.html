@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>35 · Arrays: inicialização e foreach</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="topo">
+      <a class="voltar" href="../index.html">← Todas as aulas</a>
+      <h1>35 · Arrays: inicialização e foreach</h1>
+      <p>Criar arrays já com valores e percorrê-los sem índice · <a href="https://www.youtube.com/watch?v=cl47iLWalUw" target="_blank" rel="noopener">vídeo</a></p>
+    </header>
+
+    <nav class="abas">
+      <a href="#resumo">Resumo</a>
+      <a href="#flashcards">Flashcards</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#estudo">Material de estudo</a>
+    </nav>
+
+    <p class="aviso">Aula "Arrays pt 04 - Foreach". O vídeo não aparece na playlist, mas existe no YouTube (link acima). Feito a partir da legenda automática baixada com <code>ferramentas/transcricao.py</code>. O código (<code>Aula07Arrays03</code>) foi conferido no <a href="https://github.com/devdojobr/maratona-java-virado-no-jiraya" target="_blank" rel="noopener">repositório do professor</a>. Os itens marcados como "extra" não estão no vídeo.</p>
+
+    <section id="resumo">
+      <h2>Resumo</h2>
+      <p>Até a aula 34, criar um array exigia duas etapas: <code>new int[3]</code> e depois preencher posição por posição. Esta aula mostra duas formas de <strong>criar o array já com os valores</strong> (o tamanho é calculado sozinho) e uma forma nova de <strong>percorrê-lo</strong>: o <strong>foreach</strong>, que dispensa o índice.</p>
+
+      <h3>Três formas de criar um array</h3>
+<pre><code>public class Aula07Arrays03 {
+    public static void main(String[] args) {
+        int[] numeros = new int[3];                  // tamanho, valores padrão (0, 0, 0)
+        int[] numeros2 = {1, 2, 3, 4, 5};            // valores direto: 5 posições (índices 0 a 4)
+        int[] numeros3 = new int[]{5, 4, 3, 2, 1};   // new + valores, sem informar o tamanho
+
+        for (int num : numeros3) {                   // foreach
+            System.out.println(num);
+        }
+    }
+}</code></pre>
+      <ul>
+        <li><strong><code>{1, 2, 3, 4, 5}</code>:</strong> os valores vão entre chaves, separados por vírgula e do mesmo tipo declarado. O Java conta os elementos e cria o array com esse tamanho. Economiza as linhas de <code>numeros[0] = ...</code>.</li>
+        <li><strong><code>new int[]{5, 4, 3, 2, 1}</code>:</strong> outra sintaxe que dá no mesmo. <strong>Não coloque o tamanho</strong> entre os colchetes: <code>new int[5]{...}</code> é erro de compilação, porque quem calcula o tamanho é o Java.</li>
+        <li><strong>Use o <code>length</code> do array que você está percorrendo.</strong> A aula mostra um <code>for</code> que usa <code>numeros2.length</code> para imprimir <code>numeros3[i]</code>. Funciona só porque os dois têm 5 posições: <code>length</code> é apenas um número. Com tamanhos diferentes, quebraria.</li>
+      </ul>
+
+      <h3>O foreach (for aprimorado)</h3>
+<pre><code>for (int num : numeros3) {
+    System.out.println(num);   // 5, 4, 3, 2, 1
+}
+
+// equivale a:
+for (int i = 0; i &lt; numeros3.length; i++) {
+    int num = numeros3[i];
+    System.out.println(num);
+}</code></pre>
+      <ul>
+        <li><strong>A sintaxe:</strong> <code>for (Tipo variavel : array)</code>. Leia os dois-pontos como "em": "para cada <code>num</code> <em>em</em> <code>numeros3</code>".</li>
+        <li>A cada volta, a variável recebe <strong>o próximo elemento</strong>: na primeira, <code>numeros3[0]</code>, na segunda, <code>numeros3[1]</code>, e assim por diante. O controle de índice, a comparação com o tamanho e o incremento acontecem "por baixo dos panos".</li>
+        <li><strong>O tipo da variável tem que ser o tipo dos elementos.</strong> Num <code>int[]</code>, é <code>int</code>. <code>for (String s : numeros3)</code> não compila.</li>
+        <li><strong>Não há índice.</strong> Se você precisa saber a posição (ou acessar uma posição específica), use o <code>for</code> comum com <code>i</code>.</li>
+        <li>O nome da variável é livre (<code>num</code>, <code>x</code>...). Ela é <strong>local ao laço</strong> e deixa de existir quando ele acaba. Declarar outra variável com o mesmo nome <em>depois</em> do laço funciona. <em>Antes</em> do laço, no mesmo bloco, dá conflito de nomes e não compila.</li>
+        <li>Nas palavras do William: "vocês vão utilizar muito esse for".</li>
+      </ul>
+
+      <h3>Atenção</h3>
+      <ul>
+        <li><code>{1, 2, 3}</code> sozinho só vale <strong>na declaração</strong>. Depois, para atribuir, é <code>numeros = new int[]{1, 2, 3};</code>. A aula 38 volta a isso com arrays multidimensionais.</li>
+        <li><code>new int[3]{1, 2, 3}</code> não compila: ou você dá o tamanho, ou os valores.</li>
+        <li><strong>Extra: o foreach não altera o array.</strong> <code>for (int num : numeros) { num = 0; }</code> muda só a variável temporária. Para gravar, use o <code>for</code> com índice: <code>numeros[i] = 0</code>.</li>
+        <li><strong>Extra:</strong> o foreach percorre sempre do primeiro ao último. Para ir de trás para frente, pular posições ou parar num índice, volte ao <code>for</code> comum. O <code>break</code> e o <code>continue</code> funcionam normalmente no foreach.</li>
+        <li><strong>Extra:</strong> um array <code>null</code> no foreach lança <code>NullPointerException</code>. Um array vazio (<code>{}</code>) simplesmente não entra no laço.</li>
+      </ul>
+
+      <h3>Paralelo com PHP</h3>
+      <ul>
+        <li><strong>Literal:</strong> <code>$numeros = [1, 2, 3];</code> vira <code>int[] numeros = {1, 2, 3};</code>. São chaves em vez de colchetes, e em Java é tudo do mesmo tipo e com tamanho fixo depois de criado.</li>
+        <li><strong>foreach:</strong> <code>foreach ($numeros as $num)</code> vira <code>for (int num : numeros)</code>. O tipo vem antes, e os dois-pontos substituem o <code>as</code>, com a ordem invertida (a variável primeiro).</li>
+        <li><strong>Sem chave:</strong> não existe <code>foreach ($a as $i =&gt; $v)</code> no foreach de array do Java. Precisou do índice, use o <code>for</code> comum.</li>
+        <li><strong>Escopo:</strong> no PHP, <code>$num</code> continua existindo depois do laço, com o último valor, e com <code>&amp;$num</code> ainda pode causar o famoso bug de referência. Em Java, a variável morre com o laço.</li>
+      </ul>
+    </section>
+
+    <section id="flashcards">
+      <h2>Flashcards</h2>
+      <p style="color:var(--muted);margin-top:-6px">Toque no cartão para virar.</p>
+      <div id="flashcards-app"></div>
+    </section>
+
+    <section id="quiz">
+      <h2>Quiz</h2>
+      <div id="quiz-app"></div>
+    </section>
+
+    <section id="estudo">
+      <h2>Material de estudo</h2>
+
+      <h3>Mapa mental</h3>
+<pre><code>Arrays pt 04
+├── Criar
+│   ├── new int[3]              → tamanho, valores padrão
+│   ├── {1, 2, 3, 4, 5}         → valores; tamanho calculado (só na declaração)
+│   └── new int[]{5, 4, 3, 2, 1} → valores; NÃO informar tamanho
+├── for com índice
+│   └── use o length do MESMO array que você percorre
+└── foreach
+    ├── for (Tipo variavel : array)
+    ├── variável recebe cada elemento, em ordem
+    ├── tipo = tipo dos elementos
+    ├── sem índice
+    └── variável local ao laço</code></pre>
+
+      <h3>Prática no seu WSL (10 minutos)</h3>
+<pre><code>cd ~/java-lab
+cat > src/academy/devdojo/maratonajava/introducao/Aula07Arrays03.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.introducao;
+
+public class Aula07Arrays03 {
+    public static void main(String[] args) {
+        int[] numeros2 = {1, 2, 3, 4, 5};
+        int[] numeros3 = new int[]{5, 4, 3, 2, 1};
+        System.out.println(numeros2.length);   // ?
+
+        int soma = 0;
+        for (int num : numeros3) {
+            soma += num;
+            num = 0;                           // muda o array?
+        }
+        System.out.println(soma);              // ?
+        System.out.println(numeros3[0]);       // ?
+
+        String[] nomes = {"Goku", "Kurosaki", "Luffy"};
+        for (String nome : nomes) {
+            System.out.print(nome + " ");      // ?
+        }
+    }
+}
+EOF
+javac -d out src/academy/devdojo/maratonajava/introducao/Aula07Arrays03.java
+java -cp out academy.devdojo.maratonajava.introducao.Aula07Arrays03</code></pre>
+      <details>
+        <summary>Ver a saída esperada</summary>
+<pre><code>5
+15
+5
+Goku Kurosaki Luffy </code></pre>
+      </details>
+      <p><strong>Exercícios:</strong></p>
+      <ol>
+        <li>Crie <code>double[] notas = {7.5, 8, 9.25};</code> e calcule a média com foreach.</li>
+        <li>Tente <code>int[] a = new int[3]{1, 2, 3};</code> e leia o erro.</li>
+        <li>Refaça a impressão dos nomes da aula 34 com foreach e compare com o <code>for</code> de índice.</li>
+        <li>Declare <code>int num = 10;</code> antes do foreach que usa <code>num</code> e veja o erro. Depois declare-o após o laço.</li>
+      </ol>
+
+      <h3>Glossário</h3>
+      <ul>
+        <li><strong>Inicializador de array</strong>: <code>{v1, v2, ...}</code>, lista de valores que define o conteúdo e o tamanho.</li>
+        <li><strong>Array anônimo</strong>: <code>new int[]{...}</code>, criado com valores e sem precisar de variável.</li>
+        <li><strong>foreach / for aprimorado</strong>: <code>for (Tipo x : array)</code>, que percorre elemento por elemento.</li>
+        <li><strong>Variável de iteração</strong>: a variável do foreach, que recebe um elemento por volta.</li>
+      </ul>
+
+      <h3>Revisão espaçada</h3>
+      <ul class="revisao">
+        <li><span class="dia">Dia 1</span><span>Todos os flashcards + a prática.</span></li>
+        <li><span class="dia">Dia 3</span><span>Quiz + exercícios 1 e 2.</span></li>
+        <li><span class="dia">Dia 7</span><span>Exercícios 3 e 4.</span></li>
+        <li><span class="dia">Dia 14</span><span>Flashcards que errou + questões discursivas.</span></li>
+      </ul>
+
+      <h3>Para aprofundar</h3>
+      <ul>
+        <li>O foreach funciona com o quê além de arrays? (dica: <code>Iterable</code>, nas coleções)</li>
+        <li>Como o foreach de um array multidimensional funciona? (aula 37)</li>
+        <li>Por que o <code>forEach(...)</code> com lambda das coleções é diferente do <code>for (x : lista)</code>?</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    window.AULA = {
+      flashcards: [
+        ["Como criar um array de int já com os valores 1 a 5?", "int[] numeros = {1, 2, 3, 4, 5};"],
+        ["Qual o tamanho de {1, 2, 3, 4, 5}?", "5 (calculado automaticamente), índices de 0 a 4"],
+        ["Qual a outra forma de criar com valores?", "new int[]{5, 4, 3, 2, 1}"],
+        ["new int[5]{1, 2, 3, 4, 5} compila?", "Não: com valores, o tamanho não pode ser informado"],
+        ["{1, 2, 3} funciona fora da declaração?", "Não: fora dela use new int[]{1, 2, 3}"],
+        ["Por que usar o length do mesmo array que você percorre?", "length é só um número; com tamanhos diferentes, o laço quebra"],
+        ["Qual a sintaxe do foreach?", "for (Tipo variavel : array)"],
+        ["Como ler for (int num : numeros)?", "Para cada num em numeros"],
+        ["O que a variável do foreach recebe a cada volta?", "O próximo elemento do array"],
+        ["Qual deve ser o tipo da variável do foreach?", "O tipo dos elementos do array"],
+        ["O foreach dá acesso ao índice?", "Não: se precisar do índice, use o for comum"],
+        ["A variável do foreach existe depois do laço?", "Não: é local ao laço"],
+        ["Declarar num antes de um foreach que usa num compila?", "Não, no mesmo bloco dá conflito de nomes"],
+        ["num = 0 dentro do foreach altera o array?", "Não: muda só a variável temporária"],
+        ["O que acontece no foreach com array vazio? E com null?", "Vazio: não entra no laço. null: NullPointerException"],
+        ["Como fica foreach ($a as $n) do PHP em Java?", "for (int n : a)"]
+      ],
+      quiz: [
+        { tipo: 'vf', pergunta: 'Em int[] numeros = {1, 2, 3, 4, 5};, o Java calcula sozinho que o array tem 5 posições.', correta: 0,
+          explicacao: 'Verdadeiro: o tamanho vem da quantidade de valores entre as chaves.' },
+        { tipo: 'multipla', pergunta: 'Qual declaração NÃO compila?', opcoes: ['int[] a = {1, 2, 3};', 'int[] a = new int[]{1, 2, 3};', 'int[] a = new int[3]{1, 2, 3};', 'int[] a = new int[3];'], correta: 2,
+          explicacao: 'Com a lista de valores, o tamanho não pode ser informado: o Java é quem calcula.' },
+        { tipo: 'multipla', pergunta: 'Qual é a sintaxe correta do foreach sobre int[] numeros?', opcoes: ['for (numeros : int num)', 'for (int num : numeros)', 'foreach (numeros as num)', 'for (int num in numeros)'], correta: 1,
+          explicacao: 'Tipo e nome da variável, dois-pontos, e o array.' },
+        { tipo: 'vf', pergunta: 'O foreach permite acessar o índice da posição atual.', correta: 1,
+          explicacao: 'Falso: ele entrega só o elemento. Para o índice, use o for comum.' },
+        { tipo: 'multipla', pergunta: 'Qual foreach compila para String[] nomes?', opcoes: ['for (int n : nomes)', 'for (char n : nomes)', 'for (String n : nomes)', 'for (Object[] n : nomes)'], correta: 2,
+          explicacao: 'O tipo da variável é o tipo dos elementos: String.' },
+        { tipo: 'multipla', pergunta: 'int[] a = {1, 2, 3}; for (int x : a) { x = 0; } — quanto vale a[0] depois?', opcoes: ['0', '1', '3', 'Erro de compilação'], correta: 1,
+          explicacao: 'x é uma cópia do elemento (para primitivos). Mudá-la não altera o array.' },
+        { tipo: 'multipla', pergunta: 'numeros2 tem 5 posições e numeros3 tem 3. O que acontece em for (int i = 0; i < numeros2.length; i++) System.out.println(numeros3[i]);?', opcoes: ['Imprime 3 números e para', 'Imprime 5 números', 'Imprime 3 números e lança ArrayIndexOutOfBoundsException', 'Erro de compilação'], correta: 2,
+          explicacao: 'O limite veio do array errado: ao chegar em i = 3, numeros3[3] não existe. Use o length do próprio array.' },
+        { tipo: 'vf', pergunta: 'A variável declarada no foreach continua existindo depois do laço, com o último valor.', correta: 1,
+          explicacao: 'Falso: ela é local ao laço. Isso é diferente do PHP, em que $num sobrevive ao foreach.' },
+        { tipo: 'discursiva', pergunta: 'Quando usar o foreach e quando usar o for com índice?',
+          explicacao: 'O foreach é para percorrer todos os elementos, do primeiro ao último, só lendo cada um: é mais curto e evita erros de índice e de length. O for com índice é necessário quando você precisa da posição (imprimir o índice, acessar outra posição), quer alterar o array (numeros[i] = ...), percorrer de trás para frente, pular elementos ou começar e terminar em posições específicas.' },
+        { tipo: 'discursiva', pergunta: 'Traduza para Java: $numeros = [5, 4, 3]; foreach ($numeros as $i => $n) { echo "$i: $n\\n"; }',
+          explicacao: 'O literal vira int[] numeros = {5, 4, 3};. Como o foreach do Java não entrega a chave, é preciso o for com índice: for (int i = 0; i < numeros.length; i++) { System.out.println(i + ": " + numeros[i]); }. Sem precisar do índice, bastaria for (int n : numeros) { System.out.println(n); }.' }
+      ]
+    };
+  </script>
+  <script src="../js/app.js"></script>
+</body>
+</html>

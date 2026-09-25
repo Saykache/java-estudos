@@ -30,15 +30,16 @@ Aulas que são partes do mesmo tema viram uma página só: `aulas/NN-MM-slug.htm
 commit `Aulas NN-MM - Título`. Exercícios e resoluções ficam junto da teoria. Só gerar a página com as transcrições
 do bloco inteiro (o autor pode mandar em partes). Aulas avulsas continuam `NN-slug.html`.
 
-Feitas: 02 · 03–07 · 08 · 09 · 10–14 · 15–19 · 20–24 · 25–26 · 27–31 · 32–34 · 36–38 · 39–43 · 44–47 · 48–51 · 52–53 · 54–57 · 58–59 · 60–63 · 64–70.
+Feitas: 02 · 03–07 · 08 · 09 · 10–14 · 15–19 · 20–24 · 25–26 · 27–31 · 32–34 · 35 · 36–38 · 39–43 · 44–47 · 48–51 · 52–53 · 54–57 · 58–59 · 60–63 · 64–70.
 
-Plano (títulos da playlist; a aula 35 não aparece nela):
+Plano (títulos no README do professor; a aula 35 não está na playlist, é o vídeo cl47iLWalUw — o script aceita a URL direta):
 - 10–14 Tipos primitivos (convenções, declaração/memória, casting, Strings, exercício)
 - 15–19 Operadores (aritméticos, relacionais, AND, OR, atribuição)
 - 20–24 Condicionais: if, else if, ternário, tabela verdade, exercício e resolução
 - 25–26 Switch + exercício
 - 27–31 Estruturas de repetição (while/do while/for, break, continue + exercícios)
 - 32–34 Arrays
+- 35 Arrays pt 04 (inicialização e foreach)
 - 36–38 Arrays multidimensionais (foreach, inicialização)
 - 39–43 OO: classes, coesão, exercício, referência de objetos
 - 44–47 Métodos: parâmetros e retorno
