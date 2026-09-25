@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>189–194 · Classes internas</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="topo">
+      <a class="voltar" href="../index.html">← Todas as aulas</a>
+      <h1>189–194 · Classes internas e parametrizando comportamentos</h1>
+      <p>Classe interna, local, anônima e aninhada estática; passar o comportamento por parâmetro (Predicate) até chegar às lambdas · <a href="https://www.youtube.com/playlist?list=PL62G310vn6nFIsOCC0H-C2infYgwm8SWW" target="_blank" rel="noopener">playlist</a></p>
+    </header>
+
+    <nav class="abas">
+      <a href="#resumo">Resumo</a>
+      <a href="#flashcards">Flashcards</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#estudo">Material de estudo</a>
+    </nav>
+
+    <p class="aviso">Junta as aulas 189 a 192 (classes internas: introdução, locais, anônimas e aninhadas estáticas) com 193 e 194 (parametrizando comportamentos). Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. O código (pacotes <code>javacore.ZZAclassesinternas</code> e <code>javacore.ZZBcomportamento</code>, Luffy, Midoriya, <code>Car</code> e <code>CarPredicate</code>) foi conferido no <a href="https://github.com/devdojobr/maratona-java-virado-no-jiraya" target="_blank" rel="noopener">repositório do professor</a>. Os itens marcados como "extra" não estão nos vídeos.</p>
+
+    <section id="resumo">
+      <h2>Resumo</h2>
+      <p>O alfabeto acabou, e os pacotes viraram <code>ZZA</code>, <code>ZZB</code>... <strong>Classes internas</strong> são classes declaradas <strong>dentro de outra</strong> (ou dentro de um método) quando elas são fortemente ligadas: por exemplo, a ação do botão "enviar" só faz sentido dentro da tela do chat. São quatro tipos. A mais importante no dia a dia é a <strong>anônima</strong>, que leva direto ao segundo tema: <strong>passar comportamento por parâmetro</strong> (um <code>Predicate</code>) em vez de escrever um método de filtro para cada regra. É a porta de entrada das <strong>lambdas</strong> (aulas 195+).</p>
+<pre><code>class Outer {
+    class Inner { }                   // 189 · interna (membro): precisa de um objeto Outer
+    void metodo() {
+        class Local { }               // 190 · local: só existe dentro do método
+        Animal a = new Animal() { };  // 191 · anônima: subclasse sem nome, uso único
+    }
+    static class Nested { }           // 192 · aninhada estática: não precisa de objeto Outer
+}</code></pre>
+
+      <h3>189 · Classe interna (membro)</h3>
+<pre><code>public class OuterClassesTest01 {
+    private String name = "Monkey D. Luffy";
+
+    class Inner {                                     // não estática
+        public void printOuterClassAttribute() {
+            System.out.println(name);                 // acessa até os PRIVADOS da externa
+            System.out.println(this);                 // OuterClassesTest01$Inner@1b6d3586 (o Inner)
+            System.out.println(OuterClassesTest01.this);   // o objeto EXTERNO
+        }
+    }
+
+    public static void main(String[] args) {
+        OuterClassesTest01 outerClass = new OuterClassesTest01();
+        Inner inner = outerClass.new Inner();         // precisa de um objeto da externa
+        Inner inner2 = new OuterClassesTest01().new Inner();
+        inner.printOuterClassAttribute();
+        inner2.printOuterClassAttribute();
+    }
+}</code></pre>
+      <ul>
+        <li>Uma classe declarada no corpo de outra, como se fosse um membro. Ela <strong>tem acesso a todos os atributos da externa</strong>, até os <code>private</code>.</li>
+        <li><strong>Para criar a interna, precisa de um objeto da externa</strong>: <code>outer.new Inner()</code>, uma sintaxe estranha mesmo. No <code>main</code> (estático) não dá para fazer só <code>new Inner()</code>, pela mesma regra de acessar algo não estático de um contexto estático (aulas 60–63).</li>
+        <li>O tipo completo é <code>OuterClassesTest01.Inner</code>, e às vezes você vai ver o caminho inteiro.</li>
+        <li><strong><code>this</code></strong> dentro da interna é o objeto <strong>interno</strong> (o <code>$</code> no nome mostra isso). Para o externo: <strong><code>NomeDaExterna.this</code></strong>.</li>
+        <li>Pode ter qualquer modificador de acesso (<code>private</code>, <code>protected</code>, <code>public</code>) e até <code>static</code> (aula 192).</li>
+      </ul>
+
+      <h3>190 · Classe local</h3>
+<pre><code>public class OuterClassesTest02 {
+    private String name = "Midoriya";
+
+    void print(final String param) {
+        final String lastName = "Izuku";              // tem que ser final ou "efetivamente final"
+
+        class LocalClass {                            // dentro do MÉTODO
+            public void printLocal() {
+                System.out.println(param);
+                System.out.println(name + " " + lastName);   // Midoriya Izuku
+            }
+        }
+        new LocalClass().printLocal();                // tem que usar AQUI, dentro do método
+    }
+}</code></pre>
+      <ul>
+        <li>Declarada <strong>dentro de um método</strong> (ou bloco). Depois que o método termina, não há como acessá-la. Por isso você instancia e usa <strong>no próprio método</strong>. O William diz que nunca usou na carreira, mas é bom conhecer.</li>
+        <li>Modificadores permitidos na declaração: só <strong><code>abstract</code></strong> ou <strong><code>final</code></strong>.</li>
+        <li>Acessa os atributos da externa (<code>name</code>) e as <strong>variáveis locais e parâmetros do método</strong>, desde que sejam <strong><code>final</code> ou efetivamente <code>final</code></strong> (Java 8+: nunca reatribuídos). Mudar o <code>lastName</code> depois dá erro de compilação.</li>
+        <li><strong>Por quê?</strong> A variável local "morre" quando o método termina, mas o objeto da classe local pode continuar vivo. O Java guarda uma <strong>cópia</strong> do valor, e isso só é seguro se o valor nunca mudar.</li>
+      </ul>
+
+      <h3>191 · Classe anônima</h3>
+<pre><code>class Animal {
+    public void walk() { System.out.println("Animal walking"); }
+}
+
+Animal animal = new Animal() {            // { } logo depois do new: SUBCLASSE SEM NOME
+    @Override
+    public void walk() {
+        System.out.println("Walking in the shadows");
+    }
+};
+animal.walk();                            // Walking in the shadows
+
+// A partir de uma INTERFACE: new "Interface"() { ... } cria uma classe que a implementa
+List&lt;Barco&gt; barcoList = new ArrayList&lt;&gt;(List.of(new Barco("Lancha"), new Barco("Canoa")));
+barcoList.sort(new Comparator&lt;Barco&gt;() {
+    @Override
+    public int compare(Barco o1, Barco o2) {
+        return o1.getNome().compareTo(o2.getNome());
+    }
+});
+// o mesmo com lambda (Java 8):
+barcoList.sort((o1, o2) -&gt; o1.getNome().compareTo(o2.getNome()));
+System.out.println(barcoList);            // [Barco{nome='Canoa'}, Barco{nome='Lancha'}]</code></pre>
+      <ul>
+        <li>Classe <strong>sem nome</strong>, criada e usada <strong>num único ponto</strong> do código. Serve para trocar um comportamento só ali, sem poluir o projeto com uma classe <code>Cachorro</code> que ninguém mais usaria.</li>
+        <li><code>new Animal() { ... }</code> parece um <code>new</code> comum, mas as chaves criam uma <strong>subclasse anônima</strong> de <code>Animal</code> que sobrescreve <code>walk</code>.</li>
+        <li><strong>Vale o polimorfismo</strong>: a variável é do tipo <code>Animal</code>, então um método novo que você crie dentro da anônima (<code>void tamo()</code>) <strong>não pode ser chamado de fora</strong>, só de dentro do <code>walk</code>.</li>
+        <li>Com uma <strong>interface</strong> (<code>new Comparator&lt;Barco&gt;() { ... }</code>) você <strong>não está instanciando a interface</strong>: está criando uma classe sem nome que a implementa. Dispensa o <code>BarcoNameComparator</code> separado das aulas 171–172.</li>
+        <li>Na aula, o <code>sort</code> numa lista de <code>List.of</code> deu <code>UnsupportedOperationException</code> (imutável), resolvido com <code>new ArrayList&lt;&gt;(List.of(...))</code>.</li>
+        <li>A <strong>lambda</strong> <code>(o1, o2) -&gt; ...</code> resume toda a anônima numa linha. <strong>Não é a mesma coisa</strong> por baixo, mas o resultado é igual. Esse é o assunto das próximas aulas.</li>
+      </ul>
+
+      <h3>192 · Classe aninhada estática</h3>
+<pre><code>public class OuterClassesTest03 {
+    private String name = "William";
+
+    static class Nested {
+        private String lastName = "Suane";
+
+        void print() {
+            // System.out.println(name);                       ← NÃO: name não é static
+            System.out.println(new OuterClassesTest03().name + " " + lastName);   // William Suane
+        }
+    }
+
+    public static void main(String[] args) {
+        OuterClassesTest03.Nested nested = new OuterClassesTest03.Nested();  // sem objeto externo
+        nested.print();
+    }
+}</code></pre>
+      <ul>
+        <li>Com <code>static</code>, é como uma <strong>classe de nível superior</strong> (<em>top level</em>) que só está "empacotada" dentro da outra, porque só faz sentido junto dela.</li>
+        <li><strong>Não precisa de objeto da externa</strong> para ser criada: <code>new Outer.Nested()</code>. E, como todo contexto estático, <strong>não enxerga os atributos de instância</strong> da externa sem um objeto (<code>new OuterClassesTest03().name</code>). Os privados continuam acessíveis por esse objeto.</li>
+        <li><strong>Exemplo real: <code>Map.Entry</code></strong> (aula 178) é uma interface declarada <strong>dentro</strong> de <code>Map</code>. <code>getKey</code>/<code>getValue</code> só fazem sentido para um <code>Map</code>, então não faz sentido o <code>Entry</code> ficar solto no mesmo nível.</li>
+        <li><strong>Extra: nomenclatura.</strong> A especificação chama todas de <em>nested classes</em>. As <strong>não estáticas</strong> (membro, local, anônima) são as <em>inner classes</em>, e a <code>static</code> é a <em>static nested class</em>. Também é comum em padrões como o <em>Builder</em> (<code>Pessoa.Builder</code>).</li>
+      </ul>
+
+      <h3>193 · O problema: um método de filtro para cada pedido</h3>
+<pre><code>public class Car {
+    private String name = "Audi";
+    private String color;
+    private int year;
+    ...
+}
+private static List&lt;Car&gt; cars = List.of(new Car("green", 2011), new Car("black", 1998), new Car("red", 2019));
+
+private static List&lt;Car&gt; filterGreenCar(List&lt;Car&gt; cars) { ... if (car.getColor().equals("green")) ... }
+private static List&lt;Car&gt; filterRedCar(List&lt;Car&gt; cars)   { ... if (car.getColor().equals("red")) ... }
+private static List&lt;Car&gt; filterCarByColor(List&lt;Car&gt; cars, String cor) { ... if (car.getColor().equals(cor)) ... }
+private static List&lt;Car&gt; filterByYearBefore(List&lt;Car&gt; cars, int year) { ... if (car.getYear() &lt; year) ... }
+// todos iguais: lista nova · for · IF · add · return. Só o IF muda.</code></pre>
+      <ul>
+        <li>"Na vida, três coisas são inevitáveis: morrer, pagar imposto e o cliente pedir para mudar algo pronto." Primeiro ele pede os carros verdes, depois os vermelhos, depois os anteriores a 2015...</li>
+        <li>Parametrizar a cor (<code>filterCarByColor</code>) ajuda um pouco, mas cada novo <strong>tipo</strong> de critério (ano, marca...) exige outro método copiado. <strong>A única coisa que muda é a condição do <code>if</code></strong>. E se a condição viesse por parâmetro?</li>
+        <li>Dica de carreira do William: <strong>nunca dê prazo na hora</strong> ("5 minutos"). Diga que vai analisar e depois responda com o tempo real.</li>
+      </ul>
+
+      <h3>194 · Comportamento por parâmetro: CarPredicate → Predicate&lt;T&gt;</h3>
+<pre><code>public interface CarPredicate {            // uma interface com UM método: a condição
+    boolean test(Car car);
+}
+
+private static List&lt;Car&gt; filter(List&lt;Car&gt; cars, CarPredicate carPredicate) {
+    List&lt;Car&gt; filteredCar = new ArrayList&lt;&gt;();
+    for (Car car : cars) {
+        if (carPredicate.test(car)) {      // o IF agora vem de fora (polimorfismo)
+            filteredCar.add(car);
+        }
+    }
+    return filteredCar;
+}
+
+// Com classe anônima:
+List&lt;Car&gt; greenCars = filter(cars, new CarPredicate() {
+    @Override
+    public boolean test(Car car) { return car.getColor().equals("green"); }
+});
+// Com lambda (mesma coisa, uma linha):
+List&lt;Car&gt; redCars = filter(cars, car -&gt; car.getColor().equals("red"));
+List&lt;Car&gt; yearBeforeCars = filter(cars, car -&gt; car.getYear() &lt; 2015);   // green 2011 e black 1998
+
+// Genérico, com a interface pronta do Java (java.util.function.Predicate):
+private static &lt;T&gt; List&lt;T&gt; filter(List&lt;T&gt; list, Predicate&lt;T&gt; predicate) {
+    List&lt;T&gt; filteredList = new ArrayList&lt;&gt;();
+    for (T e : list) {
+        if (predicate.test(e)) filteredList.add(e);
+    }
+    return filteredList;
+}
+List&lt;Integer&gt; nums = List.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+System.out.println(filter(nums, num -&gt; num % 2 == 0));   // [2, 4, 6, 8, 10]</code></pre>
+      <ul>
+        <li>O método <code>filter</code> passa a ter <strong>uma lógica só</strong>, e a <strong>regra de negócio chega por parâmetro</strong>: um objeto que implementa <code>CarPredicate</code>. Chamar <code>test</code> sem saber qual implementação veio é polimorfismo de novo.</li>
+        <li>O comportamento é passado com uma <strong>classe anônima</strong> ou, bem mais curto, com uma <strong>lambda</strong>: <code>car -&gt; car.getColor().equals("green")</code>. Antes da seta vem o nome do parâmetro (qualquer nome, como no foreach). Depois vem a expressão que devolve o <code>boolean</code>. Isso só funciona porque a interface tem <strong>um único método abstrato</strong>.</li>
+        <li>O Java já traz essa interface pronta e genérica: <strong><code>java.util.function.Predicate&lt;T&gt;</code></strong>, com <code>boolean test(T t)</code>. Juntando com um <strong>método genérico</strong> (aula 188), um único <code>filter</code> serve para <strong>qualquer lista e qualquer condição</strong>: carros, números pares...</li>
+        <li>É assim que funcionam o <code>removeIf</code> (aula 174) e toda a API de Streams (<code>stream().filter(...)</code>, aulas 203+).</li>
+      </ul>
+
+      <h3>Atenção</h3>
+      <ul>
+        <li><strong>Interna (não estática) precisa de objeto externo:</strong> <code>outer.new Inner()</code>. <strong>Aninhada estática não:</strong> <code>new Outer.Nested()</code>.</li>
+        <li><strong><code>this</code> na interna é a interna.</strong> O externo é <code>Externa.this</code>.</li>
+        <li><strong>Classe local e anônima só usam variáveis locais <code>final</code> ou efetivamente <code>final</code>.</strong></li>
+        <li><strong><code>new Interface() { ... }</code> não instancia a interface</strong>: cria uma classe anônima que a implementa.</li>
+        <li><strong>Extra: cada classe interna vira um arquivo <code>.class</code> próprio</strong> no <code>out/</code>: <code>OuterClassesTest01$Inner.class</code>, e as anônimas viram <code>AnonymousClassesTest01$1.class</code>. Dá para ver com <code>ls</code>.</li>
+        <li><strong>Extra: <code>@FunctionalInterface</code></strong> em cima de <code>CarPredicate</code> faz o compilador garantir que ela tenha só um método abstrato, que é o requisito para usar lambda.</li>
+      </ul>
+
+      <h3>Paralelo com PHP</h3>
+      <ul>
+        <li><strong>O PHP não tem classes internas</strong> (nem membro, nem local, nem estática aninhada). Para agrupar, usam-se <em>namespaces</em> e arquivos separados. <code>Map.Entry</code> seria algo como <code>Map\Entry</code>.</li>
+        <li><strong>Classe anônima existe (PHP 7+):</strong> <code>$animal = new class extends Animal { public function walk() { echo "Walking in the shadows"; } };</code>. Também com interface: <code>new class implements Comparator { ... }</code>. É muito usada em testes no Laravel e nas <em>migrations</em> modernas (<code>return new class extends Migration { ... }</code>).</li>
+        <li><strong>Captura de variáveis:</strong> a classe local e a anônima do Java capturam variáveis efetivamente finais. No PHP, a closure clássica precisa de <code>use ($var)</code> (captura uma cópia), e a <em>arrow function</em> <code>fn($c) =&gt; $c-&gt;cor === $cor</code> captura sozinha, também por valor.</li>
+        <li><strong>Comportamento por parâmetro é o dia a dia do PHP:</strong> <code>array_filter($cars, fn($car) =&gt; $car-&gt;color === 'green')</code> ou <code>collect($cars)-&gt;filter(fn($c) =&gt; $c-&gt;year &lt; 2015)</code> é exatamente o <code>filter(cars, car -&gt; ...)</code> da aula 194. A diferença é que no Java a função precisa "caber" numa interface (<code>Predicate&lt;T&gt;</code>), e no PHP qualquer <code>callable</code> serve.</li>
+      </ul>
+    </section>
+
+    <section id="flashcards">
+      <h2>Flashcards</h2>
+      <p style="color:var(--muted);margin-top:-6px">Toque no cartão para virar.</p>
+      <div id="flashcards-app"></div>
+    </section>
+
+    <section id="quiz">
+      <h2>Quiz</h2>
+      <div id="quiz-app"></div>
+    </section>
+
+    <section id="estudo">
+      <h2>Material de estudo</h2>
+
+      <h3>Mapa mental</h3>
+<pre><code>Classes internas + comportamento por parâmetro
+├── Interna/membro (189): class Inner dentro da classe
+│   ├── acessa até os private da externa
+│   ├── criação: outer.new Inner()
+│   └── this = interna · Externa.this = externa
+├── Local (190): dentro de um método
+│   ├── instancia e usa ali mesmo
+│   ├── só abstract ou final
+│   └── variáveis locais: final ou efetivamente final
+├── Anônima (191): new Tipo() { ... } → subclasse/implementação sem nome
+│   ├── uso único (trocar comportamento só ali)
+│   ├── só os métodos do tipo da variável são visíveis
+│   └── new Comparator&lt;Barco&gt;() { compare... } ≈ lambda (o1, o2) -&gt; ...
+├── Aninhada estática (192): static class Nested
+│   ├── new Outer.Nested() (sem objeto externo)
+│   ├── não vê atributos de instância da externa sem objeto
+│   └── ex.: Map.Entry
+└── Comportamento por parâmetro (193–194)
+    ├── problema: um filtro por pedido (só o IF muda)
+    ├── interface CarPredicate { boolean test(Car) } → filter(lista, predicate)
+    ├── passa com anônima ou lambda: car -&gt; car.getYear() &lt; 2015
+    └── genérico: &lt;T&gt; List&lt;T&gt; filter(List&lt;T&gt;, Predicate&lt;T&gt;) → serve para tudo</code></pre>
+
+      <h3>Prática no seu WSL (20 minutos)</h3>
+<pre><code>cd ~/java-lab
+A=src/academy/devdojo/maratonajava/javacore/ZZAclassesinternas
+mkdir -p $A/test
+
+cat > $A/test/ClassesInternasTest01.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.ZZAclassesinternas.test;
+
+import java.util.*;
+import java.util.function.Predicate;
+
+class Animal {
+    public void walk() { System.out.println("Animal walking"); }
+}
+
+public class ClassesInternasTest01 {
+    private String name = "Monkey D. Luffy";
+
+    class Inner {
+        void print() {
+            System.out.println(name);                                                  // ?
+            System.out.println(this.getClass().getSimpleName());                       // ?
+            System.out.println(ClassesInternasTest01.this.getClass().getSimpleName()); // ?
+        }
+    }
+
+    static class Nested {
+        void print() { System.out.println(new ClassesInternasTest01().name + " (via objeto)"); }
+    }
+
+    void local(final String param) {
+        String lastName = "Izuku";               // efetivamente final
+        class LocalClass {
+            void printLocal() { System.out.println(param + " " + lastName); }
+        }
+        new LocalClass().printLocal();           // ?
+    }
+
+    static &lt;T&gt; List&lt;T&gt; filter(List&lt;T&gt; list, Predicate&lt;T&gt; predicate) {
+        List&lt;T&gt; filtered = new ArrayList&lt;&gt;();
+        for (T e : list) if (predicate.test(e)) filtered.add(e);
+        return filtered;
+    }
+
+    public static void main(String[] args) {
+        ClassesInternasTest01 outer = new ClassesInternasTest01();
+        outer.new Inner().print();
+        new ClassesInternasTest01.Nested().print();   // ?
+        outer.local("Midoriya");
+
+        Animal animal = new Animal() {
+            @Override
+            public void walk() { System.out.println("Walking in the shadows"); }
+        };
+        animal.walk();                                // ?
+        System.out.println(animal.getClass().getName());   // ? (o nome da anônima)
+
+        List&lt;String&gt; nomes = new ArrayList&lt;&gt;(List.of("Lancha", "Canoa", "Jangada"));
+        nomes.sort(new Comparator&lt;String&gt;() {
+            @Override
+            public int compare(String a, String b) { return a.compareTo(b); }
+        });
+        System.out.println(nomes);                    // ?
+        nomes.sort((a, b) -&gt; b.compareTo(a));         // lambda: ordem inversa
+        System.out.println(nomes);                    // ?
+
+        List&lt;Integer&gt; nums = List.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+        System.out.println(filter(nums, num -&gt; num % 2 == 0));           // ?
+        System.out.println(filter(nomes, n -&gt; n.startsWith("C")));       // ?
+        System.out.println(filter(nums, new Predicate&lt;Integer&gt;() {       // o mesmo com anônima
+            @Override
+            public boolean test(Integer n) { return n &gt; 7; }
+        }));                                                               // ?
+    }
+}
+EOF
+
+javac -d out $(find src -name '*.java')
+java -cp out academy.devdojo.maratonajava.javacore.ZZAclassesinternas.test.ClassesInternasTest01
+ls out/academy/devdojo/maratonajava/javacore/ZZAclassesinternas/test/</code></pre>
+      <details>
+        <summary>Ver a saída esperada</summary>
+<pre><code>Monkey D. Luffy
+Inner
+ClassesInternasTest01
+Monkey D. Luffy (via objeto)
+Midoriya Izuku
+Walking in the shadows
+academy.devdojo.maratonajava.javacore.ZZAclassesinternas.test.ClassesInternasTest01$1
+[Canoa, Jangada, Lancha]
+[Lancha, Jangada, Canoa]
+[2, 4, 6, 8, 10]
+[Canoa]
+[8, 9, 10]
+
+(ls) Animal.class  ClassesInternasTest01.class  ClassesInternasTest01$1.class  ClassesInternasTest01$2.class
+     ClassesInternasTest01$3.class  ClassesInternasTest01$1LocalClass.class  ClassesInternasTest01$Inner.class
+     ClassesInternasTest01$Nested.class</code></pre>
+      </details>
+      <p><strong>Exercícios:</strong></p>
+      <ol>
+        <li>Dentro de <code>local</code>, faça <code>lastName = "Deku";</code> depois de declarar a classe e leia o erro.</li>
+        <li>No <code>main</code>, tente <code>new Inner()</code> sem o objeto externo. Qual o erro? E por que <code>new Nested()</code> funciona?</li>
+        <li>Crie na anônima de <code>Animal</code> um método <code>void tamo()</code> e tente chamar <code>animal.tamo()</code>. Por que não compila?</li>
+        <li>Recrie o <code>Car</code> da aula 193 e filtre com o <code>filter</code> genérico: verdes, anteriores a 2015, e "verdes E anteriores a 2015" (dica: <code>predicate1.and(predicate2)</code>).</li>
+        <li>Anote uma interface sua com <code>@FunctionalInterface</code> e adicione um segundo método abstrato. O que o compilador diz?</li>
+      </ol>
+
+      <h3>Glossário</h3>
+      <ul>
+        <li><strong>Classe interna (inner class)</strong>: classe não estática declarada dentro de outra; ligada a um objeto da externa.</li>
+        <li><strong>Classe local</strong>: classe declarada dentro de um método ou bloco.</li>
+        <li><strong>Classe anônima</strong>: classe sem nome, declarada e instanciada numa expressão <code>new Tipo() { ... }</code>.</li>
+        <li><strong>Classe aninhada estática</strong>: classe <code>static</code> dentro de outra; independente de objetos da externa.</li>
+        <li><strong>Top level class</strong>: classe declarada diretamente no arquivo, fora de qualquer outra.</li>
+        <li><strong>Efetivamente final</strong>: variável que nunca é reatribuída, mesmo sem a palavra <code>final</code>.</li>
+        <li><strong>Parametrizar comportamento</strong>: passar a lógica (a condição) como parâmetro de um método.</li>
+        <li><strong><code>Predicate&lt;T&gt;</code></strong>: interface do Java (<code>java.util.function</code>) com <code>boolean test(T t)</code>.</li>
+        <li><strong>Lambda</strong>: sintaxe curta (<code>x -&gt; expressão</code>) para implementar uma interface de um único método.</li>
+        <li><strong>Interface funcional</strong>: interface com exatamente um método abstrato; alvo das lambdas.</li>
+      </ul>
+
+      <h3>Revisão espaçada</h3>
+      <ul class="revisao">
+        <li><span class="dia">Dia 1</span><span>Todos os flashcards + a prática com previsões.</span></li>
+        <li><span class="dia">Dia 3</span><span>Quiz + exercícios 1 a 3.</span></li>
+        <li><span class="dia">Dia 7</span><span>Exercícios 4 e 5 + reescrever o filtro de carros das aulas 193–194 do zero.</span></li>
+        <li><span class="dia">Dia 14</span><span>Flashcards que errou + questões discursivas.</span></li>
+      </ul>
+
+      <h3>Para aprofundar</h3>
+      <ul>
+        <li>Por que uma classe interna não estática pode causar vazamento de memória (ela guarda uma referência ao objeto externo)?</li>
+        <li>Qual a diferença, por baixo, entre uma classe anônima e uma lambda (<code>invokedynamic</code>, sem arquivo <code>$1.class</code>)?</li>
+        <li>Como o padrão <em>Builder</em> usa uma classe aninhada estática (<code>Pessoa.builder().nome("x").build()</code>)?</li>
+        <li>O que é o padrão <em>Strategy</em> e como a aula 194 é uma aplicação dele?</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    window.AULA = {
+      flashcards: [
+        ["O que é uma classe interna?", "Uma classe declarada dentro de outra (ou de um método), por ser fortemente ligada a ela"],
+        ["Quais os 4 tipos vistos?", "Interna (membro), local, anônima e aninhada estática"],
+        ["A interna acessa atributos private da externa?", "Sim"],
+        ["Como criar um objeto da classe interna (não estática)?", "A partir de um objeto da externa: outer.new Inner()"],
+        ["Dentro da interna, o que é this?", "O objeto interno; o externo é NomeDaExterna.this"],
+        ["O que é uma classe local?", "Classe declarada dentro de um método; só pode ser usada ali"],
+        ["Que modificadores uma classe local aceita?", "Só abstract ou final"],
+        ["Que variáveis locais a classe local pode usar?", "As final ou efetivamente final"],
+        ["Por que a variável precisa ser efetivamente final?", "O objeto pode viver mais que o método; o Java guarda uma cópia, que não pode mudar"],
+        ["O que é uma classe anônima?", "Uma classe sem nome, criada em new Tipo() { ... }, para uso único"],
+        ["new Animal() { ... } cria o quê?", "Uma subclasse anônima de Animal"],
+        ["new Comparator<Barco>() { ... } instancia a interface?", "Não: cria uma classe anônima que implementa a interface"],
+        ["Método novo criado na anônima pode ser chamado de fora?", "Não: a variável é do tipo pai, que não tem esse método"],
+        ["O que é uma classe aninhada estática?", "static class dentro de outra; funciona como classe de nível superior empacotada"],
+        ["Como criar um objeto da aninhada estática?", "new Outer.Nested() (sem objeto externo)"],
+        ["A aninhada estática acessa atributos de instância da externa?", "Só através de um objeto da externa"],
+        ["Exemplo do JDK de tipo aninhado?", "Map.Entry, dentro de Map"],
+        ["Qual o problema de filterGreenCar, filterRedCar...?", "Código repetido; só a condição do if muda"],
+        ["Como parametrizar o comportamento do filtro?", "Receber uma interface com o método test (CarPredicate/Predicate) e chamar test no if"],
+        ["O que é Predicate<T>?", "Interface de java.util.function com boolean test(T t)"],
+        ["Como passar a condição com lambda?", "filter(cars, car -> car.getColor().equals(\"green\"))"],
+        ["Por que a lambda funciona com CarPredicate?", "Porque a interface tem um único método abstrato (interface funcional)"],
+        ["Assinatura do filtro genérico da aula 194?", "static <T> List<T> filter(List<T> list, Predicate<T> predicate)"],
+        ["Classe anônima e lambda são a mesma coisa?", "Não por baixo, mas atingem o mesmo resultado; a lambda é bem mais curta"],
+        ["Que arquivo .class uma anônima gera?", "Externa$1.class (numerada) — extra"]
+      ],
+      quiz: [
+        { tipo: 'multipla', pergunta: 'Dentro do main (estático) de OuterClassesTest01, como criar um objeto da classe interna Inner (não estática)?', opcoes: ['new Inner()', 'new OuterClassesTest01.Inner()', 'new OuterClassesTest01().new Inner()', 'Inner.new()'], correta: 2,
+          explicacao: 'A interna não estática precisa de um objeto da externa: outer.new Inner(). A forma com Outer.Inner sem objeto é a da aninhada estática.' },
+        { tipo: 'multipla', pergunta: 'Dentro de um método da classe interna, como referenciar o objeto da classe EXTERNA?', opcoes: ['this', 'super', 'OuterClassesTest01.this', 'outer'], correta: 2,
+          explicacao: 'this é o objeto interno. NomeDaExterna.this é o objeto externo ao qual a interna está ligada.' },
+        { tipo: 'vf', pergunta: 'Uma classe local pode usar uma variável local do método que é modificada depois (por exemplo, lastName = "Deku").', correta: 1,
+          explicacao: 'Falso. A variável precisa ser final ou efetivamente final (nunca reatribuída). O Java guarda uma cópia, que não pode divergir.' },
+        { tipo: 'multipla', pergunta: 'O que o código Animal a = new Animal() { public void walk() { ... } }; cria?', opcoes: ['Um objeto Animal comum', 'Uma subclasse anônima de Animal, instanciada ali', 'Uma nova interface', 'Um erro: Animal não é abstrata'], correta: 1,
+          explicacao: 'As chaves depois do new declaram uma subclasse sem nome que sobrescreve walk. Funciona com classe concreta, abstrata ou interface.' },
+        { tipo: 'vf', pergunta: 'new Comparator<Barco>() { ... } está instanciando a interface Comparator.', correta: 1,
+          explicacao: 'Falso. Interfaces não são instanciadas. É criada uma classe anônima que implementa Comparator<Barco>, e é ela que é instanciada.' },
+        { tipo: 'multipla', pergunta: 'Qual a diferença da classe aninhada ESTÁTICA para a interna comum?', opcoes: ['A estática não pode ter métodos', 'A estática não precisa de um objeto da externa para ser criada', 'A estática não pode ser private', 'A estática só existe dentro de métodos'], correta: 1,
+          explicacao: 'static class Nested é criada com new Outer.Nested(). Em troca, não acessa diretamente os atributos de instância da externa.' },
+        { tipo: 'multipla', pergunta: 'Nos métodos filterGreenCar, filterRedCar e filterByYearBefore, o que muda de um para o outro?', opcoes: ['O tipo de retorno', 'O laço for', 'Apenas a condição do if', 'A lista de entrada'], correta: 2,
+          explicacao: 'Tudo é igual (lista nova, for, add, return), menos a condição. Por isso ela vira um parâmetro (CarPredicate/Predicate).' },
+        { tipo: 'multipla', pergunta: 'Com static <T> List<T> filter(List<T> l, Predicate<T> p), o que filter(List.of(1,2,3,4), n -> n % 2 == 0) devolve?', opcoes: ['[1, 3]', '[2, 4]', '[true, false]', 'Não compila: Predicate só funciona com Car'], correta: 1,
+          explicacao: 'Predicate<T> é genérico. Com T = Integer, a lambda testa se é par e o filtro devolve [2, 4].' },
+        { tipo: 'discursiva', pergunta: 'Compare os quatro tipos de classe interna: onde cada um é declarado, como é instanciado e um caso de uso de cada.',
+          explicacao: 'Interna/membro: declarada no corpo da classe, sem static. É instanciada com outer.new Inner(), acessa os privados da externa e usa Externa.this para o objeto externo. Uso: um componente fortemente ligado à classe, como a ação do botão da tela do chat. Local: declarada dentro de um método, instanciada e usada ali mesmo, só aceita abstract/final e só usa variáveis efetivamente finais. Uso raro, para uma lógica auxiliar exclusiva do método. Anônima: new Tipo() { ... } numa expressão, sem nome, uso único. Uso: trocar um comportamento pontual, como um Comparator ou um listener. Hoje é quase sempre substituída por lambda. Aninhada estática: static class dentro de outra, instanciada com new Outer.Nested(), sem acesso direto à instância externa. Uso: agrupar um tipo que só faz sentido junto do externo, como Map.Entry ou um Builder.' },
+        { tipo: 'discursiva', pergunta: 'Explique como a aula 194 resolve o problema da 193 e relacione com o array_filter/collect()->filter() do PHP.',
+          explicacao: 'Na 193 cada novo critério gerava um método de filtro copiado, em que só a condição do if mudava. Na 194 a condição vira parâmetro: uma interface com um único método (CarPredicate, depois Predicate<T> do Java) e um único método filter que percorre a lista e chama predicate.test(e). A regra de negócio chega de fora, como classe anônima ou lambda (car -> car.getYear() < 2015). Com um método genérico, o mesmo filter serve para carros, números ou qualquer lista. No PHP isso é natural: array_filter($cars, fn($c) => $c->year < 2015) ou collect($cars)->filter(...), porque qualquer callable pode ser passado. Em Java a função precisa ser compatível com uma interface funcional (Predicate<T>), o que dá checagem de tipo em compilação.' }
+      ]
+    };
+  </script>
+  <script src="../js/app.js"></script>
+</body>
+</html>
