@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>149–153 · Atributos e DirectoryStream</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="topo">
+      <a class="voltar" href="../index.html">← Todas as aulas</a>
+      <h1>149–153 · NIO: atributos de arquivo e DirectoryStream</h1>
+      <p>BasicFileAttributes, DosFileAttributes, PosixFileAttributes (ler × alterar com as Views), permissões do Linux e listar um diretório · <a href="https://www.youtube.com/playlist?list=PL62G310vn6nFIsOCC0H-C2infYgwm8SWW" target="_blank" rel="noopener">playlist</a></p>
+    </header>
+
+    <nav class="abas">
+      <a href="#resumo">Resumo</a>
+      <a href="#flashcards">Flashcards</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#estudo">Material de estudo</a>
+    </nav>
+
+    <p class="aviso">Junta as aulas 149 e 150 (BasicFileAttributes), 151 (DosFileAttribute), 152 (PosixFileAttributes) e 153 (DirectoryStream). Continua as <a href="144-148-nio-path-files.html">aulas 144–148</a>. Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. O código (pacote <code>javacore.Wnio</code>) foi conferido no <a href="https://github.com/devdojobr/maratona-java-virado-no-jiraya" target="_blank" rel="noopener">repositório do professor</a>. A aula 152 roda no Ubuntu (WSL), que é o seu ambiente. A 151 é específica do Windows. Os itens marcados como "extra" não estão nos vídeos.</p>
+
+    <section id="resumo">
+      <h2>Resumo</h2>
+      <p>Arquivos têm <strong>atributos</strong>: datas de criação, modificação e acesso, oculto, somente leitura, permissões... Cada sistema operacional tem os seus, e o NIO resolve isso com <strong>interfaces e polimorfismo</strong>: você pede o tipo de atributo e a JVM entrega a implementação do SO onde o programa roda. A regra de ouro das aulas:</p>
+<pre><code>XxxFileAttributes      → só LEITURA   (Files.readAttributes(path, Xxx.class))
+XxxFileAttributeView   → ALTERAÇÃO    (Files.getFileAttributeView(path, XxxView.class))
+
+BasicFileAttributes   (qualquer SO: datas, tamanho, é diretório?...)
+ ├── DosFileAttributes   (Windows: hidden, readOnly, archive, system)
+ └── PosixFileAttributes (Unix/Linux/Mac: dono, grupo, permissões rwx)</code></pre>
+
+      <h3>149 · Alterar a data de modificação: jeito antigo × NIO</h3>
+<pre><code>LocalDateTime date = LocalDateTime.now().minusDays(10);
+
+// Jeito antigo (java.io.File): milissegundos
+File file = new File("pasta2/novo.txt");
+boolean isCreated = file.createNewFile();
+boolean isModified = file.setLastModified(date.toInstant(ZoneOffset.UTC).toEpochMilli());
+
+// NIO: FileTime
+Path path = Paths.get("pasta2/novo_path.txt");
+Files.createFile(path);
+FileTime fileTime = FileTime.from(date.toInstant(ZoneOffset.UTC));
+Files.setLastModifiedTime(path, fileTime);
+System.out.println(Files.isWritable(path));     // true
+System.out.println(Files.isReadable(path));     // true
+System.out.println(Files.isExecutable(path));   // true no Windows · false no Linux (sem x)</code></pre>
+      <ul>
+        <li>No Explorer, o arquivo mostra "modificado há 10 dias" mas "criado hoje". Moral do William: <strong>não confie cegamente na data de modificação</strong>, porque qualquer programa pode alterá-la.</li>
+        <li>O NIO usa o tipo <strong><code>FileTime</code></strong>, e não um <code>long</code>. Ele é criado com <code>FileTime.from(instant)</code> ou <code>FileTime.fromMillis(ms)</code>.</li>
+        <li><code>Files.isWritable</code>, <code>isReadable</code>, <code>isExecutable</code> e <code>isHidden</code> fazem as verificações rápidas.</li>
+        <li><strong>Extra:</strong> <code>date.toInstant(ZoneOffset.UTC)</code> trata a hora local <strong>como se fosse UTC</strong>, o que dá uma diferença de 3h no Brasil. O correto é <code>date.atZone(ZoneId.systemDefault()).toInstant()</code> (aula 128).</li>
+      </ul>
+
+      <h3>150 · BasicFileAttributes e BasicFileAttributeView</h3>
+<pre><code>Path path = Paths.get("pasta2/new.txt");
+BasicFileAttributes basicFileAttributes = Files.readAttributes(path, BasicFileAttributes.class);  // leitura
+FileTime creationTime = basicFileAttributes.creationTime();
+FileTime lastModifiedTime = basicFileAttributes.lastModifiedTime();
+FileTime lastAccessTime = basicFileAttributes.lastAccessTime();
+System.out.println("creationTime " + creationTime);   // sempre em UTC: 2021-03-05T15:28:00.12Z
+
+BasicFileAttributeView fileAttributeView = Files.getFileAttributeView(path, BasicFileAttributeView.class);  // alteração
+FileTime newCreationTime = FileTime.fromMillis(System.currentTimeMillis());
+fileAttributeView.setTimes(lastModifiedTime, newCreationTime, creationTime);
+//                         (lastModified,     lastAccess,      creation) ← a ordem dos parâmetros!
+
+lastAccessTime = fileAttributeView.readAttributes().lastAccessTime();   // relê pela View: valor novo</code></pre>
+      <ul>
+        <li><strong><code>Files.readAttributes(path, BasicFileAttributes.class)</code></strong>: você diz <strong>qual interface</strong> quer, e o Java devolve a implementação do SO (no Windows, um <code>WindowsFileAttributes</code>, que aparece no debug). Você programa para a interface (aula 94).</li>
+        <li>Além das datas, há <code>size()</code>, <code>isDirectory()</code>, <code>isRegularFile()</code> e <code>isSymbolicLink()</code>.</li>
+        <li>Os <code>FileTime</code> são impressos em <strong>UTC</strong> (o <code>Z</code> no fim): o William vê 15:28 quando o relógio dele marca 16:28.</li>
+        <li><strong>Os atributos lidos são um retrato</strong> do momento da leitura. Depois de alterar, <strong>leia de novo</strong> (<code>view.readAttributes()</code>), senão você vê os valores antigos.</li>
+        <li><strong><code>setTimes(lastModifiedTime, lastAccessTime, createTime)</code></strong>: cuidado com a ordem. Na aula, o <code>newCreationTime</code> entra na 2ª posição, então quem muda é o <strong>último acesso</strong>. Passe <code>null</code> no que não quiser alterar (extra).</li>
+      </ul>
+
+      <h3>151 · DosFileAttributes (Windows)</h3>
+<pre><code>Path path = Paths.get("pasta/teste.txt");
+if (Files.notExists(path)) Files.createFile(path);
+
+// Jeito 1: Files.setAttribute com o nome em texto
+Files.setAttribute(path, "dos:hidden", true);      // tem que ser exatamente "dos:hidden"
+Files.setAttribute(path, "dos:readonly", true);    // tudo minúsculo; "dos:readOnly" dá exceção
+
+// Jeito 2: as interfaces
+DosFileAttributes dosFileAttributes = Files.readAttributes(path, DosFileAttributes.class);
+System.out.println(dosFileAttributes.isHidden());      // false
+System.out.println(dosFileAttributes.isReadOnly());    // false
+
+DosFileAttributeView fileAttributeView = Files.getFileAttributeView(path, DosFileAttributeView.class);
+fileAttributeView.setHidden(true);
+fileAttributeView.setReadOnly(true);
+System.out.println(fileAttributeView.readAttributes().isHidden());     // true
+System.out.println(fileAttributeView.readAttributes().isReadOnly());   // true</code></pre>
+      <ul>
+        <li>São os atributos do Windows (herança do DOS): <strong>oculto</strong>, <strong>somente leitura</strong>, arquivo e sistema. No Explorer, o arquivo some (oculto) e ganha um cadeado (somente leitura).</li>
+        <li><strong><code>Files.setAttribute(path, "view:nome", valor)</code></strong> funciona, mas é frágil: o nome é uma String e precisa ser escrito exatamente (<code>"dos:readonly"</code>). Um erro de digitação só aparece em execução.</li>
+        <li>O jeito tipado é <code>DosFileAttributeView</code>: <code>setHidden</code>, <code>setReadOnly</code>, <code>setArchive</code>, <code>setSystem</code>.</li>
+        <li>Um arquivo somente leitura não pode ser apagado nem alterado até você tirar o atributo (<code>setReadOnly(false)</code>).</li>
+      </ul>
+
+      <h3>152 · PosixFileAttributes (Linux / WSL)</h3>
+<pre><code>$ ls -l        (o William usa o alias ll)
+-rw-r--r-- 1 william william 6 mar  5 17:10 file.txt
+│└┬┘└┬┘└┬┘
+│ │  │  └── outros (others):  r--  só leitura
+│ │  └───── grupo  (group):   r--  só leitura
+│ └──────── dono   (owner):   rw-  leitura e escrita
+└────────── tipo: - arquivo · d diretório</code></pre>
+<pre><code>Path path = Paths.get("/home/william/dev/file.txt");
+PosixFileAttributes posixFileAttributes = Files.readAttributes(path, PosixFileAttributes.class);
+System.out.println(posixFileAttributes.permissions());
+// [OWNER_WRITE, OWNER_READ, GROUP_READ, OTHERS_READ]
+
+PosixFileAttributeView fileAttributeView = Files.getFileAttributeView(path, PosixFileAttributeView.class);
+Set&lt;PosixFilePermission&gt; posixFilePermissions = PosixFilePermissions.fromString("rw-rw-rw-");
+fileAttributeView.setPermissions(posixFilePermissions);
+System.out.println(fileAttributeView.readAttributes().permissions());
+// [OWNER_WRITE, OWNER_READ, GROUP_WRITE, GROUP_READ, OTHERS_WRITE, OTHERS_READ]  → ls -l: -rw-rw-rw-</code></pre>
+      <ul>
+        <li><strong>POSIX</strong> é o padrão dos sistemas Unix (Linux, Mac). No Windows, pedir <code>PosixFileAttributes</code> lança <strong><code>UnsupportedOperationException</code></strong>. Por isso o William copiou a classe para o Ubuntu e rodou pelo terminal: <code>sudo apt install default-jdk</code>, depois <code>javac</code> e <code>java</code>, editando no <code>vi</code>.</li>
+        <li><strong>As permissões do <code>ls -l</code>:</strong> 1 caractere de tipo e três trios <code>rwx</code> (<em>read</em>, <em>write</em>, <em>execute</em>): <strong>dono</strong>, <strong>grupo</strong> e <strong>outros</strong>. Um <code>-</code> significa "sem essa permissão".</li>
+        <li><code>permissions()</code> devolve um <strong><code>Set&lt;PosixFilePermission&gt;</code></strong> (coleção sem repetição, aula 175+) de valores do enum <code>PosixFilePermission</code> (<code>OWNER_READ</code>, <code>GROUP_WRITE</code>...).</li>
+        <li>Você não precisa montar o <code>Set</code> à mão: <strong><code>PosixFilePermissions.fromString("rw-rw-rw-")</code></strong> converte a notação do <code>ls</code>. Repare: <code>PosixFilePermission<strong>s</strong></code> (com s, a utilitária) × <code>PosixFilePermission</code> (o enum).</li>
+        <li>A <code>PosixFileAttributeView</code> também altera o dono e o grupo (<code>setOwner</code>, <code>setGroup</code>).</li>
+      </ul>
+
+      <h3>153 · DirectoryStream: listar um diretório</h3>
+<pre><code>Path dir = Paths.get(".");                       // "." = diretório atual (onde o programa roda)
+try (DirectoryStream&lt;Path&gt; stream = Files.newDirectoryStream(dir)) {   // é Closeable
+    for (Path path : stream) {                   // itera como um array
+        System.out.println(path.getFileName());
+    }
+} catch (IOException e) {
+    e.printStackTrace();
+}
+// .idea · src · pasta · pasta2 · file.txt ... (inclui os ocultos; ordem não garantida)</code></pre>
+      <ul>
+        <li>É um dos jeitos mais simples de pegar <strong>todos os itens de um diretório</strong>, como o <code>dir</code>/<code>ls</code>: <strong>só o primeiro nível</strong>, sem entrar nas subpastas. Para percorrer a árvore inteira vem o <code>SimpleFileVisitor</code> (aulas 154–155).</li>
+        <li><code>DirectoryStream&lt;Path&gt;</code> usa <strong>generics</strong> (aulas 183+): o <code>&lt;Path&gt;</code> diz que cada elemento é um <code>Path</code>.</li>
+        <li>É um <strong>recurso do SO</strong> (tem <code>close()</code>), então vai no <strong>try-with-resources</strong>.</li>
+        <li>O caminho absoluto do projeto não funcionou na aula (ele copiou só parte). O caminho <code>"."</code> resolve: o diretório atual.</li>
+        <li>Lista também os <strong>ocultos</strong> (<code>.idea</code>, <code>.git</code>), como o <code>ls -a</code>.</li>
+      </ul>
+
+      <h3>Atenção</h3>
+      <ul>
+        <li><strong>Attributes = ler, AttributeView = alterar.</strong> Obtém-se com <code>Files.readAttributes(path, X.class)</code> e <code>Files.getFileAttributeView(path, XView.class)</code>.</li>
+        <li><strong>Depois de alterar, releia</strong>: o objeto de atributos é um retrato do momento em que foi lido.</li>
+        <li><strong>Depende do SO:</strong> <code>PosixFileAttributes</code> no Windows → <code>UnsupportedOperationException</code>. <code>getFileAttributeView</code> devolve <strong><code>null</code></strong> se a view não for suportada (extra). Teste antes de usar.</li>
+        <li><strong>A ordem do <code>setTimes</code></strong> é (modificação, acesso, criação). No Linux, muitos sistemas de arquivos <strong>não guardam</strong> a data de criação, e o <code>creationTime()</code> pode devolver a de modificação (extra).</li>
+        <li><strong>Extra: filtro no DirectoryStream.</strong> <code>Files.newDirectoryStream(dir, "*.txt")</code> lista só os <code>.txt</code> (glob, parente do <code>PathMatcher</code> das aulas 156–157). <code>Files.list(dir)</code> faz o mesmo com Streams (aulas 203+).</li>
+      </ul>
+
+      <h3>Paralelo com PHP</h3>
+      <ul>
+        <li><strong>Datas:</strong> <code>touch($f, $timestamp)</code> ≈ <code>Files.setLastModifiedTime</code>. <code>filemtime</code>/<code>fileatime</code>/<code>filectime</code> ≈ <code>lastModifiedTime</code>/<code>lastAccessTime</code>/<code>creationTime</code>. Atenção: no Linux, o <code>filectime</code> é a data de <em>mudança de status</em>, não de criação. Todos devolvem segundos (Unix timestamp).</li>
+        <li><strong>stat:</strong> <code>stat($f)</code> devolve tudo num array, parecido com <code>readAttributes</code>. No Java, cada SO tem sua interface.</li>
+        <li><strong>Permissões:</strong> <code>chmod($f, 0666)</code> ≈ <code>setPermissions(fromString("rw-rw-rw-"))</code>. <code>fileperms</code> ≈ <code>permissions()</code>. <code>chown</code>/<code>chgrp</code> ≈ <code>setOwner</code>/<code>setGroup</code>. É o mesmo mundo POSIX que você já usa em deploy (<code>chmod -R 775 storage</code> no Laravel).</li>
+        <li><strong>Checagens:</strong> <code>is_writable</code>, <code>is_readable</code>, <code>is_executable</code> ≈ <code>Files.isWritable</code>...</li>
+        <li><strong>Listar diretório:</strong> <code>scandir($dir)</code> ≈ <code>newDirectoryStream</code> (mas o <code>scandir</code> inclui <code>.</code> e <code>..</code>, que você filtra). <code>glob('*.txt')</code> ≈ o filtro com glob. <code>new DirectoryIterator($dir)</code> é o parente orientado a objetos. No Laravel: <code>File::files($dir)</code> e <code>Storage::files()</code>.</li>
+      </ul>
+    </section>
+
+    <section id="flashcards">
+      <h2>Flashcards</h2>
+      <p style="color:var(--muted);margin-top:-6px">Toque no cartão para virar.</p>
+      <div id="flashcards-app"></div>
+    </section>
+
+    <section id="quiz">
+      <h2>Quiz</h2>
+      <div id="quiz-app"></div>
+    </section>
+
+    <section id="estudo">
+      <h2>Material de estudo</h2>
+
+      <h3>Mapa mental</h3>
+<pre><code>Atributos de arquivo (java.nio.file.attribute)
+├── Regra: XxxFileAttributes = ler · XxxFileAttributeView = alterar
+├── Basic (149–150): qualquer SO
+│   ├── creationTime · lastModifiedTime · lastAccessTime (FileTime, em UTC)
+│   ├── size · isDirectory · isRegularFile
+│   ├── Files.setLastModifiedTime(path, FileTime.from(instant))
+│   └── view.setTimes(modificação, acesso, criação) → reler depois
+├── Dos (151): Windows
+│   ├── isHidden · isReadOnly · setHidden · setReadOnly
+│   └── Files.setAttribute(path, "dos:hidden", true) (String exata)
+├── Posix (152): Linux/Mac (Windows → UnsupportedOperationException)
+│   ├── ls -l: tipo + dono/grupo/outros × rwx
+│   ├── permissions() → Set&lt;PosixFilePermission&gt;
+│   └── PosixFilePermissions.fromString("rw-rw-rw-") + view.setPermissions
+└── DirectoryStream (153)
+    ├── Files.newDirectoryStream(Paths.get(".")) em try-with-resources
+    ├── for (Path p : stream) · só o 1º nível · inclui ocultos
+    └── árvore inteira → SimpleFileVisitor (154)</code></pre>
+
+      <h3>Prática no seu WSL (20 minutos)</h3>
+      <p>Rode em <code>~/java-lab</code> (sistema de arquivos do Linux). Em <code>/mnt/c/...</code> as permissões POSIX não se comportam do mesmo jeito.</p>
+<pre><code>cd ~/java-lab
+W=src/academy/devdojo/maratonajava/javacore/Wnio
+mkdir -p $W/test
+
+cat > $W/test/AtributosTest01.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Wnio.test;
+
+import java.io.IOException;
+import java.nio.file.*;
+import java.nio.file.attribute.*;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+
+public class AtributosTest01 {
+    public static void main(String[] args) throws IOException {
+        Path pasta = Files.createDirectories(Paths.get("lab-attr"));
+        Path path = pasta.resolve("novo.txt");
+        if (Files.notExists(path)) Files.createFile(path);
+        Files.createDirectories(pasta.resolve("subpasta"));
+        if (Files.notExists(pasta.resolve("outro.txt"))) Files.createFile(pasta.resolve("outro.txt"));
+
+        // 149 · data de modificação fixa (23/02/2021 12h em São Paulo)
+        LocalDateTime date = LocalDateTime.of(2021, 2, 23, 12, 0);
+        Files.setLastModifiedTime(path, FileTime.from(date.atZone(ZoneId.of("America/Sao_Paulo")).toInstant()));
+        System.out.println(Files.isWritable(path) + " " + Files.isReadable(path) + " " + Files.isExecutable(path)); // ?
+
+        // 150 · Basic
+        BasicFileAttributes basic = Files.readAttributes(path, BasicFileAttributes.class);
+        System.out.println("lastModifiedTime " + basic.lastModifiedTime());   // ? (em UTC)
+        System.out.println("size " + basic.size() + " dir? " + basic.isDirectory());   // ?
+
+        // 151 · Dos no Linux: a view existe?
+        System.out.println("dos view: " + Files.getFileAttributeView(path, DosFileAttributeView.class));
+
+        // 152 · Posix
+        PosixFileAttributes posix = Files.readAttributes(path, PosixFileAttributes.class);
+        System.out.println(PosixFilePermissions.toString(posix.permissions()));   // ?
+        PosixFileAttributeView view = Files.getFileAttributeView(path, PosixFileAttributeView.class);
+        view.setPermissions(PosixFilePermissions.fromString("rw-rw-rw-"));
+        System.out.println(PosixFilePermissions.toString(posix.permissions()));   // ? (retrato antigo!)
+        System.out.println(PosixFilePermissions.toString(view.readAttributes().permissions()));   // ?
+        System.out.println("dono: " + view.readAttributes().owner().getName());
+
+        // 153 · DirectoryStream
+        try (DirectoryStream&lt;Path&gt; stream = Files.newDirectoryStream(pasta)) {
+            for (Path p : stream) System.out.println("- " + p.getFileName());
+        }
+        try (DirectoryStream&lt;Path&gt; stream = Files.newDirectoryStream(pasta, "*.txt")) {   // extra: glob
+            for (Path p : stream) System.out.println("txt: " + p.getFileName());
+        }
+    }
+}
+EOF
+
+javac -d out $(find src -name '*.java')
+rm -rf lab-attr
+java -cp out academy.devdojo.maratonajava.javacore.Wnio.test.AtributosTest01
+ls -l lab-attr</code></pre>
+      <details>
+        <summary>Ver a saída esperada</summary>
+<pre><code>true true false
+lastModifiedTime 2021-02-23T15:00:00Z
+size 0 dir? false
+dos view: sun.nio.fs.LinuxDosFileAttributeView@...   (ou null, conforme o sistema de arquivos)
+rw-r--r--
+rw-r--r--
+rw-rw-rw-
+dono: SEU_USUARIO
+- novo.txt       ┐
+- subpasta       ├ ordem não garantida
+- outro.txt      ┘
+txt: novo.txt
+txt: outro.txt
+
+(ls -l lab-attr)
+-rw-r--r-- ... outro.txt
+-rw-rw-rw- ... 23/02/2021 novo.txt   (a data que você definiu)
+drwxr-xr-x ... subpasta</code></pre>
+      </details>
+      <p><strong>Exercícios:</strong></p>
+      <ol>
+        <li>Deixe o <code>novo.txt</code> executável só para o dono (<code>rwxr--r--</code>), confira com <code>ls -l</code> e com <code>Files.isExecutable</code>.</li>
+        <li>Rode <code>chmod 600 lab-attr/novo.txt</code> no terminal e leia as permissões pelo Java. Bate com o <code>ls -l</code>?</li>
+        <li>Use <code>view.setTimes(null, FileTime.fromMillis(0), null)</code> na <code>BasicFileAttributeView</code> e leia o <code>lastAccessTime</code>. Que data é essa?</li>
+        <li>Liste com <code>DirectoryStream</code> só os diretórios (use <code>Files.isDirectory(p)</code> dentro do <code>for</code>).</li>
+        <li>Escreva um método que imprima o tamanho total (<code>size()</code>) dos arquivos de um diretório (só o primeiro nível).</li>
+      </ol>
+
+      <h3>Glossário</h3>
+      <ul>
+        <li><strong>Atributo de arquivo</strong>: metadado (datas, tamanho, oculto, permissões) que não faz parte do conteúdo.</li>
+        <li><strong><code>FileTime</code></strong>: tipo do NIO para datas de arquivo.</li>
+        <li><strong><code>XxxFileAttributes</code></strong>: interface de leitura dos atributos.</li>
+        <li><strong><code>XxxFileAttributeView</code></strong>: interface que permite alterar os atributos.</li>
+        <li><strong>DOS</strong>: atributos herdados do MS-DOS no Windows (hidden, readonly, archive, system).</li>
+        <li><strong>POSIX</strong>: padrão dos sistemas Unix; permissões <code>rwx</code> para dono, grupo e outros.</li>
+        <li><strong><code>rwx</code></strong>: read (ler), write (escrever), execute (executar/entrar no diretório).</li>
+        <li><strong><code>DirectoryStream</code></strong>: iteração sobre os itens do primeiro nível de um diretório.</li>
+        <li><strong>Glob</strong>: padrão curinga de nomes de arquivo (<code>*.txt</code>).</li>
+      </ul>
+
+      <h3>Revisão espaçada</h3>
+      <ul class="revisao">
+        <li><span class="dia">Dia 1</span><span>Todos os flashcards + a prática com previsões.</span></li>
+        <li><span class="dia">Dia 3</span><span>Quiz + exercícios 1 a 3.</span></li>
+        <li><span class="dia">Dia 7</span><span>Exercícios 4 e 5 + ler de cabeça 5 linhas do <code>ls -l</code> de uma pasta sua.</span></li>
+        <li><span class="dia">Dia 14</span><span>Flashcards que errou + questões discursivas.</span></li>
+      </ul>
+
+      <h3>Para aprofundar</h3>
+      <ul>
+        <li>Como funciona a notação octal de permissões (644, 755, 600) e como ela se relaciona com <code>rwx</code>?</li>
+        <li>O que é o <code>umask</code> e por que arquivos novos nascem com <code>rw-r--r--</code>?</li>
+        <li>O que são <code>AclFileAttributeView</code> (ACLs no Windows) e <code>UserDefinedFileAttributeView</code> (atributos estendidos)?</li>
+        <li>Como <code>Files.createFile(path, PosixFilePermissions.asFileAttribute(...))</code> cria um arquivo já com as permissões certas?</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    window.AULA = {
+      flashcards: [
+        ["Qual a diferença entre XxxFileAttributes e XxxFileAttributeView?", "Attributes só lê; AttributeView permite alterar"],
+        ["Como ler os atributos básicos de um arquivo?", "Files.readAttributes(path, BasicFileAttributes.class)"],
+        ["Como obter uma view para alterar atributos?", "Files.getFileAttributeView(path, BasicFileAttributeView.class)"],
+        ["Por que o NIO usa interfaces para atributos?", "Polimorfismo: o Java devolve a implementação do SO (ex.: WindowsFileAttributes)"],
+        ["Quais datas o BasicFileAttributes fornece?", "creationTime, lastModifiedTime e lastAccessTime (FileTime)"],
+        ["Em que fuso os FileTime são impressos?", "UTC (termina com Z)"],
+        ["Como alterar a data de modificação com NIO?", "Files.setLastModifiedTime(path, FileTime.from(instant))"],
+        ["E com o File antigo?", "file.setLastModified(millis)"],
+        ["Qual a ordem dos parâmetros de setTimes?", "(lastModifiedTime, lastAccessTime, createTime); null = não alterar"],
+        ["Depois de alterar pela view, os atributos lidos antes mudam?", "Não: são um retrato; leia de novo com view.readAttributes()"],
+        ["Quais atributos o DosFileAttributes tem?", "hidden, readOnly, archive e system (Windows)"],
+        ["Como deixar um arquivo oculto no Windows?", "Files.getFileAttributeView(path, DosFileAttributeView.class).setHidden(true)"],
+        ["Qual o risco de Files.setAttribute(path, \"dos:readonly\", true)?", "O nome é String: um erro de digitação só aparece em execução"],
+        ["O que é POSIX?", "O padrão dos sistemas Unix (Linux, Mac), com permissões rwx para dono, grupo e outros"],
+        ["Como ler -rw-r--r--?", "Arquivo; dono lê e escreve; grupo só lê; outros só leem"],
+        ["O que significam r, w, x?", "read (ler), write (escrever), execute (executar)"],
+        ["PosixFileAttributes no Windows?", "UnsupportedOperationException"],
+        ["O que permissions() devolve?", "Um Set<PosixFilePermission> (OWNER_READ, GROUP_WRITE...)"],
+        ["Como converter \"rw-rw-rw-\" em permissões?", "PosixFilePermissions.fromString(\"rw-rw-rw-\")"],
+        ["PosixFilePermission × PosixFilePermissions?", "O enum de cada permissão × a classe utilitária (fromString, toString)"],
+        ["Como aplicar as permissões?", "posixView.setPermissions(set)"],
+        ["O que o DirectoryStream faz?", "Itera sobre os itens do primeiro nível de um diretório"],
+        ["Por que DirectoryStream vai em try-with-resources?", "É um recurso do SO (Closeable)"],
+        ["O DirectoryStream entra nas subpastas?", "Não; para a árvore inteira use SimpleFileVisitor (aula 154)"],
+        ["Como listar só os .txt?", "Files.newDirectoryStream(dir, \"*.txt\") — glob, extra"]
+      ],
+      quiz: [
+        { tipo: 'multipla', pergunta: 'Você quer TROCAR a data de último acesso de um arquivo. O que usar?', opcoes: ['Files.readAttributes(path, BasicFileAttributes.class)', 'Files.getFileAttributeView(path, BasicFileAttributeView.class).setTimes(...)', 'basicFileAttributes.setLastAccessTime(...)', 'new File(path).setLastAccess(...)'], correta: 1,
+          explicacao: 'XxxFileAttributes só lê. Para alterar, use a XxxFileAttributeView, com setTimes(modificação, acesso, criação).' },
+        { tipo: 'vf', pergunta: 'Depois de chamar view.setTimes(...), um BasicFileAttributes lido ANTES da alteração já mostra os novos valores.', correta: 1,
+          explicacao: 'Falso. Os atributos lidos são um retrato daquele momento. É preciso ler de novo (view.readAttributes()).' },
+        { tipo: 'multipla', pergunta: 'Em view.setTimes(a, b, c), o que cada argumento representa?', opcoes: ['criação, modificação, acesso', 'modificação, acesso, criação', 'acesso, criação, modificação', 'modificação, criação, acesso'], correta: 1,
+          explicacao: 'A assinatura é setTimes(lastModifiedTime, lastAccessTime, createTime). Na aula, o tempo novo foi na 2ª posição: mudou o último acesso.' },
+        { tipo: 'multipla', pergunta: 'O que acontece ao ler PosixFileAttributes rodando no Windows?', opcoes: ['Devolve permissões vazias', 'Converte automaticamente para DOS', 'Lança UnsupportedOperationException', 'Não compila'], correta: 2,
+          explicacao: 'Compila (é só uma interface), mas o Windows não suporta POSIX e a JVM lança exceção em execução. Por isso o William rodou no Ubuntu.' },
+        { tipo: 'multipla', pergunta: 'No ls -l, o que significa -rw-r-----?', opcoes: ['Diretório; todos leem', 'Arquivo; dono lê e escreve; grupo lê; outros nada', 'Arquivo; dono lê; grupo escreve; outros executam', 'Arquivo oculto e somente leitura'], correta: 1,
+          explicacao: 'O primeiro caractere é o tipo (- arquivo). Depois vêm os trios rwx: dono rw-, grupo r--, outros ---.' },
+        { tipo: 'multipla', pergunta: 'Qual forma cria o Set de permissões para "rw-rw-rw-"?', opcoes: ['PosixFilePermission.fromString("rw-rw-rw-")', 'PosixFilePermissions.fromString("rw-rw-rw-")', 'new Set<>("rw-rw-rw-")', 'Files.chmod(path, 666)'], correta: 1,
+          explicacao: 'PosixFilePermissions (com s) é a utilitária que converte a notação do ls. PosixFilePermission (sem s) é o enum com cada permissão.' },
+        { tipo: 'vf', pergunta: 'Files.newDirectoryStream(Paths.get(".")) percorre todas as subpastas recursivamente.', correta: 1,
+          explicacao: 'Falso. Lista só o primeiro nível, como ls/dir. Para percorrer a árvore, use SimpleFileVisitor (aulas 154–155).' },
+        { tipo: 'multipla', pergunta: 'Por que o DirectoryStream é criado dentro de try-with-resources?', opcoes: ['Porque lança exceção unchecked', 'Porque é um recurso do sistema operacional que precisa ser fechado', 'Porque não pode ser usado num for', 'Porque o Java exige para qualquer classe genérica'], correta: 1,
+          explicacao: 'Ele abre um recurso do SO e implementa Closeable. O try-with-resources garante o close().' },
+        { tipo: 'discursiva', pergunta: 'Explique o desenho "Attributes para ler / AttributeView para alterar" e como o polimorfismo ajuda a mesma linha de código rodar em Windows e Linux.',
+          explicacao: 'O NIO separa leitura e escrita em interfaces: Files.readAttributes(path, XxxFileAttributes.class) devolve um objeto só de leitura (um retrato), e Files.getFileAttributeView(path, XxxFileAttributeView.class) devolve uma view com métodos de alteração (setTimes, setHidden, setPermissions). O código pede a INTERFACE (ex.: BasicFileAttributes), e a JVM entrega a implementação do SO atual: no Windows um WindowsFileAttributes, no Linux a implementação Unix. Assim, o código que usa só BasicFileAttributes roda igual nos dois. Os atributos específicos (Dos só no Windows, Posix só no Unix) lançam UnsupportedOperationException, ou devolvem null na view, onde não há suporte.' },
+        { tipo: 'discursiva', pergunta: 'No deploy de um Laravel você roda chmod -R 775 storage. Como faria o equivalente para um arquivo em Java, e como leria as permissões atuais?',
+          explicacao: 'Para um arquivo: Files.getFileAttributeView(path, PosixFileAttributeView.class).setPermissions(PosixFilePermissions.fromString("rwxrwxr-x")), onde 775 = rwx (dono), rwx (grupo), r-x (outros). Ou direto: Files.setPosixFilePermissions(path, PosixFilePermissions.fromString("rwxrwxr-x")). Para ler: PosixFilePermissions.toString(Files.readAttributes(path, PosixFileAttributes.class).permissions()) dá "rwxrwxr-x". O -R (recursivo) exigiria percorrer a árvore com SimpleFileVisitor (aula 154) ou Files.walk. Só funciona em sistemas POSIX (Linux/Mac/WSL). No Windows lança UnsupportedOperationException. O PHP tem o mesmo com chmod($f, 0775) e fileperms.' }
+      ]
+    };
+  </script>
+  <script src="../js/app.js"></script>
+</body>
+</html>
