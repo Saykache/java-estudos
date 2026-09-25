@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>54–57 · private, get/set e sobrecarga</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="topo">
+      <a class="voltar" href="../index.html">← Todas as aulas</a>
+      <h1>54–57 · private, get/set e sobrecarga</h1>
+      <p>Acoplamento, modificador private, getters e setters, atributo só leitura e sobrecarga de métodos · <a href="https://www.youtube.com/playlist?list=PL62G310vn6nFIsOCC0H-C2infYgwm8SWW" target="_blank" rel="noopener">playlist</a></p>
+    </header>
+
+    <nav class="abas">
+      <a href="#resumo">Resumo</a>
+      <a href="#flashcards">Flashcards</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#estudo">Material de estudo</a>
+    </nav>
+
+    <p class="aviso">Junta as aulas 54, 55 e 56 (modificador <code>private</code>, get e set) e 57 (sobrecarga de métodos). Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. O anime do exemplo da aula 57 foi reconstruído a partir do áudio ("Akudama Drive"). O getter de <code>boolean</code>, o array exposto pelo getter, a resolução com promoção de tipos e os itens marcados como "extra" não estão nos vídeos.</p>
+
+    <section id="resumo">
+      <h2>Resumo</h2>
+      <p>Com atributos <code>public</code>, qualquer classe lê e grava o que quiser, e nada impede um <code>pessoa.idade = -1</code>. A partir daqui os atributos ficam <strong><code>private</code></strong>, e o acesso passa por <strong>métodos públicos</strong>, os <strong>getters</strong> e <strong>setters</strong>. É uma camada no meio que permite validar e mudar a implementação sem quebrar quem usa a classe. A aula 57 traz a <strong>sobrecarga</strong>: vários métodos com o mesmo nome e parâmetros diferentes, para evoluir a classe sem quebrar quem já a usa.</p>
+
+      <h3>54 · Acoplamento e o modificador <code>private</code></h3>
+      <ul>
+        <li><strong>Coesão</strong> (aula 41): quanto uma classe se limita a um propósito. <strong>Alta é bom.</strong></li>
+        <li><strong>Acoplamento</strong>: quanto uma classe <strong>conhece e depende</strong> de outra. <strong>Baixo é bom.</strong> Se <code>PessoaTeste01</code> mexe direto em <code>pessoa.idade</code>, qualquer mudança em <code>Pessoa</code> (como bloquear idade negativa) afeta o teste. As duas estão fortemente acopladas.</li>
+        <li><strong><code>private</code></strong>: o atributo só pode ser acessado <strong>de dentro do próprio objeto</strong>. Para as outras classes, "é como se não existisse". É a analogia da carteira: você não deveria nem saber que existe uma nota de 100 reais na carteira de outra pessoa.</li>
+        <li>Com o atributo <code>private</code>, <code>pessoa.nome = "Jiraya"</code> no teste <strong>não compila</strong>. Dentro da classe (<code>this.nome</code> no <code>imprime</code>) continua funcionando.</li>
+      </ul>
+
+      <h3>54 · Setters e getters</h3>
+<pre><code>public class Pessoa {
+    private String nome;
+    private int idade;
+
+    public void setNome(String nome) {
+        this.nome = nome;            // sem this, "nome = nome" não altera nada
+    }
+
+    public void setIdade(int idade) {
+        if (idade &lt; 0) {
+            System.out.println("Idade inválida");
+            return;                  // a validação fica num lugar só
+        }
+        this.idade = idade;
+    }
+
+    public String getNome() {
+        return nome;                 // this é opcional aqui: não há outro "nome"
+    }
+
+    public int getIdade() {
+        return idade;
+    }
+}
+
+// PessoaTeste01
+Pessoa pessoa = new Pessoa();
+pessoa.setNome("Jiraya");
+pessoa.setIdade(-1);                 // "Idade inválida": o valor não entra
+System.out.println(pessoa.getNome());</code></pre>
+      <ul>
+        <li><strong>Setter:</strong> <code>public void set</code> + nome do atributo em camelCase (<code>setNome</code>), recebendo um parâmetro <strong>do mesmo tipo</strong>. Não retorna nada.</li>
+        <li><strong>Getter:</strong> <code>public Tipo get</code> + nome (<code>getNome</code>), <strong>sem parâmetros</strong>, retornando o valor em memória com o mesmo tipo do atributo.</li>
+        <li>O parâmetro costuma ter o <strong>mesmo nome</strong> do atributo, e aí o <strong><code>this</code> é obrigatório</strong>: <code>nome = nome</code> só atribui o parâmetro a ele mesmo e, ao final do método, nada mudou. Com um nome diferente (<code>setNome(String x)</code> → <code>nome = x</code>), o <code>this</code> seria dispensável.</li>
+        <li>Os nomes <code>get</code> e <code>set</code> não são obrigatórios para o compilador, mas é uma convenção <strong>extremamente forte</strong>: qualquer dev Java entende na hora o que o método faz.</li>
+        <li><strong>A vitória:</strong> a validação de idade entrou <em>dentro</em> de <code>setIdade</code> e o teste <strong>continuou compilando</strong>. Enquanto a assinatura (o contrato) se mantém, o que acontece dentro do método não afeta quem chama. Isso é baixo acoplamento.</li>
+        <li>Com um setter <code>void</code>, <code>System.out.println(pessoa.setNome(...))</code> não compila. Para ler, use o getter.</li>
+      </ul>
+
+      <h3>55 · O que a variável de referência enxerga</h3>
+      <ul>
+        <li>De fora do objeto, a variável de referência (o "controle remoto") <strong>só tem botões para o que é <code>public</code></strong>: <code>setNome</code>, <code>getNome</code>, <code>imprime</code>... Os atributos <code>private</code> não aparecem.</li>
+        <li><strong>Dentro</strong> do objeto, tudo é acessível, inclusive os próprios getters. Dá para escrever <code>getNome()</code> dentro do <code>imprime</code>, mas o William não aconselha: dentro da classe, use o atributo direto (<code>this.nome</code>).</li>
+        <li><strong>Acoplamento mora na assinatura.</strong> Mudar a assinatura de um método público (parâmetros, retorno ou torná-lo <code>private</code>) quebra todas as classes que o chamam. Mudar só o corpo não quebra.</li>
+      </ul>
+
+      <h3>56 · Todos private, geração automática e atributo só leitura</h3>
+<pre><code>public class Funcionario {
+    private String nome;
+    private int idade;
+    private double[] salarios;
+    private double media;            // calculada pela própria classe
+
+    public void imprimeMediaSalario() {
+        if (salarios == null) return;
+        for (double salario : salarios) {
+            media += salario;
+        }
+        media /= salarios.length;
+        System.out.println("Média salarial: " + media);
+    }
+
+    public double getMedia() {       // tem get...
+        return media;
+    }
+    // ...mas NÃO tem setMedia: ninguém de fora altera a média
+}</code></pre>
+      <ul>
+        <li>Na classe <code>Funcionario</code>, <strong>todos os atributos viram <code>private</code></strong>, e o teste passa a usar <code>setNome</code>, <code>setIdade</code> e <code>setSalarios</code>.</li>
+        <li><strong>Getters e setters são trabalho repetitivo, e a IDE gera:</strong> <code>Alt+Insert</code> → <em>Getter and Setter</em> (ou só <em>Getter</em> / só <em>Setter</em>), selecionando os atributos.</li>
+        <li><strong>Nem todo atributo deve ter set.</strong> A <code>media</code> é calculada pela própria classe. Com um <code>setMedia</code>, qualquer um poderia gravar uma média falsa. Removendo o setter, ela fica <strong>somente leitura</strong>: só a classe grava e todos podem ler pelo <code>getMedia()</code>. Alguns atributos nem getter terão, porque são de uso interno.</li>
+        <li>O atributo de classe já nasce com 0, então a média não precisa ser inicializada. Só que <code>getMedia()</code> devolve 0 até alguém chamar a impressão, o que é uma questão de regra de negócio para pensar depois.</li>
+      </ul>
+
+      <h3>57 · Sobrecarga de métodos</h3>
+<pre><code>// javacore.Csobrecargametodos.dominio.Anime
+public void init(String nome, String tipo, int episodios) {
+    this.nome = nome;
+    this.tipo = tipo;
+    this.episodios = episodios;
+}
+
+public void init(String nome, String tipo, int episodios, String genero) {
+    this.init(nome, tipo, episodios);   // reaproveita o init de 3 parâmetros
+    this.genero = genero;
+}
+
+// AnimeTeste01
+anime.init("Akudama Drive", "TV", 12);            // continua funcionando
+anime.init("Akudama Drive", "TV", 12, "Ação");    // versão nova</code></pre>
+      <ul>
+        <li><strong>O cenário:</strong> uma classe <code>Anime</code> (tipo, episódios) começa com setters, um por linha. Vem uma "mudança de requisito": acrescentar o <code>nome</code>. Para não precisar de três linhas de <code>set</code>, surge um método <code>init</code> que inicializa tudo de uma vez.</li>
+        <li>Depois chega outro requisito: o <code>genero</code>. Mudar o <code>init</code> para 4 parâmetros <strong>alteraria o contrato</strong> e quebraria todo mundo que chama com 3. Numa equipe espalhada por fusos horários, você quebra o código no fim do seu dia e os colegas que ainda estão trabalhando ficam parados.</li>
+        <li>Criar um <code>init2</code> "funciona", mas é feio: dois nomes para a mesma ideia.</li>
+        <li><strong>Sobrecarga</strong>: métodos com <strong>o mesmo nome</strong> e <strong>quantidade ou tipos de parâmetros diferentes</strong>. O Java escolhe qual executar pelos argumentos da chamada.</li>
+        <li><strong>O modificador de acesso e o tipo de retorno não contam</strong> para a sobrecarga. Só contam o nome e a lista de parâmetros.</li>
+        <li><strong>Evite repetir código:</strong> o <code>init</code> de 4 parâmetros <strong>delega</strong> para o de 3 (<code>this.init(nome, tipo, episodios)</code>) e só acrescenta o gênero. No debug (<code>Shift+F9</code>, <code>F8</code>) dá para ver a execução entrar num e depois no outro. <code>Ctrl+P</code> mostra as duas opções.</li>
+        <li><strong>Sem ambiguidade:</strong> se duas versões ficassem indistinguíveis numa chamada, o compilador não saberia qual escolher e dá erro.</li>
+        <li>Costume do William: <strong>getters e setters no fim da classe</strong>, depois dos atributos e dos métodos com lógica, que "são mais importantes".</li>
+      </ul>
+
+      <h3>Atenção</h3>
+      <ul>
+        <li><strong>Esquecer o <code>this</code> no setter</strong> é o erro clássico: compila, roda, e o atributo continua <code>null</code> ou 0.</li>
+        <li><strong>Só o tipo de retorno diferente não é sobrecarga:</strong> <code>int calcula()</code> e <code>double calcula()</code> na mesma classe <strong>não compilam</strong>. Nomes de parâmetros diferentes com os mesmos tipos também não: <code>m(int a)</code> e <code>m(int b)</code> são o mesmo método.</li>
+        <li><strong>Extra: getter de boolean</strong> usa <code>is</code>: <code>isAtivo()</code> no lugar de <code>getAtivo()</code>. A IDE já gera assim.</li>
+        <li><strong>Extra: getter de array vaza o objeto.</strong> <code>getSalarios()</code> devolve a <em>referência</em> do array, e quem recebe pode alterar <code>salarios[0]</code> por fora, contornando o <code>private</code> (aulas 49–50). Quando isso importa, devolva uma cópia: <code>return salarios.clone();</code>.</li>
+        <li><strong>Extra: sobrecarga com promoção de tipo.</strong> Com <code>m(long x)</code> e <code>m(double x)</code>, a chamada <code>m(5)</code> escolhe <code>long</code>, a conversão "mais próxima" do int.</li>
+        <li><strong>Extra:</strong> <code>this.init(...)</code> é uma chamada de método comum. Não confunda com <code>this(...)</code>, que chama outro <em>construtor</em> (aulas 58–59) e é o jeito mais comum de fazer essa mesma delegação.</li>
+        <li><code>private</code> é por <strong>classe</strong>, não por objeto: um método de <code>Pessoa</code> pode ler o <code>nome</code> privado de <em>outra</em> <code>Pessoa</code> recebida por parâmetro.</li>
+      </ul>
+
+      <h3>Paralelo com PHP</h3>
+      <ul>
+        <li><strong>Visibilidade igual:</strong> <code>public</code>, <code>private</code> e <code>protected</code> funcionam do mesmo jeito. O <code>protected</code> vem com herança.</li>
+        <li><strong>PHP não tem sobrecarga.</strong> Declarar dois métodos com o mesmo nome dá <em>fatal error</em>. No PHP você usa parâmetro opcional (<code>$genero = null</code>), argumentos nomeados ou <code>__call</code>. Em Java, que não tem parâmetros opcionais, a sobrecarga cumpre esse papel.</li>
+        <li><strong>Getters e setters × Eloquent:</strong> no Laravel você raramente escreve getters, porque o Model expõe os atributos "por mágica", e os <em>accessors/mutators</em> (<code>Attribute::make(get: ..., set: ...)</code>) fazem o papel do get/set com lógica, como a validação de idade.</li>
+        <li><strong>Só leitura:</strong> o <code>readonly</code> do PHP 8.1 e a visibilidade assimétrica do PHP 8.4 (<code>public private(set)</code>) equivalem ao "tem getter, não tem setter" da aula 56.</li>
+        <li><strong>Menos código repetido:</strong> o PHP tem <em>constructor property promotion</em>. Em Java o equivalente moderno são os <code>record</code> (Java 16+), e muitos projetos usam o Lombok (<code>@Getter @Setter</code>) para gerar getters e setters.</li>
+      </ul>
+    </section>
+
+    <section id="flashcards">
+      <h2>Flashcards</h2>
+      <p style="color:var(--muted);margin-top:-6px">Toque no cartão para virar.</p>
+      <div id="flashcards-app"></div>
+    </section>
+
+    <section id="quiz">
+      <h2>Quiz</h2>
+      <div id="quiz-app"></div>
+    </section>
+
+    <section id="estudo">
+      <h2>Material de estudo</h2>
+
+      <h3>Mapa mental</h3>
+<pre><code>private, get/set e sobrecarga
+├── Acoplamento (54)
+│   ├── quanto uma classe conhece a outra → baixo é bom
+│   └── alta coesão + baixo acoplamento
+├── private (54–55)
+│   ├── só acessível dentro da própria classe
+│   ├── de fora: "não existe" (não compila)
+│   └── a referência só enxerga o que é public
+├── Getters e setters (54–56)
+│   ├── setX(Tipo x) { this.x = x; }  ← this obrigatório se o nome é igual
+│   ├── Tipo getX() { return x; }
+│   ├── validação dentro do set (idade &lt; 0)
+│   ├── Alt+Insert gera
+│   └── sem setter = somente leitura (media)
+└── Sobrecarga (57)
+    ├── mesmo nome + parâmetros diferentes (quantidade ou tipo)
+    ├── acesso e retorno não contam
+    ├── evolui a API sem quebrar quem chama
+    ├── delegar: init(4) chama init(3)
+    └── sem ambiguidade</code></pre>
+
+      <h3>Prática no seu WSL (20 minutos)</h3>
+<pre><code>cd ~/java-lab
+C=src/academy/devdojo/maratonajava/javacore/Csobrecargametodos
+mkdir -p $C/dominio $C/test
+
+cat > $C/dominio/Anime.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Csobrecargametodos.dominio;
+
+public class Anime {
+    private String nome;
+    private String tipo;
+    private int episodios;
+    private String genero;
+
+    public void init(String nome, String tipo, int episodios) {
+        this.nome = nome;
+        this.tipo = tipo;
+        setEpisodios(episodios);
+    }
+
+    public void init(String nome, String tipo, int episodios, String genero) {
+        this.init(nome, tipo, episodios);
+        this.genero = genero;
+    }
+
+    public void imprime() {
+        System.out.println(nome + " | " + tipo + " | " + episodios + " | " + genero);
+    }
+
+    public void setEpisodios(int episodios) {
+        if (episodios &lt; 0) {
+            System.out.println("Episódios inválidos");
+            return;
+        }
+        this.episodios = episodios;
+    }
+
+    public int getEpisodios() {
+        return episodios;
+    }
+}
+EOF
+
+cat > $C/test/AnimeTeste01.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Csobrecargametodos.test;
+
+import academy.devdojo.maratonajava.javacore.Csobrecargametodos.dominio.Anime;
+
+public class AnimeTeste01 {
+    public static void main(String[] args) {
+        Anime anime = new Anime();
+        anime.init("Akudama Drive", "TV", 12);
+        anime.imprime();                           // ?
+        anime.init("Akudama Drive", "TV", 12, "Ação");
+        anime.imprime();                           // ?
+        anime.setEpisodios(-5);                    // ?
+        System.out.println(anime.getEpisodios());  // ?
+        // anime.nome = "x";                       // descomente: o que acontece?
+    }
+}
+EOF
+
+javac -d out $(find src -name '*.java')
+java -cp out academy.devdojo.maratonajava.javacore.Csobrecargametodos.test.AnimeTeste01</code></pre>
+      <details>
+        <summary>Ver a saída esperada</summary>
+<pre><code>Akudama Drive | TV | 12 | null
+Akudama Drive | TV | 12 | Ação
+Episódios inválidos
+12</code></pre>
+        <p>Descomentando <code>anime.nome = "x";</code>, o erro é <em>nome has private access in Anime</em>.</p>
+      </details>
+      <p><strong>Exercícios:</strong></p>
+      <ol>
+        <li>Refaça a <code>Pessoa</code> da aula 54 com <code>private</code>, getters, setters e a validação de idade. Confirme que o teste continua compilando.</li>
+        <li>Na <code>Funcionario</code>, torne tudo <code>private</code>, gere getters e setters com <code>Alt+Insert</code> e remova o <code>setMedia</code>.</li>
+        <li>Faça <code>getSalarios()</code> devolver <code>salarios.clone()</code> e prove que alterar o array retornado não muda o funcionário.</li>
+        <li>Crie na <code>Calculadora</code> três versões de <code>soma</code>: <code>(int, int)</code>, <code>(double, double)</code> e <code>(int, int, int)</code>. Tente criar <code>double soma(int, int)</code> e leia o erro.</li>
+      </ol>
+
+      <h3>Glossário</h3>
+      <ul>
+        <li><strong>Acoplamento</strong>: grau de dependência entre classes. Baixo acoplamento é o desejável.</li>
+        <li><strong>Encapsulamento</strong>: esconder o estado interno (<code>private</code>) e expor só uma interface pública controlada.</li>
+        <li><strong>Modificador de acesso</strong>: <code>public</code>, <code>private</code> (e <code>protected</code>/padrão, mais à frente).</li>
+        <li><strong>Getter</strong>: método que devolve o valor de um atributo (<code>getNome()</code>, <code>isAtivo()</code>).</li>
+        <li><strong>Setter</strong>: método que altera o valor de um atributo, podendo validar (<code>setIdade(int)</code>).</li>
+        <li><strong>Somente leitura</strong>: atributo com getter e sem setter.</li>
+        <li><strong>Sobrecarga (overloading)</strong>: métodos com o mesmo nome e listas de parâmetros diferentes.</li>
+        <li><strong>Assinatura</strong>: nome mais os tipos dos parâmetros. O retorno não faz parte.</li>
+      </ul>
+
+      <h3>Revisão espaçada</h3>
+      <ul class="revisao">
+        <li><span class="dia">Dia 1</span><span>Todos os flashcards + a prática com previsões.</span></li>
+        <li><span class="dia">Dia 3</span><span>Quiz + exercícios 1 e 2.</span></li>
+        <li><span class="dia">Dia 7</span><span>Exercícios 3 e 4 + explicar em voz alta acoplamento × coesão.</span></li>
+        <li><span class="dia">Dia 14</span><span>Flashcards que errou + questões discursivas.</span></li>
+      </ul>
+
+      <h3>Para aprofundar</h3>
+      <ul>
+        <li>Getters e setters para <em>tudo</em> ainda é encapsulamento? Pesquise "anemic domain model".</li>
+        <li>Como os <code>record</code> do Java 16+ dispensam getters e setters?</li>
+        <li>Qual a diferença entre sobrecarga (overloading) e sobrescrita (overriding)? (aula 76)</li>
+        <li>Como o compilador escolhe a sobrecarga quando há promoção de tipo, autoboxing e varargs ao mesmo tempo?</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    window.AULA = {
+      flashcards: [
+        ["O que é acoplamento?", "O quanto uma classe conhece e depende de outra; baixo acoplamento é bom"],
+        ["Coesão e acoplamento: qual deve ser alto e qual baixo?", "Coesão alta, acoplamento baixo"],
+        ["O que o modificador private faz?", "Deixa o atributo/método acessível só dentro da própria classe"],
+        ["pessoa.nome = \"x\" com nome private, fora da classe: o que acontece?", "Não compila (has private access)"],
+        ["Qual a analogia da aula para private?", "A nota de 100 na carteira: você nem deveria saber que existe"],
+        ["Qual a convenção do setter?", "public void setNome(String nome) { this.nome = nome; }"],
+        ["Qual a convenção do getter?", "public String getNome() { return nome; } (sem parâmetros)"],
+        ["Por que this.nome = nome no setter?", "O parâmetro tem o mesmo nome e esconde o atributo; sem this nada muda"],
+        ["Onde colocar a validação de idade negativa?", "Dentro do setIdade"],
+        ["Por que a validação no setter não quebrou o teste?", "A assinatura (contrato) não mudou: baixo acoplamento"],
+        ["O que a variável de referência enxerga de fora?", "Só o que é public"],
+        ["Dentro da classe, usar getNome() ou this.nome?", "this.nome (o atributo direto)"],
+        ["O que quebra quem usa uma classe?", "Mudar a assinatura de métodos públicos; mudar só o corpo não quebra"],
+        ["Como gerar getters e setters no IntelliJ?", "Alt+Insert → Getter and Setter"],
+        ["Como deixar um atributo somente leitura?", "Criar só o getter, sem setter"],
+        ["Por que a média do Funcionario não tem setter?", "Ela é calculada pela classe; ninguém de fora deve gravá-la"],
+        ["O que é sobrecarga de métodos?", "Mesmo nome, parâmetros diferentes (quantidade ou tipo)"],
+        ["O tipo de retorno conta para a sobrecarga?", "Não. Nem o modificador de acesso"],
+        ["Por que sobrecarregar init em vez de mudar a assinatura?", "Para não quebrar quem já chama a versão antiga"],
+        ["Como evitar código repetido entre sobrecargas?", "Uma delega para a outra: init(4) chama this.init(3) e acrescenta o resto"],
+        ["int calcula() e double calcula() na mesma classe compilam?", "Não: só o retorno diferente não é sobrecarga"],
+        ["Como fica o getter de um boolean ativo?", "isAtivo()"],
+        ["Qual o risco de um getter que devolve um array?", "Quem recebe altera o array interno; devolva uma cópia (clone)"],
+        ["PHP tem sobrecarga de métodos?", "Não: usa parâmetros opcionais, argumentos nomeados ou __call"],
+        ["Equivalente PHP ao atributo só leitura?", "readonly (8.1) ou public private(set) (8.4)"]
+      ],
+      quiz: [
+        { tipo: 'vf', pergunta: 'Um atributo private pode ser lido e alterado diretamente por outra classe com objeto.atributo.', correta: 1,
+          explicacao: 'Falso: private só é acessível dentro da própria classe. De fora, o acesso passa por métodos públicos (getters e setters).' },
+        { tipo: 'multipla', pergunta: 'Qual é o setter correto para private String nome?', opcoes: ['public String setNome() { return nome; }', 'public void setNome(String nome) { nome = nome; }', 'public void setNome(String nome) { this.nome = nome; }', 'private void setNome(String nome) { this.nome = nome; }'], correta: 2,
+          explicacao: 'O setter é público, void, recebe o valor e usa this para diferenciar atributo e parâmetro. Sem this, o atributo não muda.' },
+        { tipo: 'multipla', pergunta: 'O que idealmente deve ser baixo e o que deve ser alto?', opcoes: ['Coesão baixa, acoplamento alto', 'Coesão alta, acoplamento baixo', 'Os dois altos', 'Os dois baixos'], correta: 1,
+          explicacao: 'Classes com um propósito (alta coesão) que dependem pouco dos detalhes umas das outras (baixo acoplamento).' },
+        { tipo: 'vf', pergunta: 'Acrescentar uma validação dentro de setIdade, sem mudar a assinatura, obriga a alterar as classes que chamam o método.', correta: 1,
+          explicacao: 'Falso: quem chama depende da assinatura (o contrato), não do corpo. Esse é o ganho do baixo acoplamento.' },
+        { tipo: 'multipla', pergunta: 'Como tornar o atributo media somente leitura para quem usa a classe?', opcoes: ['Deixá-lo public', 'Criar getMedia e setMedia', 'Criar getMedia e não criar setMedia', 'Criar só setMedia'], correta: 2,
+          explicacao: 'Com getter e sem setter, qualquer um lê, mas só a própria classe grava.' },
+        { tipo: 'multipla', pergunta: 'Qual par de métodos NÃO é uma sobrecarga válida na mesma classe?', opcoes: ['void init(String a) e void init(String a, int b)', 'void init(int a) e void init(double a)', 'int calcula(int a) e double calcula(int a)', 'void m() e void m(String... s)'], correta: 2,
+          explicacao: 'Sobrecarga exige listas de parâmetros diferentes. Só o retorno diferente não basta, então não compila.' },
+        { tipo: 'multipla', pergunta: 'Qual a melhor forma de adicionar genero ao init(nome, tipo, episodios) sem quebrar ninguém e sem repetir código?', opcoes: ['Mudar o init existente para 4 parâmetros', 'Criar init2 com 4 parâmetros copiando o código', 'Criar init(nome, tipo, episodios, genero) que chama this.init(nome, tipo, episodios) e atribui genero', 'Tornar genero public'], correta: 2,
+          explicacao: 'A sobrecarga mantém o contrato antigo, e a delegação evita duplicar as atribuições.' },
+        { tipo: 'vf', pergunta: 'Na sobrecarga, métodos com o mesmo nome podem ter modificadores de acesso e tipos de retorno diferentes, desde que os parâmetros sejam diferentes.', correta: 0,
+          explicacao: 'Verdadeiro: o que define a sobrecarga é o nome igual com parâmetros diferentes. Acesso e retorno não contam.' },
+        { tipo: 'discursiva', pergunta: 'Explique com o exemplo da idade -1 por que atributos public geram alto acoplamento e como private + setter resolvem.',
+          explicacao: 'Com idade public, qualquer classe grava pessoa.idade = -1 e não há onde validar. Para bloquear, seria preciso mudar a forma de acesso, o que quebra todo código que usa pessoa.idade: as classes estão acopladas aos detalhes internos de Pessoa. Com idade private e setIdade público, todo acesso passa pelo método: a validação entra num lugar só, e quem chama depende apenas da assinatura. A implementação pode mudar sem quebrar ninguém, e isso é baixo acoplamento.' },
+        { tipo: 'discursiva', pergunta: 'No PHP você faria function init(string $nome, string $tipo, int $episodios, ?string $genero = null). Por que isso não existe em Java e como a aula 57 resolve?',
+          explicacao: 'Java não tem parâmetros com valor padrão nem argumentos nomeados, e o PHP não tem sobrecarga (dois métodos com o mesmo nome dão fatal error). Em Java, a mesma flexibilidade vem da sobrecarga: um init com 3 parâmetros e outro com 4, com o mesmo nome. Para não duplicar código, o de 4 chama this.init(nome, tipo, episodios) e só atribui o gênero. Quem chama com 3 argumentos continua funcionando.' }
+      ]
+    };
+  </script>
+  <script src="../js/app.js"></script>
+</body>
+</html>
