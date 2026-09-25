@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>71–75 · Herança</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="topo">
+      <a class="voltar" href="../index.html">← Todas as aulas</a>
+      <h1>71–75 · Herança</h1>
+      <p>extends, "é um" × "tem um", sobrescrita e super, protected, construtores e a ordem de inicialização · <a href="https://www.youtube.com/playlist?list=PL62G310vn6nFIsOCC0H-C2infYgwm8SWW" target="_blank" rel="noopener">playlist</a></p>
+    </header>
+
+    <nav class="abas">
+      <a href="#resumo">Resumo</a>
+      <a href="#flashcards">Flashcards</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#estudo">Material de estudo</a>
+    </nav>
+
+    <p class="aviso">Junta as aulas 71 a 75 (Herança pt 01 a 05: introdução, super, protected, construtores e sequência de inicialização). Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. O código e os valores foram conferidos no <a href="https://github.com/devdojobr/maratona-java-virado-no-jiraya" target="_blank" rel="noopener">repositório do professor</a> (pacote <code>javacore.Hheranca</code>). A anotação <code>@Override</code>, a nota sobre a alocação do objeto e os itens marcados como "extra" não estão nos vídeos.</p>
+
+    <section id="resumo">
+      <h2>Resumo</h2>
+      <p>Até aqui, as classes se relacionavam por <strong>associação</strong>: uma pessoa <em>tem um</em> endereço. <strong>Herança</strong> é outro tipo de relação: um funcionário <em>é uma</em> pessoa. Com <code>extends</code>, a classe filha recebe tudo o que a mãe tem (atributos e métodos) e acrescenta o que é específico dela. É poderosa, mas <strong>acopla fortemente</strong> as classes, e o próprio William diz que evita usá-la ao máximo.</p>
+      <p>Antes de começar, a aula 71 corrige o exercício da aula 70: o requisito dizia que o seminário <strong>deve</strong> ter um local, mas havia construtores sem ele. Agora os construtores exigem o <code>Local</code>.</p>
+
+      <h3>71 · extends: "é um"</h3>
+<pre><code>public class Endereco {          // classe independente, reaproveitável
+    private String rua;
+    private String cep;
+    // getters e setters
+}
+
+public class Pessoa {
+    private String nome;
+    private String cpf;
+    private Endereco endereco;    // Pessoa TEM UM endereço (associação)
+
+    public void imprime() {
+        System.out.println(this.nome);
+        System.out.println(this.cpf);
+        System.out.println(this.endereco.getRua() + " " + this.endereco.getCep());
+    }
+    // getters e setters
+}
+
+public class Funcionario extends Pessoa {   // Funcionario É UMA Pessoa
+    private double salario;                  // só o que é específico
+    // getSalario / setSalario
+}
+
+// HerancaTest01
+Funcionario funcionario = new Funcionario();
+funcionario.setNome("Oda Nobunaga");   // herdado de Pessoa
+funcionario.setCpf("22222");           // herdado
+funcionario.setEndereco(endereco);     // herdado
+funcionario.setSalario(20000);         // próprio
+funcionario.imprime();                 // herdado: imprime nome, cpf e endereço, mas NÃO o salário</code></pre>
+      <ul>
+        <li><strong>O cenário:</strong> o gerente pede uma classe <code>Funcionario</code> com nome, CPF, endereço e salário. Você começa a escrever e percebe que três atributos são os mesmos de <code>Pessoa</code>. Na vida real, um funcionário <strong>é</strong> uma pessoa.</li>
+        <li><strong>"Tem um" × "é um":</strong> associação é "tem um" (uma pessoa <em>tem um</em> endereço, um professor <em>tem</em> seminários). Herança é "é um": o funcionário <em>é</em> tudo o que uma pessoa é, e mais alguma coisa.</li>
+        <li><code>class Funcionario extends Pessoa</code>: "funcionário <strong>estende</strong> as funcionalidades de pessoa". Os atributos e métodos de <code>Pessoa</code> passam a existir em todo <code>Funcionario</code>, mesmo sem aparecer no código dele (nem no <code>.class</code> compilado).</li>
+        <li><strong>Quanto mais para baixo, mais especializado:</strong> <code>Pessoa</code> (genérica) → <code>Funcionario</code> → <code>Gerente</code>. A classe de cima é a <strong>superclasse</strong> (mãe) e a de baixo é a <strong>subclasse</strong> (filha).</li>
+        <li><strong>Por que <code>Endereco</code> não conhece <code>Pessoa</code>:</strong> sem a relação de volta, o endereço fica <strong>desacoplado</strong> e pode ser reutilizado em outras classes e até em outros sistemas.</li>
+        <li><strong>O alerta:</strong> herança <strong>acopla fortemente</strong>. Qualquer mudança em <code>Pessoa</code> afeta <code>Funcionario</code> e todas as outras filhas. Use em dois casos: para <strong>estender</strong> uma classe ou para usar <strong>polimorfismo</strong> (aulas 90–94).</li>
+        <li>O <code>imprime()</code> herdado não mostra o salário, porque <code>Pessoa</code> nem sabe que salário existe. O IntelliJ mostra um ícone ao lado de <code>Pessoa</code> indicando que ela tem subclasses.</li>
+      </ul>
+
+      <h3>72 · Sobrescrita e <code>super</code></h3>
+<pre><code>public class Funcionario extends Pessoa {
+    private double salario;
+
+    public void imprime() {            // MESMA assinatura do imprime() de Pessoa: sobrescrita
+        super.imprime();               // executa o imprime() da superclasse...
+        System.out.println(this.salario);   // ...e acrescenta o específico
+    }
+}</code></pre>
+      <ul>
+        <li>Cada <code>new</code> cria um objeto separado: a <code>pessoa</code> e o <code>funcionario</code> têm cada um os seus <code>nome</code>, <code>cpf</code> e <code>endereco</code>. Dentro do <code>imprime()</code>, o <code>this</code> é <strong>o objeto que está executando</strong>, e por isso cada um imprime os próprios dados.</li>
+        <li><strong>Sobrescrita (override):</strong> declarar na subclasse um método com a <strong>mesma assinatura</strong> de um método da superclasse. Ele passa a ser o comportamento dos objetos da subclasse. O IntelliJ mostra o ícone de "overrides".</li>
+        <li>Se o <code>imprime()</code> do funcionário tiver só o salário, <strong>só o salário</strong> sai: o método da mãe foi substituído.</li>
+        <li><code>imprime2()</code> <strong>não</strong> seria sobrescrita. Com outro nome, é um método novo, e o <code>imprime()</code> herdado continua valendo.</li>
+        <li><strong><code>super</code></strong> se refere à <strong>parte da superclasse</strong> do objeto. <code>super.imprime()</code> executa o método como foi escrito em <code>Pessoa</code>, mas <strong>no objeto funcionário</strong>: o <code>this.nome</code> lá dentro é o nome do funcionário. A sobrescrita garante que o funcionário tem todos os atributos da mãe. Já a mãe nunca enxerga o <code>salario</code>.</li>
+      </ul>
+
+      <h3>73 · Herança simples e <code>protected</code></h3>
+<pre><code>public class Pessoa {
+    protected String nome;       // visível para as subclasses (e para o pacote)
+    protected String cpf;
+    protected Endereco endereco;
+}
+
+public class Funcionario extends Pessoa {
+    public void relatorioPagamento() {
+        System.out.println("Eu " + this.nome + " recebi o salário de " + this.salario);
+    }
+}</code></pre>
+      <ul>
+        <li><strong>Não existe herança múltipla de classes em Java:</strong> <code>class Funcionario extends Pessoa, Aluno</code> não compila. Uma classe estende uma só. As interfaces (aulas 87–89) dão uma alternativa.</li>
+        <li><strong>O problema:</strong> com <code>nome</code> <code>private</code> em <code>Pessoa</code>, o <code>Funcionario</code> não consegue escrever <code>this.nome</code>, mesmo o atributo existindo no objeto. Dá para usar <code>getNome()</code> (público), mas não é o ideal.</li>
+        <li><strong><code>protected</code></strong> dá acesso direto, como se o atributo fosse da própria classe:
+          <ul>
+            <li>para <strong>todas as subclasses</strong>, em <strong>qualquer pacote</strong>;</li>
+            <li>para <strong>todas as classes do mesmo pacote</strong>, sejam subclasses ou não. No exemplo da aula, <code>Endereco</code>, que está no mesmo pacote <code>dominio</code>, consegue fazer <code>p.nome = "..."</code>.</li>
+          </ul>
+        </li>
+        <li>Uma classe de <strong>outro pacote</strong> que <strong>não</strong> é subclasse (o <code>HerancaTest01</code>, em <code>test</code>) não enxerga <code>pessoa.nome</code>. Uma subclasse em outro pacote enxerga, como o <code>Funcionario2 extends Pessoa</code> criado em <code>test</code>.</li>
+      </ul>
+
+      <h3>74 · Construtores na herança</h3>
+<pre><code>public class Pessoa {
+    protected String nome;
+    public Pessoa(String nome) {
+        this.nome = nome;
+    }
+}
+
+public class Funcionario extends Pessoa {
+    public Funcionario(String nome) {
+        super(nome);           // chama o construtor de Pessoa — primeira linha, obrigatório aqui
+    }
+}
+
+// HerancaTest01
+Pessoa pessoa = new Pessoa("Toyohisa Shimazu");
+Funcionario funcionario = new Funcionario("Oda Nobunaga");</code></pre>
+      <ul>
+        <li><strong>Todo construtor começa chamando um construtor da superclasse.</strong> Se você não escrever nada, o compilador coloca <code>super();</code>, sem argumentos, na primeira linha, inclusive no construtor padrão.</li>
+        <li>Quando <code>Pessoa</code> passa a ter só <code>Pessoa(String nome)</code>, o <code>super()</code> implícito de <code>Funcionario</code> não encontra um construtor vazio, e <strong><code>Funcionario</code> para de compilar</strong>. A regra: se a mãe exige o nome, a filha também tem que exigir.</li>
+        <li>A solução é declarar um construtor na filha que receba o nome e chame <strong><code>super(nome)</code></strong>. Com vários construtores na mãe, o <code>super(...)</code> escolhe pela lista de argumentos, como o <code>this(...)</code>.</li>
+        <li><strong><code>super(...)</code> tem a mesma regra do <code>this(...)</code>:</strong> primeira instrução do construtor. Por isso não dá para ter os dois no mesmo construtor.</li>
+        <li><strong>Toda classe estende <code>Object</code></strong> (de <code>java.lang</code>), direta ou indiretamente. <code>Pessoa</code> é um <code>Object</code>, <code>Funcionario</code> é uma <code>Pessoa</code>, e portanto <code>Object</code> é o "avô" de <code>Funcionario</code>. É daí que vêm métodos que você nunca escreveu, como <code>toString()</code>, <code>equals()</code> e <code>hashCode()</code>. Não se escreve <code>extends Object</code>: é implícito.</li>
+        <li>Herança múltipla não existe, mas <strong>herança em vários níveis</strong> (pai, avô, bisavô...) sim.</li>
+        <li><code>Ctrl+O</code> (Override Methods) lista o que pode ser sobrescrito, inclusive os métodos de <code>Object</code>.</li>
+      </ul>
+
+      <h3>75 · A sequência de inicialização com herança</h3>
+<pre><code>// Pessoa e Funcionario ganham: 1 bloco static, 2 blocos de instância e um println no construtor
+new Funcionario("Jiraya");</code></pre>
+<pre><code>Dentro do bloco de inicialização estático de pessoa         ← 0
+Dentro do bloco de inicialização estático de Funcionario    ← 1
+Dentro do bloco inicialização de pessoa 1                   ← 4
+Dentro do bloco inicialização de pessoa 2                   ← 4
+Dentro do construtor de pessoa                              ← 5
+Dentro do bloco inicialização de Funcionario 1              ← 8
+Dentro do bloco inicialização de Funcionario 2              ← 8
+Dentro do construtor de funcionário                         ← 9</code></pre>
+      <p>A lista do professor (comentário do <code>HerancaTest02</code>):</p>
+<pre><code>0 - Bloco estático da SUPERCLASSE (quando a JVM carrega a classe pai)
+1 - Bloco estático da SUBCLASSE (quando a JVM carrega a classe filha)
+2 - Espaço em memória para o objeto
+3 - Atributos da superclasse: valores padrão ou os declarados
+4 - Blocos de inicialização da superclasse, na ordem em que aparecem
+5 - Construtor da superclasse
+6 - (parte da subclasse no objeto)
+7 - Atributos da subclasse: valores padrão ou os declarados
+8 - Blocos de inicialização da subclasse, na ordem em que aparecem
+9 - Construtor da subclasse</code></pre>
+      <ul>
+        <li><strong>A regra: o pai sempre vem primeiro.</strong> Para carregar <code>Funcionario</code>, a JVM precisa antes carregar <code>Pessoa</code>. Por isso os estáticos vão do pai para o filho (e rodam uma vez só).</li>
+        <li>Depois vem a parte de <strong>objeto</strong>: primeiro a da mãe (atributos, blocos, construtor) e só então a da filha. A filha só termina de ser construída quando a mãe já está pronta.</li>
+        <li>Com mais níveis (um <code>Gerente extends Funcionario</code>), a sequência só ganha mais passos, sempre de cima para baixo.</li>
+        <li>O William avisa que é um tema que você "provavelmente não vai ligar no dia a dia", mas cai em prova de <strong>certificação</strong> e é um diferencial saber.</li>
+      </ul>
+
+      <h3>Atenção</h3>
+      <ul>
+        <li><strong>Herança é "é um".</strong> Se a frase "X é um Y" soa estranha (um <code>Carro</code> é um <code>Motor</code>?), é associação ("tem um"), não herança.</li>
+        <li><strong>Construtores não são herdados.</strong> Mesmo com <code>Pessoa(String nome)</code>, <code>new Funcionario("x")</code> só existe se <code>Funcionario</code> declarar esse construtor.</li>
+        <li><strong><code>private</code> existe no objeto, mas a filha não acessa.</strong> O <code>nome</code> privado de <code>Pessoa</code> está dentro de todo <code>Funcionario</code>, só que o código de <code>Funcionario</code> não enxerga. Use <code>protected</code> ou getters.</li>
+        <li><strong><code>protected</code> abre para o pacote inteiro</strong>, não só para as filhas. É mais aberto do que parece.</li>
+        <li><strong>Extra: <code>@Override</code>.</strong> Coloque a anotação em cima do método sobrescrito. Se você errar a assinatura (<code>imprimir()</code> em vez de <code>imprime()</code>), o compilador avisa, em vez de você criar um método novo sem perceber. O IntelliJ já gera com ela.</li>
+        <li><strong>Extra: o objeto é um só.</strong> O comentário do professor fala em "espaço para o objeto da superclasse" e "da subclasse", mas a JVM aloca <strong>um único objeto</strong> contendo os atributos das duas classes. O que segue a ordem pai → filho é a <em>inicialização</em>.</li>
+        <li><strong>Extra: prefira composição.</strong> "Composição em vez de herança" é um princípio clássico: quando a relação é "tem um" ou você só quer reaproveitar código, um atributo (como o <code>Endereco</code>) acopla menos que <code>extends</code>. Uma classe <code>final</code> nem pode ser estendida (aulas 77–79).</li>
+      </ul>
+
+      <h3>Paralelo com PHP</h3>
+      <ul>
+        <li><strong>Igual:</strong> <code>extends</code>, herança simples (uma classe mãe só), sobrescrita e <code>parent::imprime()</code>, que equivale a <code>super.imprime()</code>.</li>
+        <li><strong>A grande diferença, construtores:</strong> no PHP o <code>__construct</code> <strong>é herdado</strong>: se a filha não declara um, usa o da mãe. Em Java, construtores <strong>não</strong> são herdados, e se a mãe exige argumentos, a filha precisa declarar o seu e chamar <code>super(...)</code>. O <code>parent::__construct($nome)</code> equivale ao <code>super(nome)</code>, com a diferença de que em Java ele é obrigatório e tem que ser a primeira linha.</li>
+        <li><strong><code>protected</code>:</strong> no PHP vale só para a hierarquia (mãe e filhas). Em Java vale também para o <strong>pacote</strong> inteiro. O PHP não tem visibilidade por pacote/namespace.</li>
+        <li><strong>Raiz comum:</strong> em Java tudo estende <code>Object</code>. No PHP não existe classe-base universal (<code>stdClass</code> não é mãe das suas classes).</li>
+        <li><strong>Reuso sem herança:</strong> o PHP tem <em>traits</em>. Em Java, o mais próximo são interfaces com métodos <code>default</code> (aulas 87–89) ou composição.</li>
+        <li><strong>Anotação de sobrescrita:</strong> o PHP 8.3 ganhou <code>#[\Override]</code>, que é a mesma ideia do <code>@Override</code> do Java.</li>
+      </ul>
+    </section>
+
+    <section id="flashcards">
+      <h2>Flashcards</h2>
+      <p style="color:var(--muted);margin-top:-6px">Toque no cartão para virar.</p>
+      <div id="flashcards-app"></div>
+    </section>
+
+    <section id="quiz">
+      <h2>Quiz</h2>
+      <div id="quiz-app"></div>
+    </section>
+
+    <section id="estudo">
+      <h2>Material de estudo</h2>
+
+      <h3>Mapa mental</h3>
+<pre><code>Herança
+├── Conceito (71)
+│   ├── "é um" (herança) × "tem um" (associação)
+│   ├── class Funcionario extends Pessoa
+│   ├── filha herda atributos e métodos da mãe
+│   ├── mais abaixo = mais especializado
+│   └── acopla forte: use para estender ou polimorfismo
+├── Sobrescrita (72)
+│   ├── mesma assinatura na filha
+│   ├── super.metodo() → versão da mãe, no mesmo objeto
+│   └── outro nome = método novo (não é sobrescrita)
+├── protected (73)
+│   ├── subclasses (qualquer pacote) + mesmo pacote
+│   └── sem herança múltipla de classes
+├── Construtores (74)
+│   ├── super() implícito na 1ª linha
+│   ├── mãe exige argumentos → filha declara e chama super(args)
+│   ├── construtores não são herdados
+│   └── toda classe estende Object
+└── Inicialização (75)
+    ├── static da mãe → static da filha (1 vez)
+    └── mãe: atributos → blocos → construtor · filha: atributos → blocos → construtor</code></pre>
+
+      <h3>Prática no seu WSL (20 minutos)</h3>
+<pre><code>cd ~/java-lab
+H=src/academy/devdojo/maratonajava/javacore/Hheranca
+mkdir -p $H/dominio $H/test
+
+cat > $H/dominio/Pessoa.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Hheranca.dominio;
+
+public class Pessoa {
+    protected String nome;
+    static { System.out.println("static Pessoa"); }
+    { System.out.println("bloco Pessoa"); }
+
+    public Pessoa(String nome) {
+        System.out.println("construtor Pessoa");
+        this.nome = nome;
+    }
+
+    public void imprime() {
+        System.out.println("Nome: " + this.nome);
+    }
+}
+EOF
+
+cat > $H/dominio/Funcionario.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Hheranca.dominio;
+
+public class Funcionario extends Pessoa {
+    private double salario;
+    static { System.out.println("static Funcionario"); }
+    { System.out.println("bloco Funcionario"); }
+
+    public Funcionario(String nome, double salario) {
+        super(nome);
+        System.out.println("construtor Funcionario");
+        this.salario = salario;
+    }
+
+    @Override
+    public void imprime() {
+        super.imprime();
+        System.out.println("Salário: " + this.salario);
+    }
+}
+EOF
+
+cat > $H/test/HerancaTest02.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Hheranca.test;
+
+import academy.devdojo.maratonajava.javacore.Hheranca.dominio.Funcionario;
+
+public class HerancaTest02 {
+    public static void main(String[] args) {
+        Funcionario f = new Funcionario("Oda Nobunaga", 20000);   // ?
+        f.imprime();                                               // ?
+        System.out.println(f instanceof Object);                   // ?
+    }
+}
+EOF
+
+javac -d out $(find src -name '*.java')
+java -cp out academy.devdojo.maratonajava.javacore.Hheranca.test.HerancaTest02</code></pre>
+      <details>
+        <summary>Ver a saída esperada</summary>
+<pre><code>static Pessoa
+static Funcionario
+bloco Pessoa
+construtor Pessoa
+bloco Funcionario
+construtor Funcionario
+Nome: Oda Nobunaga
+Salário: 20000.0
+true</code></pre>
+      </details>
+      <p><strong>Exercícios:</strong></p>
+      <ol>
+        <li>Tire o construtor de <code>Funcionario</code> e compile: leia o erro sobre o construtor de <code>Pessoa</code>.</li>
+        <li>Troque <code>protected</code> por <code>private</code> em <code>nome</code> e veja onde o código quebra. Corrija usando um getter.</li>
+        <li>Renomeie o método da filha para <code>imprimir()</code> mantendo o <code>@Override</code> e leia o erro. Depois tire o <code>@Override</code> e veja que compila, mas não sobrescreve.</li>
+        <li>Crie <code>Gerente extends Funcionario</code> com um bônus, blocos e prints, e preveja a ordem completa de inicialização antes de rodar.</li>
+      </ol>
+
+      <h3>Glossário</h3>
+      <ul>
+        <li><strong>Herança</strong>: relação "é um", em que a subclasse recebe atributos e métodos da superclasse.</li>
+        <li><strong>Superclasse / subclasse</strong>: classe mãe (mais genérica) / classe filha (mais especializada).</li>
+        <li><strong><code>extends</code></strong>: palavra que declara a herança.</li>
+        <li><strong>Sobrescrita (override)</strong>: método da filha com a mesma assinatura de um da mãe, que substitui o comportamento.</li>
+        <li><strong><code>super</code></strong>: referência à parte da superclasse (<code>super.metodo()</code>) ou chamada do construtor da mãe (<code>super(...)</code>).</li>
+        <li><strong><code>protected</code></strong>: visível para subclasses (qualquer pacote) e para o mesmo pacote.</li>
+        <li><strong><code>Object</code></strong>: classe raiz de todas as classes Java.</li>
+        <li><strong>Acoplamento forte</strong>: dependência grande entre classes. A herança é o caso mais forte.</li>
+      </ul>
+
+      <h3>Revisão espaçada</h3>
+      <ul class="revisao">
+        <li><span class="dia">Dia 1</span><span>Todos os flashcards + a prática com a ordem de inicialização.</span></li>
+        <li><span class="dia">Dia 3</span><span>Quiz + exercícios 1 e 2.</span></li>
+        <li><span class="dia">Dia 7</span><span>Exercícios 3 e 4 + escrever de memória os 10 passos da aula 75.</span></li>
+        <li><span class="dia">Dia 14</span><span>Flashcards que errou + questões discursivas.</span></li>
+      </ul>
+
+      <h3>Para aprofundar</h3>
+      <ul>
+        <li>O que é o Princípio da Substituição de Liskov e como ele se relaciona com "é um"?</li>
+        <li>Por que "composição em vez de herança" é tão repetido em livros de design?</li>
+        <li>Quais métodos de <code>Object</code> são mais sobrescritos? (<code>toString</code> na aula 76, <code>equals</code>/<code>hashCode</code> depois)</li>
+        <li>O que acontece se um construtor da mãe chama um método que a filha sobrescreveu?</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    window.AULA = {
+      flashcards: [
+        ["Qual a diferença entre associação e herança?", "Associação é \"tem um\"; herança é \"é um\""],
+        ["Como declarar que Funcionario é uma Pessoa?", "class Funcionario extends Pessoa"],
+        ["O que a subclasse recebe da superclasse?", "Os atributos e métodos (os private existem, mas não são acessíveis direto)"],
+        ["Superclasse ou subclasse: qual é mais especializada?", "A subclasse (quanto mais abaixo, mais específica)"],
+        ["Por que herança exige cuidado?", "Acopla fortemente: mudanças na mãe afetam todas as filhas"],
+        ["Quando o William diz para usar herança?", "Para estender funcionalidades ou para usar polimorfismo"],
+        ["O imprime() herdado de Pessoa imprime o salário do funcionário?", "Não: Pessoa não conhece o atributo salario"],
+        ["O que é sobrescrita?", "Método na subclasse com a mesma assinatura de um da superclasse"],
+        ["imprime2() na filha sobrescreve imprime() da mãe?", "Não: é um método novo"],
+        ["O que super.imprime() faz?", "Executa a versão da superclasse, no mesmo objeto (this continua sendo o funcionário)"],
+        ["Java tem herança múltipla de classes?", "Não: uma classe estende só uma (há vários níveis, mas uma mãe direta)"],
+        ["Quem enxerga um atributo protected?", "Subclasses em qualquer pacote e todas as classes do mesmo pacote"],
+        ["Uma classe de outro pacote, que não é subclasse, enxerga protected?", "Não"],
+        ["O que todo construtor faz na primeira linha?", "Chama um construtor da superclasse (super() implícito se você não escrever)"],
+        ["Pessoa só tem Pessoa(String nome). O que acontece com Funcionario sem construtor?", "Não compila: o super() implícito não acha construtor vazio"],
+        ["Como resolver?", "Declarar Funcionario(String nome) { super(nome); }"],
+        ["Construtores são herdados?", "Não"],
+        ["Pode ter this(...) e super(...) no mesmo construtor?", "Não: os dois precisam ser a primeira linha"],
+        ["De quem toda classe Java descende?", "De Object (java.lang)"],
+        ["De onde vêm toString(), equals() e hashCode()?", "Da classe Object"],
+        ["Ordem dos blocos static com herança?", "Primeiro o da superclasse, depois o da subclasse (uma vez cada)"],
+        ["Ordem da parte de objeto com herança?", "Mãe: atributos, blocos, construtor. Depois filha: atributos, blocos, construtor"],
+        ["Para que serve @Override?", "Fazer o compilador verificar que o método realmente sobrescreve um da mãe"],
+        ["PHP herda o construtor da mãe? E Java?", "PHP sim (__construct é herdado); Java não"],
+        ["Equivalente Java de parent::metodo()?", "super.metodo()"]
+      ],
+      quiz: [
+        { tipo: 'vf', pergunta: 'Herança representa a relação "é um", enquanto associação representa "tem um".', correta: 0,
+          explicacao: 'Verdadeiro: um funcionário é uma pessoa (herança); uma pessoa tem um endereço (associação).' },
+        { tipo: 'multipla', pergunta: 'Qual declaração faz Funcionario herdar de Pessoa?', opcoes: ['class Funcionario implements Pessoa', 'class Funcionario extends Pessoa', 'class Funcionario : Pessoa', 'class Funcionario inherits Pessoa'], correta: 1,
+          explicacao: 'extends. implements é para interfaces (aulas 87–89).' },
+        { tipo: 'multipla', pergunta: 'Funcionario extends Pessoa e NÃO sobrescreve imprime(). O que funcionario.imprime() mostra?', opcoes: ['Nada', 'Os dados de Pessoa (nome, cpf, endereço) do funcionário, sem o salário', 'Os dados e o salário', 'Erro de compilação'], correta: 1,
+          explicacao: 'O método herdado roda no objeto funcionário, mas só conhece os atributos de Pessoa.' },
+        { tipo: 'vf', pergunta: 'class Gerente extends Funcionario, Pessoa { } compila em Java.', correta: 1,
+          explicacao: 'Falso: Java não tem herança múltipla de classes. Uma classe estende apenas uma.' },
+        { tipo: 'multipla', pergunta: 'Na classe Funcionario, qual o efeito de public void imprime() { super.imprime(); System.out.println(this.salario); }?', opcoes: ['Imprime só o salário', 'Imprime os dados de Pessoa e depois o salário', 'Loop infinito', 'Imprime os dados de um objeto Pessoa separado'], correta: 1,
+          explicacao: 'super.imprime() executa a versão da mãe no mesmo objeto, e depois vem o específico da filha.' },
+        { tipo: 'multipla', pergunta: 'Um atributo protected de Pessoa (pacote dominio) pode ser acessado diretamente por:', opcoes: ['Qualquer classe de qualquer pacote', 'Só pela própria Pessoa', 'Subclasses de Pessoa (em qualquer pacote) e classes do pacote dominio', 'Só por subclasses no mesmo pacote'], correta: 2,
+          explicacao: 'protected = subclasses, onde estiverem, mais todo o pacote.' },
+        { tipo: 'multipla', pergunta: 'Pessoa tem apenas public Pessoa(String nome). Funcionario extends Pessoa não declara construtor. O que acontece?', opcoes: ['Funcionario herda Pessoa(String nome)', 'Compila e o nome fica null', 'Não compila: o construtor padrão chama super(), que não existe em Pessoa', 'Compila, mas lança exceção ao criar'], correta: 2,
+          explicacao: 'Construtores não são herdados, e o construtor padrão da filha tem um super() implícito sem argumentos.' },
+        { tipo: 'multipla', pergunta: 'Com blocos static e de instância em Pessoa e Funcionario, qual é a ordem em new Funcionario("x")?', opcoes: ['static Pessoa, bloco Pessoa, construtor Pessoa, static Funcionario, bloco Funcionario, construtor Funcionario', 'static Pessoa, static Funcionario, bloco Pessoa, construtor Pessoa, bloco Funcionario, construtor Funcionario', 'static Funcionario, static Pessoa, bloco Funcionario, bloco Pessoa, construtor Pessoa, construtor Funcionario', 'bloco Pessoa, bloco Funcionario, static Pessoa, static Funcionario, construtores'], correta: 1,
+          explicacao: 'Primeiro os estáticos (mãe, depois filha, no carregamento). Depois a parte de objeto da mãe (blocos, construtor) e então a da filha.' },
+        { tipo: 'discursiva', pergunta: 'Por que o William diz que evita herança ao máximo? Em que casos ela vale a pena, e qual alternativa a própria aula mostra com o Endereco?',
+          explicacao: 'Porque herança acopla fortemente: a filha depende de tudo o que a mãe é, e qualquer mudança na superclasse (um construtor com argumento, um atributo, um método) afeta todas as subclasses. Ela vale a pena quando existe uma relação "é um" de verdade e você quer estender funcionalidades ou usar polimorfismo. A alternativa é a associação/composição: Pessoa tem um Endereco como atributo, e Endereco não sabe nada de Pessoa. Assim Endereco fica desacoplado e reaproveitável em outras classes e sistemas.' },
+        { tipo: 'discursiva', pergunta: 'No Laravel, class Admin extends User funciona mesmo sem Admin declarar __construct. Por que o equivalente em Java pode não compilar e como corrigir?',
+          explicacao: 'No PHP, o construtor da mãe é herdado: se a filha não declara __construct, usa o da mãe. Em Java, construtores não são herdados, e todo construtor da filha chama um da mãe na primeira linha (super() implícito, sem argumentos). Se User só tiver User(String nome), o super() implícito de Admin não encontra construtor vazio e não compila. A correção é declarar public Admin(String nome) { super(nome); }, o equivalente a chamar parent::__construct($nome), só que obrigatório e na primeira linha.' }
+      ]
+    };
+  </script>
+  <script src="../js/app.js"></script>
+</body>
+</html>
