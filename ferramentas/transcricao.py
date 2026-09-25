@@ -32,6 +32,8 @@ PLAYLIST = "https://www.youtube.com/playlist?list=PL62G310vn6nFIsOCC0H-C2infYgwm
 RAIZ = Path(__file__).resolve().parent.parent
 SAIDA_PADRAO = RAIZ / "transcricoes"
 TENTATIVAS = 3
+RECARGAS = 2  # quantas vezes recarregar (F5) uma página travada antes de desistir da tentativa
+TIMEOUT_MS = 15000  # nenhuma ação espera mais que isso: melhor recarregar do que ficar parado
 PERFIL_PADRAO = Path.home() / ".cache" / "java-estudos" / "perfil-navegador"
 # Título de cada vídeo na playlist: layout novo (lockup) e antigo.
 SEL_TITULO_PLAYLIST = "a.ytLockupMetadataViewModelTitle, ytd-playlist-video-renderer a#video-title"
@@ -148,16 +150,45 @@ def linhas_das_legendas(dados):
     return linhas
 
 
-def ligar_legendas(page):
-    """Liga o botão CC do player; é isso que faz o navegador baixar a legenda."""
+def ligar_legendas(page, alternar=False):
+    """Liga o botão CC do player; é isso que faz o navegador baixar a legenda.
+
+    Com alternar=True desliga e liga de novo, para forçar o player a pedir a legenda outra vez.
+    """
     botao = page.locator("button.ytp-subtitles-button")
     try:
         botao.wait_for(state="attached", timeout=10000)
-    except PWTimeout:
-        return
-    if botao.get_attribute("aria-pressed") != "true":
         page.locator("#movie_player").hover()
-        botao.click(force=True)
+        if alternar and botao.get_attribute("aria-pressed") == "true":
+            botao.click(force=True)
+            time.sleep(0.5)
+        if botao.get_attribute("aria-pressed") != "true":
+            botao.click(force=True)
+    except PWTimeout:
+        pass
+
+
+def esperar_legendas(page, legendas, segundos):
+    """Espera a legenda chegar; na metade do tempo, desliga e liga o CC para pedir de novo."""
+    passos = int(segundos / 0.5)
+    for i in range(passos):
+        linhas = next((l for l in map(linhas_das_legendas, legendas) if l), None)
+        if linhas:
+            return linhas
+        if i == passos // 2:
+            ligar_legendas(page, alternar=True)
+        time.sleep(0.5)
+    return None
+
+
+def carregar_video(page):
+    """Espera o título e o player aparecerem; devolve o título do vídeo."""
+    aceitar_cookies(page)
+    titulo = page.locator("h1.ytd-watch-metadata, #title h1").first
+    titulo.wait_for(timeout=20000)
+    page.locator("#movie_player video").first.wait_for(state="attached", timeout=TIMEOUT_MS)
+    pausar_video(page)
+    return titulo.inner_text().strip()
 
 
 def transcrever(contexto, url):
@@ -181,21 +212,28 @@ def transcrever(contexto, url):
                 pass  # corpo vazio ou em outro formato
 
     page.on("response", ao_receber)
+    page.set_default_timeout(TIMEOUT_MS)
+    titulo = None
     try:
-        page.goto(url, wait_until="domcontentloaded")
-        aceitar_cookies(page)
-        page.locator("h1.ytd-watch-metadata, #title h1").first.wait_for(timeout=20000)
-        pausar_video(page)
-        titulo = page.locator("h1.ytd-watch-metadata, #title h1").first.inner_text().strip()
-
-        ligar_legendas(page)
-        for _ in range(30):
-            linhas = next((l for l in map(linhas_das_legendas, legendas) if l), None)
+        # Às vezes o player trava (tela preta, legenda que nunca chega): aí recarrega a página,
+        # como você faria com F5, antes de partir para o painel "Mostrar transcrição".
+        for recarga in range(RECARGAS + 1):
+            try:
+                if recarga:
+                    print(f"  página travada; recarregando ({recarga}/{RECARGAS})", flush=True)
+                    legendas.clear()
+                    page.reload(wait_until="domcontentloaded")
+                else:
+                    page.goto(url, wait_until="domcontentloaded")
+                titulo = carregar_video(page)
+            except PWTimeout:
+                continue
+            ligar_legendas(page)
+            linhas = esperar_legendas(page, legendas, segundos=12)
             if linhas:
                 return titulo, linhas
-            time.sleep(0.5)
 
-        if abrir_painel_transcricao(page):
+        if titulo and abrir_painel_transcricao(page):
             linhas = ler_transcricao(page)
             if linhas:
                 return titulo, linhas
@@ -211,12 +249,24 @@ def videos_da_playlist(contexto, inicio, fim):
     """Lê a playlist no navegador e devolve [(numero, titulo, url)] das aulas pedidas."""
     page = contexto.new_page()
     try:
-        page.goto(PLAYLIST, wait_until="domcontentloaded")
-        aceitar_cookies(page)
-        itens = page.locator(SEL_TITULO_PLAYLIST)
-        itens.first.wait_for(timeout=20000)
+        page.set_default_timeout(TIMEOUT_MS)
+        for recarga in range(RECARGAS + 1):
+            try:
+                if recarga:
+                    print(f"  playlist não carregou; recarregando ({recarga}/{RECARGAS})", flush=True)
+                    page.reload(wait_until="domcontentloaded")
+                else:
+                    page.goto(PLAYLIST, wait_until="domcontentloaded")
+                aceitar_cookies(page)
+                page.locator(SEL_TITULO_PLAYLIST).first.wait_for(timeout=20000)
+                break
+            except PWTimeout:
+                continue
+        else:
+            raise RuntimeError("a playlist não carregou mesmo recarregando")
         encontrados = {}
-        for _ in range(15):  # rola a página até carregar a última aula pedida
+        maior_antes, parado, recargas = -1, 0, 0
+        for _ in range(30):  # rola a página até carregar a última aula pedida
             maior = -1
             for titulo, href in page.evaluate(
                 "sel => [...document.querySelectorAll(sel)].map(a => [a.title || a.innerText, a.href])",
@@ -231,6 +281,19 @@ def videos_da_playlist(contexto, inicio, fim):
                     encontrados[n] = (titulo.strip(), href.split("&")[0])
             if maior >= fim:
                 break
+            # Rolagem que não traz aulas novas: a lista travou. Recarrega (o que já achou fica guardado).
+            parado = parado + 1 if maior <= maior_antes else 0
+            maior_antes = max(maior, maior_antes)
+            if parado >= 4 and recargas < RECARGAS:
+                recargas += 1
+                parado = 0
+                print(f"  playlist parou de carregar; recarregando ({recargas}/{RECARGAS})", flush=True)
+                page.reload(wait_until="domcontentloaded")
+                try:
+                    page.locator(SEL_TITULO_PLAYLIST).first.wait_for(timeout=20000)
+                except PWTimeout:
+                    pass
+                continue
             page.mouse.wheel(0, 20000)
             time.sleep(1.5)
         faltando = [n for n in range(inicio, fim + 1) if n not in encontrados]
