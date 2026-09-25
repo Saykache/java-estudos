@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>48–51 · Parâmetros e this</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="topo">
+      <a class="voltar" href="../index.html">← Todas as aulas</a>
+      <h1>48–51 · Parâmetros primitivo × referência e this</h1>
+      <p>O que realmente chega ao método, o perigo de alterar objetos recebidos e a referência this · <a href="https://www.youtube.com/playlist?list=PL62G310vn6nFIsOCC0H-C2infYgwm8SWW" target="_blank" rel="noopener">playlist</a></p>
+    </header>
+
+    <nav class="abas">
+      <a href="#resumo">Resumo</a>
+      <a href="#flashcards">Flashcards</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#estudo">Material de estudo</a>
+    </nav>
+
+    <p class="aviso">Junta as aulas 48 (parâmetros de tipo primitivo), 49 e 50 (parâmetros de tipo referência) e 51 (<code>this</code>). Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. Os nomes dos estudantes (Midoriya, Sakura, Gohan) seguem o que dá para entender no áudio. A frase "Java é sempre passagem por valor", o caso de reatribuir o parâmetro e os itens marcados como "extra" não estão nos vídeos. O William avisa que é normal assistir estas aulas duas ou três vezes: "se você não entender isso, vai ter uma vida muito difícil".</p>
+
+    <section id="resumo">
+      <h2>Resumo</h2>
+      <p>Quando você passa algo para um método, o que chega lá é sempre uma <strong>cópia</strong>. A diferença está no <em>que</em> é copiado. Com um <strong>primitivo</strong>, copia-se o <strong>valor</strong>, e o original nunca muda. Com um <strong>objeto</strong>, copia-se a <strong>referência</strong>: o método recebe outro "controle remoto" que aponta para o <strong>mesmo objeto</strong>, e tudo o que ele alterar no objeto aparece para quem chamou. O <code>this</code> fecha o bloco: dentro do próprio objeto, ele é a referência para "este objeto aqui". As aulas continuam no pacote <code>javacore.Bintroducaometodos</code>.</p>
+
+      <h3>48 · Primitivos: chega uma cópia do valor</h3>
+<pre><code>// Calculadora
+public void alteraDoisNumeros(int num1, int num2) {
+    num1 = 99;
+    num2 = 33;
+    System.out.println("Dentro do alteraDoisNumeros: " + num1 + " " + num2);
+}
+
+// CalculadoraTeste04
+int num1 = 1;
+int num2 = 2;
+calculadora.alteraDoisNumeros(num1, num2);                     // 99 33
+System.out.println("Dentro do CalculadoraTeste04: " + num1 + " " + num2);   // 1 2</code></pre>
+      <ul>
+        <li>O Java <strong>copia os bits do valor</strong> para a variável local do método. São espaços de memória diferentes, mesmo com o <strong>mesmo nome</strong>. O William usa nomes iguais de propósito, para mostrar que isso não liga nada.</li>
+        <li>Renomear os parâmetros para <code>a</code> e <code>b</code> não muda o resultado: continuam sendo variáveis independentes.</li>
+        <li><strong>A regra:</strong> com tipo primitivo, a variável original <strong>nunca</strong> é alterada, não importa o que aconteça dentro do método.</li>
+        <li>O IntelliJ chega a avisar que o parâmetro "pode virar variável local", porque o valor recebido nem é usado antes de ser sobrescrito.</li>
+      </ul>
+
+      <h3>49 · Objetos: chega uma cópia da referência</h3>
+<pre><code>// dominio/ImpressoraEstudante.java — uma classe só para imprimir (coesão)
+public class ImpressoraEstudante {
+    public void imprime(Estudante estudante) {
+        System.out.println(estudante.nome);
+        System.out.println(estudante.idade);
+        System.out.println(estudante.sexo);
+    }
+}
+
+// test/EstudanteTeste01.java
+ImpressoraEstudante impressora = new ImpressoraEstudante();
+impressora.imprime(estudante01);   // "estudante" aponta para o MESMO objeto de estudante01
+impressora.imprime(estudante02);   // agora aponta para o de estudante02</code></pre>
+<pre><code>estudante01 ─────┐
+                 ├──▶ [Midoriya | 15 | M]     (durante impressora.imprime(estudante01))
+estudante (param)┘
+estudante02 ────────▶ [Sakura | 16 | F]</code></pre>
+      <ul>
+        <li>O ponto de partida é código repetido: imprimir <code>estudante01</code> e <code>estudante02</code> com as mesmas 3 linhas, mudando só a variável. A solução é uma classe com um método que <strong>recebe o objeto como parâmetro</strong>.</li>
+        <li>O parâmetro <code>Estudante estudante</code> é uma variável de referência <em>sem objeto próprio</em>: o objeto vem como argumento na chamada.</li>
+        <li>Na chamada, o parâmetro passa a apontar para o <strong>mesmo objeto</strong> que o argumento. No debug, os dois mostram o mesmo identificador (por exemplo <code>Estudante@81</code>).</li>
+        <li>Quando o método termina, a variável local <strong>morre</strong>, mas o objeto continua existindo, porque <code>estudante01</code> ainda aponta para ele. <strong>Não há limite</strong> de variáveis apontando para o mesmo objeto.</li>
+        <li><strong>Cuidado com o <code>import</code>:</strong> agora existem <strong>duas</strong> classes <code>Estudante</code>, uma em <code>Aintroducaoclasses.dominio</code> e outra em <code>Bintroducaometodos.dominio</code>. Para o Java elas são tão diferentes quanto "laranja e alface". Importar a errada gera erro de compilação ao passá-la para o método.</li>
+        <li>Classes do <strong>mesmo pacote</strong> não precisam de <code>import</code> entre si: <code>ImpressoraEstudante</code> enxerga <code>Estudante</code> direto.</li>
+      </ul>
+
+      <h3>50 · O perigo: alterar o objeto recebido</h3>
+<pre><code>public void imprime(Estudante estudante) {
+    System.out.println(estudante.nome + " " + estudante.idade + " " + estudante.sexo);
+    estudante.nome = "Gohan";   // altera o OBJETO, não uma cópia
+}
+
+impressora.imprime(estudante01);   // Midoriya 15 M
+impressora.imprime(estudante02);   // Sakura 16 F
+impressora.imprime(estudante01);   // Gohan 15 M   ← o objeto original mudou!
+impressora.imprime(estudante02);   // Gohan 16 F</code></pre>
+      <ul>
+        <li>Como o método tem uma referência para o <em>mesmo</em> objeto, <strong>qualquer alteração no estado</strong> dele continua valendo depois que o método acaba, para todas as variáveis que apontam para aquele objeto.</li>
+        <li>É o que torna a passagem de referência perigosa: um método chamado "imprime" mudou os dados sem ninguém esperar.</li>
+        <li><strong>Boa prática</strong> citada na aula: não altere o objeto recebido. Se precisar de uma versão modificada, crie e <strong>retorne um objeto novo</strong> com o estado alterado.</li>
+      </ul>
+
+      <h3>51 · A referência <code>this</code></h3>
+<pre><code>// dominio/Estudante.java
+public class Estudante {
+    public String nome;
+    public int idade;
+    public char sexo;
+
+    public void imprime() {
+        System.out.println(this.nome);   // "o nome DESTE objeto"
+        System.out.println(this.idade);
+        System.out.println(this.sexo);
+    }
+}
+
+// test/EstudanteTeste02.java
+estudante01.imprime();   // executa no objeto de estudante01
+estudante02.imprime();   // executa no objeto de estudante02</code></pre>
+      <ul>
+        <li>Um método da própria classe roda <strong>dentro do objeto</strong>, então enxerga todos os atributos dele. Não precisa receber o estudante por parâmetro.</li>
+        <li><strong><code>this</code></strong> ("este", em inglês) é a palavra reservada que referencia <strong>o objeto atual</strong>, aquele em que o método está executando.</li>
+        <li><strong>A analogia do controle remoto:</strong> a variável de referência tem "botões" (<code>nome</code>, <code>idade</code>, <code>sexo</code>, <code>imprime</code>). Ela só manda o sinal. <strong>Quem executa é sempre o objeto</strong>. Em <code>estudante01.imprime()</code>, o <code>this</code> é o objeto de <code>estudante01</code>, e em <code>estudante02.imprime()</code> é o de <code>estudante02</code>.</li>
+        <li>Nesse caso o <code>this</code> <strong>é opcional</strong>: sem nenhuma variável local de mesmo nome, <code>nome</code> já significa o atributo. Mas é bom usar, para deixar claro que é o atributo. Ele passa a ser obrigatório quando um parâmetro tem o mesmo nome (veja "Atenção").</li>
+        <li><strong>Coesão:</strong> o próprio William pondera que colocar a impressão dentro de <code>Estudante</code> "baixa um pouco a coesão", já que a classe passa a representar <em>e</em> imprimir. A linha entre alta e baixa coesão é tênue. Um método que mostra os dados do objeto é comum e útil, e é a ideia do <code>toString</code> (aula 76).</li>
+      </ul>
+
+      <h3>Atenção</h3>
+      <ul>
+        <li><strong>Extra: Java é sempre passagem por valor.</strong> Para objetos, o "valor" copiado é a referência. Por isso <em>alterar o objeto</em> aparece fora do método, mas <em>trocar para onde o parâmetro aponta</em> não aparece:
+<pre><code>public void troca(Estudante estudante) {
+    estudante = new Estudante();   // só o parâmetro passa a apontar para outro objeto
+    estudante.nome = "Novo";       // o objeto de quem chamou NÃO muda
+}</code></pre></li>
+        <li><strong>Extra: <code>this</code> para desempatar nomes.</strong> Se o parâmetro tem o mesmo nome do atributo, o nome sozinho é o parâmetro. <code>nome = nome;</code> não faz nada útil. O certo é <code>this.nome = nome;</code>, padrão que aparece nos setters (aulas 54–56) e nos construtores (58–59).</li>
+        <li><strong>Extra: <code>this</code> não existe em métodos <code>static</code></strong>, como o <code>main</code>, porque não há objeto atual. Isso volta nas aulas 61–62.</li>
+        <li><strong>Extra: String parece primitivo aqui.</strong> Passar uma <code>String</code> e fazer <code>texto = "outro"</code> dentro do método não altera a original. É o caso da reatribuição acima, e além disso String é imutável.</li>
+        <li>O mesmo vale para <strong>arrays</strong>, que também são objetos: alterar <code>array[0]</code> dentro do método altera o array de quem chamou.</li>
+      </ul>
+
+      <h3>Paralelo com PHP</h3>
+      <ul>
+        <li><strong>Objetos: comportamento idêntico.</strong> Em PHP, passar um objeto para uma função também passa o "handle", e alterar <code>$estudante-&gt;nome</code> lá dentro altera o original. Trocar o parâmetro (<code>$estudante = new Estudante()</code>) também não afeta quem chamou.</li>
+        <li><strong>Escalares e arrays:</strong> em PHP também vão por valor. A diferença é que o PHP tem <code>&amp;$var</code> (passagem por referência de verdade), que <strong>não existe em Java</strong>. Não há como um método Java trocar o <code>int</code> de quem chamou.</li>
+        <li><strong><code>$this</code> × <code>this</code>:</strong> no PHP, <code>$this-&gt;nome</code> é <strong>obrigatório</strong> para acessar o atributo (<code>$nome</code> sozinho é variável local). Em Java, <code>this.nome</code> é opcional quando não há conflito de nomes.</li>
+        <li><strong>A aula 50 no Laravel:</strong> é o problema clássico do <code>Carbon</code> mutável. <code>$fim = $inicio-&gt;addDays(7);</code> também altera <code>$inicio</code>, porque é o mesmo objeto. A solução do Laravel (<code>CarbonImmutable</code>, que devolve um objeto novo) é exatamente a boa prática que o William cita.</li>
+      </ul>
+    </section>
+
+    <section id="flashcards">
+      <h2>Flashcards</h2>
+      <p style="color:var(--muted);margin-top:-6px">Toque no cartão para virar.</p>
+      <div id="flashcards-app"></div>
+    </section>
+
+    <section id="quiz">
+      <h2>Quiz</h2>
+      <div id="quiz-app"></div>
+    </section>
+
+    <section id="estudo">
+      <h2>Material de estudo</h2>
+
+      <h3>Mapa mental</h3>
+<pre><code>Parâmetros e this
+├── Primitivo (48)
+│   ├── o método recebe uma CÓPIA do valor
+│   ├── mesmo nome ≠ mesma variável
+│   └── original nunca muda
+├── Referência (49)
+│   ├── o método recebe uma CÓPIA da referência
+│   ├── parâmetro e argumento apontam para o MESMO objeto
+│   ├── fim do método: a referência local morre, o objeto não
+│   └── cuidado com o import (duas classes Estudante)
+├── Perigo (50)
+│   ├── alterar o objeto recebido afeta todo mundo
+│   └── boa prática: não altere; retorne um objeto novo
+├── this (51)
+│   ├── referência para o objeto atual
+│   ├── a variável é o controle remoto; quem executa é o objeto
+│   └── opcional sem conflito · obrigatório com parâmetro de mesmo nome
+└── Extra
+    ├── Java é sempre passagem por valor
+    ├── reatribuir o parâmetro não afeta quem chamou
+    └── this não existe em static</code></pre>
+
+      <h3>Prática no seu WSL (20 minutos)</h3>
+<pre><code>cd ~/java-lab
+B=src/academy/devdojo/maratonajava/javacore/Bintroducaometodos
+mkdir -p $B/dominio $B/test
+
+cat > $B/dominio/Estudante.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Bintroducaometodos.dominio;
+
+public class Estudante {
+    public String nome;
+    public int idade;
+
+    public void imprime() {
+        System.out.println(this.nome + " " + this.idade);
+    }
+}
+EOF
+
+cat > $B/test/EstudanteTeste01.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Bintroducaometodos.test;
+
+import academy.devdojo.maratonajava.javacore.Bintroducaometodos.dominio.Estudante;
+
+public class EstudanteTeste01 {
+    static void alteraIdade(int idade) { idade = 99; }
+    static void alteraNome(Estudante e) { e.nome = "Gohan"; }
+    static void troca(Estudante e) { e = new Estudante(); e.nome = "Novo"; }
+
+    public static void main(String[] args) {
+        Estudante estudante = new Estudante();
+        estudante.nome = "Midoriya";
+        estudante.idade = 15;
+
+        alteraIdade(estudante.idade);
+        estudante.imprime();          // ?
+        alteraNome(estudante);
+        estudante.imprime();          // ?
+        troca(estudante);
+        estudante.imprime();          // ?
+    }
+}
+EOF
+
+javac -d out $(find src -name '*.java')
+java -cp out academy.devdojo.maratonajava.javacore.Bintroducaometodos.test.EstudanteTeste01</code></pre>
+      <p>Os métodos auxiliares estão como <code>static</code> dentro da classe de teste só para caber num arquivo. O <code>static</code> será explicado nas aulas 61–62.</p>
+      <details>
+        <summary>Ver a saída esperada</summary>
+<pre><code>Midoriya 15
+Gohan 15
+Gohan 15</code></pre>
+      </details>
+      <p><strong>Exercícios:</strong></p>
+      <ol>
+        <li>Refaça a aula 48: crie <code>alteraDoisNumeros</code> e prove, com prints, que os valores de quem chamou não mudam.</li>
+        <li>Crie <code>ImpressoraEstudante</code> como na aula 49 e use o debug para ver que o parâmetro e o argumento têm o mesmo identificador de objeto.</li>
+        <li>Reescreva o <code>alteraNome</code> do jeito "boa prática": em vez de alterar, crie um <code>Estudante</code> novo, copie a idade, ponha o nome novo e <strong>retorne</strong> o objeto.</li>
+        <li>Crie um método <code>setNome(String nome)</code> em <code>Estudante</code> com <code>nome = nome;</code>. Veja que não funciona e corrija com <code>this</code>.</li>
+      </ol>
+
+      <h3>Glossário</h3>
+      <ul>
+        <li><strong>Passagem por valor</strong>: o método recebe uma cópia do que foi passado. Em Java é sempre assim.</li>
+        <li><strong>Cópia da referência</strong>: o que é copiado quando se passa um objeto. Aponta para o mesmo objeto.</li>
+        <li><strong>Estado do objeto</strong>: os valores atuais dos seus atributos.</li>
+        <li><strong>Efeito colateral</strong>: mudança de estado fora do método, como alterar o objeto recebido.</li>
+        <li><strong><code>this</code></strong>: referência para o objeto atual, em cujo contexto o método executa.</li>
+        <li><strong>Sombreamento (shadowing)</strong>: variável local ou parâmetro com o mesmo nome de um atributo, que "esconde" o atributo. Resolve-se com <code>this</code>.</li>
+        <li><strong>Imutável</strong>: objeto cujo estado não muda depois de criado (como <code>String</code>).</li>
+      </ul>
+
+      <h3>Revisão espaçada</h3>
+      <ul class="revisao">
+        <li><span class="dia">Dia 1</span><span>Todos os flashcards + a prática com previsões.</span></li>
+        <li><span class="dia">Dia 3</span><span>Quiz + exercícios 1 e 2 (com debug).</span></li>
+        <li><span class="dia">Dia 7</span><span>Exercícios 3 e 4 + desenhar a memória das aulas 49 e 50 no papel.</span></li>
+        <li><span class="dia">Dia 14</span><span>Flashcards que errou + questões discursivas + rever o trecho de "Atenção" sobre passagem por valor.</span></li>
+      </ul>
+
+      <h3>Para aprofundar</h3>
+      <ul>
+        <li>Por que se diz que Java <strong>não</strong> tem passagem por referência, mesmo com objetos?</li>
+        <li>O que são objetos imutáveis e por que eles evitam o problema da aula 50?</li>
+        <li>Como os <code>record</code> (Java 16+) ajudam a criar objetos imutáveis?</li>
+        <li>Qual a diferença entre <code>this</code> e <code>this()</code>? (construtores, aulas 58–59)</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    window.AULA = {
+      flashcards: [
+        ["O que o método recebe quando você passa um int?", "Uma cópia do valor"],
+        ["Alterar um parâmetro primitivo altera a variável de quem chamou?", "Nunca"],
+        ["Parâmetro com o mesmo nome da variável de quem chamou é a mesma variável?", "Não: são espaços de memória diferentes"],
+        ["O que o método recebe quando você passa um objeto?", "Uma cópia da referência, que aponta para o mesmo objeto"],
+        ["Depois de impressora.imprime(estudante01), para onde aponta o parâmetro?", "Para o mesmo objeto de estudante01"],
+        ["O que acontece com o parâmetro quando o método termina?", "A variável local morre; o objeto continua se ainda houver referência"],
+        ["Há limite de variáveis apontando para o mesmo objeto?", "Não"],
+        ["Alterar estudante.nome dentro do método afeta o original?", "Sim: o objeto é o mesmo"],
+        ["Por que a passagem de referência pode ser perigosa?", "Um método pode alterar o estado do objeto sem quem chamou esperar"],
+        ["Qual a boa prática para não alterar o objeto recebido?", "Criar e retornar um objeto novo com o estado alterado"],
+        ["Duas classes Estudante em pacotes diferentes são a mesma?", "Não: para o Java são tipos diferentes (\"laranja e alface\")"],
+        ["Classes do mesmo pacote precisam de import entre si?", "Não"],
+        ["O que é this?", "A referência para o objeto atual, onde o método está executando"],
+        ["O que significa this.nome?", "O atributo nome deste objeto"],
+        ["Por que imprime() dentro de Estudante não precisa de parâmetro?", "Porque roda dentro do objeto e já enxerga os atributos"],
+        ["Na analogia do controle remoto, quem executa o método?", "Sempre o objeto; a variável só manda o sinal"],
+        ["this é obrigatório para acessar atributos?", "Não, só quando há parâmetro ou variável local com o mesmo nome"],
+        ["Qual o problema de nome = nome; num método com parâmetro nome?", "Atribui o parâmetro a ele mesmo; o certo é this.nome = nome"],
+        ["Pode usar this dentro do main?", "Não: main é static e não há objeto atual"],
+        ["Java tem passagem por referência?", "Não: é sempre por valor (para objetos, copia-se a referência)"],
+        ["e = new Estudante() dentro do método afeta quem chamou?", "Não: só o parâmetro passa a apontar para outro objeto"],
+        ["Arrays passados a métodos se comportam como primitivos ou objetos?", "Como objetos: alterar posições altera o original"],
+        ["Existe &$var do PHP em Java?", "Não: não dá para um método trocar o int de quem chamou"],
+        ["$this->nome é obrigatório em PHP e this.nome em Java?", "No PHP sim; em Java é opcional sem conflito de nomes"],
+        ["Qual exemplo do Laravel mostra o perigo da aula 50?", "Carbon mutável: addDays() altera o objeto original"]
+      ],
+      quiz: [
+        { tipo: 'vf', pergunta: 'Ao passar um int para um método, qualquer alteração no parâmetro também muda a variável de quem chamou.', correta: 1,
+          explicacao: 'Falso: com primitivos o método recebe uma cópia do valor. O original nunca muda.' },
+        { tipo: 'multipla', pergunta: 'int a = 1; calc.altera(a); (altera faz num = 99). O que System.out.println(a) imprime?', opcoes: ['99', '1', '0', 'Erro de compilação'], correta: 1,
+          explicacao: 'O parâmetro recebeu uma cópia do 1. Mudar a cópia para 99 não afeta a.' },
+        { tipo: 'multipla', pergunta: 'Ao passar um objeto Estudante para um método, o que é copiado?', opcoes: ['O objeto inteiro', 'A referência (para onde o objeto está)', 'Só os atributos primitivos', 'Nada: é passagem por referência'], correta: 1,
+          explicacao: 'Copia-se a referência. O parâmetro e a variável original apontam para o mesmo objeto.' },
+        { tipo: 'vf', pergunta: 'Se um método faz estudante.nome = "Gohan" no objeto recebido, o objeto de quem chamou também passa a ter nome "Gohan".', correta: 0,
+          explicacao: 'Verdadeiro: o objeto é o mesmo, e a mudança de estado persiste depois do método. É o perigo da aula 50.' },
+        { tipo: 'multipla', pergunta: 'Em imprime(Estudante e) { ... }, o que acontece com a variável e quando o método termina?', opcoes: ['O objeto é apagado', 'A variável local deixa de existir; o objeto continua se houver outra referência', 'O objeto vira null', 'A variável passa a apontar para null'], correta: 1,
+          explicacao: 'A variável local morre com o método. O objeto continua vivo enquanto alguma variável (como estudante01) apontar para ele.' },
+        { tipo: 'multipla', pergunta: 'Dentro de um método da classe Estudante, o que this.nome significa?', opcoes: ['O nome da classe', 'O nome de uma variável local', 'O atributo nome do objeto em que o método está executando', 'O nome do primeiro estudante criado'], correta: 2,
+          explicacao: 'this é o objeto atual. Em estudante02.imprime(), this.nome é o nome de estudante02.' },
+        { tipo: 'multipla', pergunta: 'Na classe Estudante: public void setNome(String nome) { nome = nome; }. O que acontece com o atributo nome?', opcoes: ['Recebe o valor do parâmetro', 'Não muda: o parâmetro foi atribuído a ele mesmo', 'Erro de compilação', 'Vira null'], correta: 1,
+          explicacao: 'O parâmetro "esconde" o atributo. nome = nome atribui o parâmetro a ele mesmo. O certo é this.nome = nome.' },
+        { tipo: 'multipla', pergunta: 'void troca(Estudante e) { e = new Estudante(); e.nome = "Novo"; } — depois de troca(estudante), qual o nome de estudante (que era "Midoriya")?', opcoes: ['Novo', 'Midoriya', 'null', 'Erro de compilação'], correta: 1,
+          explicacao: 'Reatribuir o parâmetro só muda para onde e aponta. O objeto original não foi tocado. Java é sempre passagem por valor.' },
+        { tipo: 'discursiva', pergunta: 'Explique, desenhando a memória, por que alteraDoisNumeros(num1, num2) não muda num1 e num2, mas impressora.imprime(estudante01) pode mudar estudante01.',
+          explicacao: 'Com primitivos, o valor é copiado para outra variável: o parâmetro tem seu próprio espaço com 1 e 2, e trocar para 99 e 33 mexe só nessa cópia. Com objetos, o que se copia é a referência: o parâmetro estudante e a variável estudante01 apontam para o mesmo objeto na memória. Alterar estudante.nome mexe nesse objeto compartilhado, e por isso a mudança aparece em estudante01 depois do método.' },
+        { tipo: 'discursiva', pergunta: 'Relacione a aula 50 com um problema que você já pode ter visto no Laravel e explique a boa prática citada pelo William.',
+          explicacao: 'No Laravel, Carbon é mutável: $fim = $inicio->addDays(7) também altera $inicio, porque é o mesmo objeto. É o que a aula 50 mostra: um método que recebe um objeto e muda o estado dele afeta todo mundo que o referencia. A boa prática é não alterar o objeto recebido: criar e retornar um objeto novo com o estado alterado. É o que o CarbonImmutable faz, e o que objetos imutáveis (como String) garantem em Java.' }
+      ]
+    };
+  </script>
+  <script src="../js/app.js"></script>
+</body>
+</html>
