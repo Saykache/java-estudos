@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>220–228 · Threads</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="topo">
+      <a class="voltar" href="../index.html">← Todas as aulas</a>
+      <h1>220–228 · Threads</h1>
+      <p>Thread e Runnable, start × run, estados, prioridade, sleep, yield, join, condição de corrida, synchronized, classes thread safe, deadlock e wait/notify/notifyAll · <a href="https://www.youtube.com/playlist?list=PL62G310vn6nFIsOCC0H-C2infYgwm8SWW" target="_blank" rel="noopener">playlist</a></p>
+    </header>
+
+    <nav class="abas">
+      <a href="#resumo">Resumo</a>
+      <a href="#flashcards">Flashcards</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#estudo">Material de estudo</a>
+    </nav>
+
+    <p class="aviso">Junta as aulas 220 a 223 (introdução, estados, prioridade/sleep, yield/join) e 224 a 228 (sincronismo: condição de corrida, synchronized, classes thread safe, deadlock e wait/notify). Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. <strong>A legenda da aula 221 veio em romeno</strong> (reconhecimento errado do YouTube): a seção dela usa o código do professor e o que ele fala sobre estados nas aulas 222 e 223. O código (pacote <code>javacore.ZZFthreads</code>, <code>ThreadTest01</code>, <code>ThreadAccountTest01</code>, <code>DeadLockTest01</code>, <code>Members</code>, <code>EmailDeliveryService</code>) foi conferido no <a href="https://github.com/devdojobr/maratona-java-virado-no-jiraya" target="_blank" rel="noopener">repositório do professor</a>. Os itens marcados como "extra" não estão nos vídeos.</p>
+
+    <section id="resumo">
+      <h2>Resumo</h2>
+      <p>Uma <strong>thread</strong> é uma <strong>linha de execução</strong>: um "trabalhador" que executa código. Todo programa Java já começa com uma, a thread <code>main</code>, e você pode criar outras para fazer coisas <strong>ao mesmo tempo</strong>. O preço é a imprevisibilidade: quem decide qual thread roda, quando e por quanto tempo é a JVM (o <em>scheduler</em>), e o professor repete durante o bloco inteiro que <strong>quase nada é garantido</strong> no mundo das threads. A segunda metade trata do problema clássico: <strong>duas threads mexendo no mesmo objeto</strong> (condição de corrida) e as ferramentas para controlar isso (<code>synchronized</code>, <code>wait</code>/<code>notify</code>) sem cair num <strong>deadlock</strong>.</p>
+<pre><code>Runnable tarefa = () -&gt; System.out.println(Thread.currentThread().getName());
+Thread t = new Thread(tarefa, "T1");   // 220 · criar (NEW)
+t.start();                             // 220 · nova linha de execução (RUNNABLE)
+Thread.sleep(2000);                    // 222 · dormir (garantido!)
+t.join();                              // 223 · esperar t terminar
+synchronized (conta) { ... }           // 225 · uma thread por vez
+lista.wait(); lista.notifyAll();       // 228 · esperar / avisar</code></pre>
+
+      <h3>220 · Introdução: Thread e Runnable</h3>
+      <ul>
+        <li><strong>"Thread" tem dois sentidos</strong>: um <strong>objeto</strong> da classe <code>java.lang.Thread</code> e um <strong>processo</strong>, a linha de execução que divide a carga de trabalho de um programa. No Gerenciador de Tarefas, na aba de desempenho, dá para ver milhares de threads rodando em poucas centenas de processos.</li>
+        <li>O processador tem <strong>núcleos</strong> e <strong>processadores lógicos</strong> (normalmente o dobro): a máquina do professor tem 4 núcleos e 8 processadores lógicos, então 8 threads podem rodar realmente em paralelo. As demais se revezam.</li>
+        <li><strong>Daemon × user</strong>: o Java encerra o programa quando todas as threads <strong>user</strong> terminam, mesmo que ainda haja threads <strong>daemon</strong> rodando. A daemon tem menos prioridade, e o exemplo é a thread do <em>garbage collector</em>.</li>
+        <li><code>Thread.currentThread().getName()</code> devolve o nome da thread atual; a que inicia o programa se chama <code>main</code>.</li>
+      </ul>
+<pre><code>class ThreadExample extends Thread {          // forma 1: herdar de Thread (não recomendada)
+    private final char c;
+    public ThreadExample(char c) { this.c = c; }
+    @Override
+    public void run() {                         // o código que a nova thread executa
+        System.out.println(Thread.currentThread().getName());
+        for (int i = 0; i &lt; 500; i++) {
+            System.out.print(c);
+            if (i % 100 == 0) System.out.println();
+        }
+    }
+}
+
+class ThreadExampleRunnable implements Runnable { // forma 2: implementar Runnable (recomendada)
+    private final char c;
+    public ThreadExampleRunnable(char c) { this.c = c; }
+    @Override
+    public void run() { /* o mesmo código */ }
+}
+
+// Daemon x User
+public class ThreadTest01 {
+    public static void main(String[] args) {
+        Thread t1 = new Thread(new ThreadExampleRunnable('A'));
+        Thread t2 = new Thread(new ThreadExampleRunnable('B'));
+        Thread t3 = new Thread(new ThreadExampleRunnable('C'));
+        Thread t4 = new Thread(new ThreadExampleRunnable('D'));
+        t1.start();
+        t2.start();
+        t3.start();
+        t4.start();
+    }
+}</code></pre>
+      <ul>
+        <li><strong><code>run()</code> × <code>start()</code></strong>: chamar <code>t1.run()</code> é uma chamada de método comum, executada pela própria <code>main</code>: imprime todos os A, depois todos os B, na ordem. Só <strong><code>start()</code></strong> pede à JVM uma <strong>nova thread</strong>, e aí as letras saem misturadas, numa ordem diferente a cada execução.</li>
+        <li><strong>Herdar de <code>Thread</code> não é o recomendado</strong>: herança é para especializar, e você não está especializando uma thread. <strong>Implementar <code>Runnable</code></strong> diz "esta classe é uma tarefa executável" e deixa a classe livre para herdar de outra. A tarefa é passada no construtor <code>new Thread(Runnable)</code>.</li>
+        <li>Uma curiosidade do fim do vídeo: <code>new Thread(new ThreadExample('A'))</code> também compila, porque <code>Thread</code> implementa <code>Runnable</code>.</li>
+      </ul>
+
+      <h3>221 · Estados das threads</h3>
+      <p><em>A legenda desta aula veio em romeno, então o texto abaixo junta o código e o que o professor fala sobre estados nas aulas 222–223.</em> O código só acrescentou esta linha no fim do <code>main</code>:</p>
+<pre><code>t1.start(); t2.start(); t3.start(); t4.start();
+System.out.println("############################# " + Thread.currentThread().getName());
+// a linha da main costuma sair antes (ou no meio) das letras: start() não espera a thread rodar</code></pre>
+<pre><code>          start()                scheduler escolhe
+  NOVA ──────────▶ RUNNABLE ◀───────────────────▶ RUNNING ──── run() acabou ───▶ MORTA
+  (new)           (pronta p/ rodar)   yield()        │                             (dead)
+                        ▲                            │ sleep(), join(), wait(),
+                        │                            │ esperar um lock
+                        └──── acabou a espera ── BLOQUEADA / ESPERANDO ◀─┘</code></pre>
+      <ul>
+        <li><strong>Nova</strong>: o objeto <code>Thread</code> existe, mas <code>start()</code> ainda não foi chamado.</li>
+        <li><strong>Runnable</strong>: pronta para rodar, esperando o <em>scheduler</em> escolhê-la. <strong>Running</strong>: executando de fato. Quem decide a troca entre as duas é o scheduler, não você.</li>
+        <li><strong>Bloqueada/esperando</strong>: dormindo (<code>sleep</code>), esperando outra terminar (<code>join</code>), esperando aviso (<code>wait</code>) ou esperando um lock. Quando a espera acaba, ela volta para <strong>runnable</strong> (não direto para running).</li>
+        <li><strong>Morta</strong>: o <code>run()</code> terminou. Uma thread morta <strong>não pode</strong> ser iniciada de novo (<code>start()</code> outra vez lança <code>IllegalThreadStateException</code>).</li>
+        <li><strong>Extra</strong>: no código, <code>t.getState()</code> devolve o enum <code>Thread.State</code>: <code>NEW</code>, <code>RUNNABLE</code> (junta "pronta" e "rodando"), <code>BLOCKED</code> (esperando um lock), <code>WAITING</code> (<code>join</code>/<code>wait</code> sem tempo), <code>TIMED_WAITING</code> (<code>sleep</code>, <code>wait(ms)</code>) e <code>TERMINATED</code>.</li>
+      </ul>
+
+      <h3>222 · Prioridade e sleep</h3>
+<pre><code>Thread t1 = new Thread(new ThreadExampleRunnable('A'), "T1A");  // nome no construtor
+Thread t2 = new Thread(new ThreadExampleRunnable('B'), "T2B");
+Thread t3 = new Thread(new ThreadExampleRunnable('C'), "T3C");
+Thread t4 = new Thread(new ThreadExampleRunnable('D'), "T4D");
+t4.setPriority(Thread.MAX_PRIORITY);   // 10 · MIN_PRIORITY = 1 · NORM_PRIORITY = 5
+
+// dentro do for do run():
+try {
+    Thread.sleep(2000);                // 2000 ms = 2 segundos
+} catch (InterruptedException e) {
+    e.printStackTrace();
+}</code></pre>
+      <ul>
+        <li><strong>Nome</strong>: o construtor <code>new Thread(runnable, "nome")</code> define o nome que aparece no <code>getName()</code>.</li>
+        <li><strong>Prioridade</strong> vai de 1 a 10, e o aconselhado é usar as constantes <code>MIN_PRIORITY</code>, <code>NORM_PRIORITY</code> e <code>MAX_PRIORITY</code>. É só uma <strong>indicação</strong> ao scheduler: a JVM é uma especificação com várias implementações, e em algumas a prioridade não muda quase nada. No teste, T4D tinha prioridade máxima, mas a T1A começou primeiro. <strong>Nunca escreva código que dependa de prioridade.</strong></li>
+        <li><strong><code>Thread.sleep(ms)</code></strong> é <strong>estático</strong>: faz dormir a thread <strong>atual</strong> (nenhuma thread manda outra dormir). Uso típico: um loop que consulta uma API ou um estoque a cada X segundos, sem ficar martelando a conexão.</li>
+        <li>É uma das <strong>poucas garantias</strong>: a thread realmente fica pelo menos esse tempo parada. Ela sai de running, fica bloqueada e, ao fim do tempo, volta para runnable.</li>
+        <li><code>sleep</code> lança <code>InterruptedException</code> (checked), e o <code>run()</code> não pode declarar <code>throws</code> porque o método da interface não declara (regra da sobrescrita, aula 105). Por isso vai num <code>try/catch</code>.</li>
+        <li>Com o <code>sleep</code> dentro do <code>for</code>, a saída sai "de quatro em quatro" (A, B, C, D, uma letra de cada, a cada 2 segundos), mas a ordem dentro de cada grupo continua sem garantia.</li>
+      </ul>
+
+      <h3>223 · Yield e join</h3>
+      <p>Antes, o professor mostra que o <code>Runnable</code> pode ser uma <strong>classe anônima</strong> ou uma <strong>lambda</strong> (<code>Runnable</code> é interface funcional, aula 195), guardada numa variável, como <code>Runnable r = () -&gt; { ... };</code> e <code>new Thread(r).start();</code>. Mas quando a tarefa precisa receber algo no construtor (a letra), a classe continua útil:</p>
+<pre><code>public class ThreadTest02 {
+    public static void main(String[] args) throws InterruptedException {
+        Thread t1 = new Thread(new ThreadExampleRunnable2("KA"));
+        Thread t2 = new Thread(new ThreadExampleRunnable2("ME"));
+        t1.setPriority(Thread.MAX_PRIORITY);
+        t1.start();
+        t1.join();      // a main PARA aqui até t1 terminar
+        t2.start();     // só então t2 começa: KAKAKA... depois MEMEME...
+    }
+}</code></pre>
+      <ul>
+        <li><strong><code>Thread.yield()</code></strong>: a thread atual "sugere" ceder a vez, voltando de running para runnable para outras rodarem. É só uma <strong>dica</strong>, que o scheduler pode ignorar. "Pouca coisa é garantida na vida; em threads, pior ainda." O professor diz que é bom saber o que é, para quando alguém perguntar no café.</li>
+        <li><strong><code>t1.join()</code></strong>: a thread que <strong>chama</strong> (aqui, a <code>main</code>) fica bloqueada até <code>t1</code> terminar. Ou seja, "junte-se a t1": a <code>main</code> não prossegue, e a linha <code>t2.start()</code> não roda enquanto t1 não acabar. Sem o <code>join</code>, KA e ME saem misturados.</li>
+        <li><code>join</code> também lança <code>InterruptedException</code>; no <code>main</code> ele declarou <code>throws</code>.</li>
+      </ul>
+
+      <h3>224 · Sincronismo pt 01: condição de corrida</h3>
+      <p>O exemplo "mais famoso de todas as aulas de threads": uma conta bancária compartilhada.</p>
+<pre><code>public class Account {
+    private int balance = 50;
+    public void withdrawal(int amount) { this.balance = this.balance - amount; }
+    public int getBalance() { return balance; }
+}
+
+public class ThreadAccountTest01 implements Runnable {
+    private Account account = new Account();          // UMA conta
+
+    public static void main(String[] args) {
+        ThreadAccountTest01 threadAccountTest01 = new ThreadAccountTest01();
+        Thread t1 = new Thread(threadAccountTest01, "Hestia");      // duas threads,
+        Thread t2 = new Thread(threadAccountTest01, "Bell Cranel"); // o MESMO objeto
+        t1.start();
+        t2.start();
+    }
+
+    @Override
+    public void run() {
+        for (int i = 0; i &lt; 5; i++) {
+            withdrawal(10);
+            if (account.getBalance() &lt; 0) {
+                System.out.println("FODEO");          // saldo negativo: deu problema
+            }
+        }
+    }
+
+    private void withdrawal(int amount) {
+        if (account.getBalance() &gt;= amount) {                 // 1. verifica
+            System.out.println(getThreadName() + " está indo sacar dinheiro");
+            account.withdrawal(amount);                       // 2. saca
+            System.out.println(getThreadName() + " completou o saque, valor atual da conta " + account.getBalance());
+        } else {
+            System.out.println("Sem dinheiro para " + getThreadName() + " efetuar o saque " + account.getBalance());
+        }
+    }
+}</code></pre>
+      <p>Saldo 50, duas threads, cada uma tenta sacar 10 cinco vezes (100 no total). O <code>if</code> deveria impedir o saldo negativo, mas às vezes ele fica <strong>−10</strong>. Com 10 na conta, Bell Cranel passa pelo <code>if</code> (10 ≥ 10) e, antes de sacar, o scheduler dá a vez à Hestia, que <strong>também</strong> passa pelo <code>if</code>, porque o saldo ainda é 10. As duas sacam. Isso é uma <strong>condição de corrida</strong> (<em>race condition</em>): o resultado depende da ordem em que as threads são intercaladas. Às vezes a execução sai certa, e é isso que torna esse bug terrível: "é difícil de reproduzir e vai te dar cabelo branco".</p>
+
+      <h3>225 · Sincronismo pt 02: synchronized</h3>
+      <p>O trecho "verificar e sacar" precisa ser <strong>atômico</strong>: a thread que começa tem que terminar antes de outra entrar. Para isso existe o <strong>lock</strong> (trava, ou "chave"): <strong>todo objeto tem um</strong>, e só uma thread por vez pode segurá-lo.</p>
+<pre><code>private final Account account = new Account();   // final: o lock não pode trocar de objeto
+
+// opção 1: método sincronizado → lock do próprio objeto (this, o ThreadAccountTest01)
+private synchronized void withdrawal(int amount) { ... }
+
+// opção 2: bloco sincronizado → lock só do objeto account, só no trecho crítico
+private void withdrawal(int amount) {
+    System.out.println(getThreadName() + " #### fora do synchronized");
+    synchronized (account) {
+        System.out.println(getThreadName() + " **** dentro do synchronized");
+        if (account.getBalance() &gt;= amount) {
+            ...
+        }
+    }
+}</code></pre>
+      <ul>
+        <li><strong>Método <code>synchronized</code></strong>: a thread precisa do lock do objeto (<code>this</code>) para entrar. Como as duas threads usam <strong>o mesmo</strong> <code>ThreadAccountTest01</code>, só uma entra por vez, e o saldo nunca fica negativo. A <strong>ordem</strong> continua sem garantia: o garantido é que quem começa o método termina antes de outra entrar.</li>
+        <li><strong><code>Thread.sleep</code> não solta o lock</strong>: com um <code>sleep</code> de 10 s dentro do método sincronizado, a outra thread fica esperando os 10 s. Ao terminar, o lock é liberado, e qual thread pega em seguida é decisão do scheduler.</li>
+        <li><strong>Bloco <code>synchronized (objeto)</code></strong>: trava só o trecho crítico, usando o lock do objeto indicado. O que está <strong>fora</strong> roda livremente em paralelo, e na saída "fora do synchronized" das duas threads aparece misturado, enquanto "dentro" aparece uma de cada vez.</li>
+        <li><strong>A referência do lock deve ser <code>final</code></strong>: se alguém fizer <code>account = new Account()</code>, as threads passam a travar objetos diferentes e a proteção some.</li>
+        <li><strong>Método <code>static synchronized</code></strong> usa o lock da <strong>classe</strong>, o mesmo que <code>synchronized (ThreadAccountTest01.class) { ... }</code>. O professor diz que isso aparece pouco; o comum é sincronizar métodos ou blocos.</li>
+        <li>A thread que não consegue o lock fica <strong>bloqueada</strong> até ele ser liberado.</li>
+      </ul>
+
+      <h3>226 · Sincronismo pt 03: classes thread safe</h3>
+      <p>Uma classe é <strong>thread safe</strong> quando seus métodos de acesso são sincronizados. Exemplos: <code>StringBuffer</code> (a versão sincronizada do <code>StringBuilder</code>, aula 111) e as listas de <code>Collections.synchronizedList(new ArrayList&lt;&gt;())</code>. O professor mostra a pegadinha: <strong>usar uma coleção thread safe não deixa o <em>seu</em> código thread safe</strong>.</p>
+<pre><code>class ThreadSafeNames {
+    private final List&lt;String&gt; names = Collections.synchronizedList(new ArrayList&lt;&gt;()); // no vídeo
+
+    public void add(String name) { names.add(name); }
+
+    public void removeFirst() {
+        if (names.size() &gt; 0) {                   // 1. verifica  (sincronizado sozinho)
+            System.out.println(Thread.currentThread().getName());
+            System.out.println(names.remove(0));  // 2. remove    (sincronizado sozinho)
+        }
+    }
+}
+
+ThreadSafeNames threadSafeNames = new ThreadSafeNames();
+threadSafeNames.add("Junkrat");                   // um nome só
+Runnable r = threadSafeNames::removeFirst;       // method reference como Runnable
+new Thread(r).start();
+new Thread(r).start();
+// às vezes: IndexOutOfBoundsException — as duas passaram pelo size() &gt; 0</code></pre>
+      <p>Cada chamada (<code>size</code>, <code>remove</code>) é sincronizada, mas o <strong>conjunto</strong> "verifica e depois remove" não é: as duas threads podem ver <code>size() == 1</code> e depois as duas tentarem remover. A solução é sincronizar <strong>o seu método</strong> também. Na versão final do repositório, os métodos <code>add</code> e <code>removeFirst</code> ficaram <code>synchronized</code> e a lista virou um <code>ArrayList</code> comum, que é seguro porque todo acesso passa por esses métodos. "Não adianta nada a classe ser thread safe se o seu código não for."</p>
+
+      <h3>227 · Sincronismo pt 04: deadlock</h3>
+      <p>Quando uma thread segura um lock, todas as outras que precisam dele esperam "de boa na lagoa". O <strong>deadlock</strong> acontece quando duas threads esperam, cada uma, um lock que a outra segura: Natsu segura A e precisa de B; Lucy segura B e precisa de A. Nenhuma solta e nenhuma avança, e o programa <strong>nunca termina</strong>. Não há o que fazer além de reiniciar a aplicação.</p>
+<pre><code>Object lock1 = new Object();
+Object lock2 = new Object();
+Runnable r1 = () -&gt; {
+    synchronized (lock1) {
+        System.out.println("Thread 1: Segurando lock 1");
+        System.out.println("Thread 1: Esperando lock 2");
+        synchronized (lock2) {
+            System.out.println("Thread 1: Segurando lock 2");
+        }
+    }
+};
+Runnable r2 = () -&gt; {
+    synchronized (lock2) {                 // ordem INVERTIDA: aqui mora a bomba
+        System.out.println("Thread 2: Segurando lock 2");
+        System.out.println("Thread 2: Esperando lock 1");
+        synchronized (lock1) {
+            System.out.println("Thread 2: Segurando lock 1");
+        }
+    }
+};
+new Thread(r1).start();
+new Thread(r2).start();</code></pre>
+      <ul>
+        <li>Pode ser que não trave toda vez. Um <code>Thread.sleep(10)</code> entre os dois <code>synchronized</code> praticamente garante o deadlock.</li>
+        <li><strong>A solução</strong>: todas as threads pegam os locks <strong>na mesma ordem</strong>. Com <code>r2</code> também pegando <code>lock1</code> e depois <code>lock2</code>, o deadlock nunca acontece.</li>
+        <li>É pergunta clássica de entrevista técnica ("o que é deadlock?"), com a piada do professor: "se eu te contratar eu te respondo".</li>
+      </ul>
+
+      <h3>228 · Sincronismo pt 05: wait, notify e notifyAll</h3>
+      <p><code>wait()</code>, <code>notify()</code> e <code>notifyAll()</code> são métodos da classe <strong><code>Object</code></strong>, então todo objeto tem. Servem para threads <strong>conversarem</strong>: uma espera até outra avisar que há trabalho. O exemplo é um sistema de e-mails: a <code>main</code> adiciona e-mails numa lista, e duas threads (Jiraya e Kakashi) pegam e "enviam". Sem e-mail na lista, as entregadoras não podem simplesmente terminar (morta não volta), e também não podem ficar num loop gastando CPU: elas precisam <strong>dormir até serem avisadas</strong>.</p>
+<pre><code>public class Members {
+    private final Queue&lt;String&gt; emails = new ArrayBlockingQueue&lt;&gt;(10); // fila thread safe, capacidade 10
+    private boolean open = true;                                         // "chave" para aceitar e-mails
+
+    public boolean isOpen() { return open; }
+
+    public int pendingEmails() {
+        synchronized (emails) { return emails.size(); }
+    }
+
+    public void addMemberEmail(String email) {
+        synchronized (this.emails) {
+            System.out.println(Thread.currentThread().getName() + " Adicionou email na lista");
+            this.emails.add(email);
+            this.emails.notifyAll();                  // acorda TODAS as que esperam em emails
+        }
+    }
+
+    public String retrieveEmail() throws InterruptedException {
+        System.out.println(Thread.currentThread().getName() + " checking if there are emails");
+        synchronized (this.emails) {
+            while (this.emails.size() == 0) {
+                if (!open) return null;
+                System.out.println(Thread.currentThread().getName() + " Não tem email disponível na lista, entrando em modo de espera");
+                this.emails.wait();                   // SOLTA o lock e dorme até um notify
+            }
+            return this.emails.poll();                // tira e devolve o primeiro
+        }
+    }
+
+    public void close() {
+        open = false;
+        synchronized (this.emails) {
+            System.out.println(Thread.currentThread().getName() + " Notificando todo mundo que não estamos mais pegando emails");
+            // falta aqui: this.emails.notifyAll();   (veja o Atenção)
+        }
+    }
+}
+
+public class EmailDeliveryService implements Runnable {
+    private final Members members;
+    public EmailDeliveryService(Members members) { this.members = members; }
+
+    @Override
+    public void run() {
+        String threadName = Thread.currentThread().getName();
+        System.out.println(threadName + " starting to deliver emails...");
+        while (members.isOpen() || members.pendingEmails() &gt; 0) {
+            try {
+                String email = members.retrieveEmail();
+                if (email == null) continue;
+                System.out.println(threadName + " enviando email para " + email);
+                Thread.sleep(2000);                   // simula a chamada a uma API de e-mail
+                System.out.println(threadName + " enviou email com sucesso para " + email);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        System.out.println("Todos os emails foram enviados com sucesso!");
+    }
+}
+
+// EmailDeliveryTest01.main
+Members members = new Members();
+Thread jiraya = new Thread(new EmailDeliveryService(members), "Jiraya");
+Thread kakashi = new Thread(new EmailDeliveryService(members), "Kakashi");
+jiraya.start();
+kakashi.start();
+while (true) {
+    String email = JOptionPane.showInputDialog("Entre com seu email"); // caixinha do Swing
+    if (email == null || email.isEmpty()) {
+        members.close();
+        break;
+    }
+    members.addMemberEmail(email);
+}</code></pre>
+      <ul>
+        <li><strong><code>wait()</code> só pode ser chamado por quem tem o lock daquele objeto</strong>, então sempre dentro de <code>synchronized (obj)</code>. O mesmo vale para <code>notify</code> e <code>notifyAll</code>. Fora dele, dá <code>IllegalMonitorStateException</code>. <code>wait</code> lança <code>InterruptedException</code>.</li>
+        <li><strong><code>wait()</code> solta o lock</strong> (ao contrário do <code>sleep</code>): é assim que Jiraya e Kakashi conseguem esperar ao mesmo tempo, e que a <code>main</code> consegue entrar no <code>addMemberEmail</code>.</li>
+        <li><strong><code>notify()</code></strong> acorda <strong>uma</strong> thread que espera naquele objeto ("sabe Deus qual"); <strong><code>notifyAll()</code></strong> acorda <strong>todas</strong>, e elas disputam o lock. No teste, as duas acordaram, "o Kakashi não deu sorte dessa vez" e o Jiraya pegou o e-mail. O Kakashi voltou a esperar.</li>
+        <li>A espera fica num <strong><code>while</code></strong>, não num <code>if</code>: quem acorda precisa conferir de novo se ainda tem e-mail, porque outra thread pode ter pegado antes.</li>
+        <li><code>ArrayBlockingQueue</code> é uma fila thread safe de tamanho fixo (o professor definiu 10); <code>poll()</code> tira e devolve o primeiro. Mesmo assim, o <code>synchronized</code> por cima continua necessário (a lição da aula 226).</li>
+      </ul>
+
+      <h3>Atenção</h3>
+      <ul>
+        <li><strong><code>run()</code> não cria thread; <code>start()</code> cria.</strong> E <code>start()</code> só pode ser chamado uma vez por objeto <code>Thread</code>.</li>
+        <li><strong>Quase nada é garantido</strong>: ordem de execução, prioridade e <code>yield</code> são indicações. Garantidos: o <code>sleep</code> dorme pelo menos o tempo pedido, o <code>join</code> espera a outra terminar, e o <code>synchronized</code> deixa uma thread por vez.</li>
+        <li><strong><code>sleep</code> não solta o lock; <code>wait</code> solta.</strong></li>
+        <li><strong><code>wait</code>/<code>notify</code>/<code>notifyAll</code> só dentro de <code>synchronized</code> do mesmo objeto</strong>, senão <code>IllegalMonitorStateException</code>.</li>
+        <li><strong>Sincronize no mesmo objeto</strong>: duas threads que travam objetos diferentes não se bloqueiam. Por isso o lock deve ser <code>final</code>.</li>
+        <li><strong>Coleção thread safe + "verificar e depois agir" ≠ thread safe</strong>: o conjunto precisa estar num <code>synchronized</code>.</li>
+        <li><strong>Correção: no repositório, o <code>close()</code> da aula 228 não chama <code>notifyAll()</code></strong>, embora o professor diga que o <code>notifyAll</code> precisa estar no contexto sincronizado. Sem ele, as threads que estão em <code>wait()</code> nunca acordam para ver que <code>open</code> virou <code>false</code>, e o programa não termina depois de fechar a caixinha. A linha que falta, dentro do <code>synchronized</code> do <code>close</code>, é <code>this.emails.notifyAll();</code>.</li>
+        <li><strong>Extra: <code>open</code> deveria ser <code>volatile</code></strong> (ou lido dentro do <code>synchronized</code>): sem isso, a JVM pode deixar uma thread enxergar um valor antigo de uma variável que outra thread alterou (visibilidade de memória).</li>
+        <li><strong>Extra: <code>ArrayBlockingQueue.add</code> com a fila cheia</strong> (o 11º e-mail) lança <code>IllegalStateException: Queue full</code>. Os métodos próprios da fila bloqueante, <code>put</code> e <code>take</code>, esperam sozinhos e dispensam o <code>wait</code>/<code>notify</code> manual.</li>
+        <li><strong>Extra: <code>count++</code> não é atômico</strong> (ler, somar, gravar). Duas threads incrementando um <code>int</code> sem <code>synchronized</code> perdem incrementos. A prática abaixo mostra isso.</li>
+      </ul>
+
+      <h3>Paralelo com PHP</h3>
+      <ul>
+        <li><strong>O PHP tradicional não tem threads na requisição</strong>: cada request roda num processo/worker isolado (PHP-FPM), sem memória compartilhada entre requests. Paralelismo vem de <strong>processos</strong>: filas do Laravel com vários <em>workers</em> (Horizon), <code>Process::pool</code> e <code>Concurrency::run</code> (Laravel 11+). Existem a extensão <em>parallel</em> e os <em>Fibers</em> (PHP 8.1), mas os Fibers são cooperativos, parecidos com o <code>yield</code> e sem paralelismo real.</li>
+        <li><strong>A condição de corrida existe igual</strong>, só que <strong>entre requisições</strong> e no banco: dois requests sacando da mesma conta ao mesmo tempo é exatamente a aula 224. As soluções equivalentes ao <code>synchronized</code>: <code>DB::transaction(fn() =&gt; Account::lockForUpdate()-&gt;find($id)...)</code> (lock de linha no banco), <code>Cache::lock('conta:'.$id)-&gt;block(5, fn() =&gt; ...)</code> (lock atômico) ou um <code>UPDATE accounts SET balance = balance - 10 WHERE id = ? AND balance &gt;= 10</code>, que é atômico por si.</li>
+        <li><strong>Deadlock também existe no banco</strong>: duas transações travando linhas em ordens opostas. O MySQL detecta e aborta uma delas ("Deadlock found when trying to get lock"), e o <code>DB::transaction($fn, 3)</code> tenta de novo. A prevenção é a mesma da aula 227: travar sempre na mesma ordem.</li>
+        <li><strong>O exemplo da aula 228 é uma fila de e-mails</strong>, o <code>Mail::to($user)-&gt;queue(...)</code> do Laravel: a <code>main</code> é quem despacha o job, e Jiraya e Kakashi são dois <code>php artisan queue:work</code>. O worker que "espera sem gastar CPU" usa um <em>blocking pop</em> no Redis (<code>BLPOP</code>), o equivalente ao <code>wait</code>/<code>notify</code>.</li>
+        <li><code>sleep(2)</code> do PHP é em <strong>segundos</strong>; <code>Thread.sleep(2000)</code> é em <strong>milissegundos</strong> (<code>usleep</code> é em microssegundos).</li>
+      </ul>
+    </section>
+
+    <section id="flashcards">
+      <h2>Flashcards</h2>
+      <p style="color:var(--muted);margin-top:-6px">Toque no cartão para virar.</p>
+      <div id="flashcards-app"></div>
+    </section>
+
+    <section id="quiz">
+      <h2>Quiz</h2>
+      <div id="quiz-app"></div>
+    </section>
+
+    <section id="estudo">
+      <h2>Material de estudo</h2>
+
+      <h3>Mapa mental</h3>
+<pre><code>Threads (220–228)
+├── Conceito (220): linha de execução · a main já é uma · JVM/scheduler decide quase tudo
+│   ├── núcleos × processadores lógicos (4 × 8 na máquina do professor)
+│   └── daemon (ex.: GC) × user: o programa acaba quando as user acabam
+├── Criar (220, 223)
+│   ├── extends Thread (evitar) · implements Runnable (recomendado) · lambda/anônima
+│   └── start() = nova thread · run() = chamada comum na thread atual
+├── Estados (221): nova → runnable ⇄ running → morta · bloqueada/esperando → runnable
+├── Controle (222–223)
+│   ├── nome: new Thread(r, "T1A") · prioridade 1–10 (só dica)
+│   ├── sleep(ms): estático, garantido, InterruptedException
+│   ├── yield(): dica para ceder a vez
+│   └── join(): quem chama espera a outra terminar
+└── Sincronismo (224–228)
+    ├── race condition: verificar-e-agir intercalado (conta fica −10)
+    ├── synchronized: método (lock do this) · bloco (lock do objeto) · static (lock da classe)
+    │   └── lock final · sleep NÃO solta o lock
+    ├── thread safe: StringBuffer, synchronizedList... mas o SEU método também precisa
+    ├── deadlock: locks em ordem invertida → travar sempre na mesma ordem
+    └── wait / notify / notifyAll (Object): dentro de synchronized, wait SOLTA o lock, while</code></pre>
+
+      <h3>Prática no seu WSL (20 minutos)</h3>
+<pre><code>cd ~/java-lab
+T=src/academy/devdojo/maratonajava/javacore/ZZFthreads
+mkdir -p $T/test
+
+cat > $T/test/ThreadsPraticaTest01.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.ZZFthreads.test;
+
+import java.util.ArrayDeque;
+import java.util.Queue;
+
+public class ThreadsPraticaTest01 {
+    static int semSync = 0;
+    static int comSync = 0;
+    static synchronized void incrementaComSync() { comSync++; }
+
+    // versão enxuta do Members da aula 228, já com o notifyAll no close
+    static class Caixa {
+        private final Queue&lt;String&gt; emails = new ArrayDeque&lt;&gt;();
+        private boolean open = true;
+
+        void add(String email) {
+            synchronized (emails) { emails.add(email); emails.notifyAll(); }
+        }
+        String retrieve() throws InterruptedException {
+            synchronized (emails) {
+                while (emails.isEmpty()) {
+                    if (!open) return null;
+                    emails.wait();
+                }
+                return emails.poll();
+            }
+        }
+        void close() {
+            synchronized (emails) { open = false; emails.notifyAll(); }
+        }
+    }
+
+    public static void main(String[] args) throws InterruptedException {
+        // 220 · a thread main
+        System.out.println(Thread.currentThread().getName());               // ?
+
+        // 221 · estados
+        Thread dorminhoca = new Thread(() -&gt; {
+            try { Thread.sleep(500); } catch (InterruptedException e) { e.printStackTrace(); }
+        }, "Dorminhoca");
+        System.out.println(dorminhoca.getState());                          // ?
+        dorminhoca.start();
+        Thread.sleep(100);
+        System.out.println(dorminhoca.getState());                          // ?
+        dorminhoca.join();
+        System.out.println(dorminhoca.getState());                          // ?
+
+        // 223 · join
+        Thread ka = new Thread(() -&gt; { for (int i = 0; i &lt; 3; i++) System.out.print("KA"); });
+        Thread me = new Thread(() -&gt; { for (int i = 0; i &lt; 3; i++) System.out.print("ME"); });
+        ka.start();
+        ka.join();
+        System.out.println();
+        me.start();
+        me.join();
+        System.out.println();                                               // ?
+
+        // 224–225 · condição de corrida × synchronized
+        Runnable incrementa = () -&gt; {
+            for (int i = 0; i &lt; 100_000; i++) {
+                semSync++;
+                incrementaComSync();
+            }
+        };
+        Thread t1 = new Thread(incrementa);
+        Thread t2 = new Thread(incrementa);
+        t1.start(); t2.start();
+        t1.join(); t2.join();
+        System.out.println("sem synchronized: " + semSync);                 // ?
+        System.out.println("com synchronized: " + comSync);                 // ?
+
+        // 220 · daemon
+        Thread daemon = new Thread(() -&gt; {
+            while (true) {
+                try { Thread.sleep(1000); } catch (InterruptedException e) { return; }
+            }
+        });
+        daemon.setDaemon(true);
+        daemon.start();
+        System.out.println(daemon.isDaemon());                              // ?
+
+        // 228 · wait / notifyAll
+        Caixa caixa = new Caixa();
+        Thread kakashi = new Thread(() -&gt; {
+            try {
+                String email;
+                while ((email = caixa.retrieve()) != null) {
+                    System.out.println(Thread.currentThread().getName() + " enviando email para " + email);
+                }
+                System.out.println("Todos os emails foram enviados");
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }, "Kakashi");
+        kakashi.start();
+        caixa.add("a@devdojo.com");
+        caixa.add("b@devdojo.com");
+        caixa.close();
+        kakashi.join();                                                     // ?
+        System.out.println("fim do main");                                  // o programa termina: a daemon não segura
+    }
+}
+EOF
+
+javac -d out $(find src -name '*.java')
+java -cp out academy.devdojo.maratonajava.javacore.ZZFthreads.test.ThreadsPraticaTest01</code></pre>
+      <details>
+        <summary>Ver a saída esperada</summary>
+<pre><code>main
+NEW
+TIMED_WAITING
+TERMINATED
+KAKAKA
+MEMEME
+sem synchronized: 13xxxx   ← varia a cada execução, quase sempre menor que 200000
+com synchronized: 200000
+true
+Kakashi enviando email para a@devdojo.com
+Kakashi enviando email para b@devdojo.com
+Todos os emails foram enviados
+fim do main</code></pre>
+      </details>
+      <p>O <code>TIMED_WAITING</code> depende de a <code>main</code> olhar enquanto a outra ainda dorme (100 ms × 500 ms). É o esperado, mas não é garantia absoluta, bem no espírito das aulas. A linha "sem synchronized" é a condição de corrida da aula 224 em números: rode três vezes e compare.</p>
+      <p><strong>Exercícios:</strong></p>
+      <ol>
+        <li>Recrie a <code>ThreadExampleRunnable</code> da aula 220 e troque <code>start()</code> por <code>run()</code> nas quatro threads. O que muda na saída e no nome impresso?</li>
+        <li>Tire o <code>ka.join()</code> da prática. O que acontece com KA e ME?</li>
+        <li>Monte o <code>ThreadAccountTest01</code> da aula 224, rode algumas vezes até ver o saldo negativo e depois corrija com o bloco <code>synchronized (account)</code>.</li>
+        <li>Rode o <code>DeadLockTest01</code> da aula 227 com <code>Thread.sleep(10)</code> entre os dois <code>synchronized</code>. Depois corrija invertendo a ordem dos locks em <code>r2</code>. (Para matar o programa travado: Ctrl+C.)</li>
+        <li>Na <code>Caixa</code> da prática, tire o <code>notifyAll()</code> do <code>close()</code> e rode. O programa termina? Relacione com a correção da aula 228.</li>
+      </ol>
+
+      <h3>Glossário</h3>
+      <ul>
+        <li><strong>Thread</strong>: linha de execução dentro de um processo; também a classe <code>java.lang.Thread</code>.</li>
+        <li><strong>Runnable</strong>: interface funcional com <code>void run()</code>; a tarefa que a thread executa.</li>
+        <li><strong>Scheduler</strong>: parte da JVM/SO que decide qual thread roda e por quanto tempo.</li>
+        <li><strong>Daemon thread</strong>: thread de serviço; não impede o programa de terminar.</li>
+        <li><strong>Prioridade</strong>: indicação de 1 a 10 ao scheduler, sem garantia.</li>
+        <li><strong><code>sleep</code></strong>: pausa a thread atual por um tempo (não solta locks).</li>
+        <li><strong><code>yield</code></strong>: sugestão para ceder o processador.</li>
+        <li><strong><code>join</code></strong>: faz a thread atual esperar outra terminar.</li>
+        <li><strong>Condição de corrida (race condition)</strong>: resultado depende da intercalação das threads.</li>
+        <li><strong>Operação atômica</strong>: executa inteira, sem outra thread no meio.</li>
+        <li><strong>Lock (monitor)</strong>: trava que todo objeto tem; <code>synchronized</code> usa ela.</li>
+        <li><strong>Thread safe</strong>: seguro para uso por várias threads ao mesmo tempo.</li>
+        <li><strong>Deadlock</strong>: threads esperando para sempre locks que umas seguram das outras.</li>
+        <li><strong><code>wait</code>/<code>notify</code>/<code>notifyAll</code></strong>: métodos de <code>Object</code> para uma thread esperar (soltando o lock) e outra avisar.</li>
+      </ul>
+
+      <h3>Revisão espaçada</h3>
+      <ul class="revisao">
+        <li><span class="dia">Dia 1</span><span>Todos os flashcards + a prática com previsões.</span></li>
+        <li><span class="dia">Dia 3</span><span>Quiz + exercícios 1 a 3.</span></li>
+        <li><span class="dia">Dia 7</span><span>Exercícios 4 e 5 + desenhar de memória o diagrama de estados e o deadlock Natsu/Lucy.</span></li>
+        <li><span class="dia">Dia 14</span><span>Flashcards que errou + questões discursivas.</span></li>
+      </ul>
+
+      <h3>Para aprofundar</h3>
+      <ul>
+        <li>O que <code>volatile</code> garante (visibilidade) e o que não garante (atomicidade)?</li>
+        <li>Como <code>AtomicInteger</code> resolve o <code>count++</code> sem <code>synchronized</code>? (É o começo das aulas de concorrência, 229+.)</li>
+        <li>Como <code>BlockingQueue.put</code>/<code>take</code> substituem o <code>wait</code>/<code>notify</code> da aula 228?</li>
+        <li>O que é <em>spurious wakeup</em> e por que ele obriga o <code>wait</code> a ficar num <code>while</code>?</li>
+        <li>Como <code>interrupt()</code> e <code>InterruptedException</code> são usados para parar uma thread de forma educada?</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    window.AULA = {
+      flashcards: [
+        ["O que é uma thread?", "Uma linha de execução dentro de um processo (e também a classe java.lang.Thread)"],
+        ["Qual o nome da thread que inicia o programa?", "main"],
+        ["Daemon × user thread?", "O programa termina quando todas as user terminam; daemon (ex.: garbage collector) não segura o programa"],
+        ["Quais as duas formas vistas de criar a tarefa de uma thread?", "Herdar de Thread (não recomendado) ou implementar Runnable (recomendado), também como lambda"],
+        ["Por que implementar Runnable é melhor que herdar de Thread?", "Você não está especializando uma thread; e a classe fica livre para herdar de outra"],
+        ["run() × start()?", "run() é uma chamada comum na thread atual; start() cria uma nova thread que executa o run()"],
+        ["Quais os estados de uma thread?", "Nova, runnable, running, bloqueada/esperando e morta (em Java: NEW, RUNNABLE, BLOCKED, WAITING, TIMED_WAITING, TERMINATED)"],
+        ["Dá para chamar start() duas vezes?", "Não: IllegalThreadStateException. Thread morta não volta"],
+        ["Como dar nome a uma thread?", "new Thread(runnable, \"T1A\")"],
+        ["Qual a faixa de prioridade e ela é garantida?", "1 a 10 (MIN, NORM=5, MAX); é só uma indicação ao scheduler"],
+        ["O que faz Thread.sleep(2000)?", "Faz a thread ATUAL dormir pelo menos 2 segundos (é estático); lança InterruptedException"],
+        ["Por que o sleep dentro do run() precisa de try/catch?", "InterruptedException é checked e o run() da interface não declara throws"],
+        ["O que faz Thread.yield()?", "Sugere ceder a vez (running → runnable); o scheduler pode ignorar"],
+        ["O que faz t1.join()?", "A thread que chama fica bloqueada até t1 terminar"],
+        ["O que é condição de corrida?", "Quando o resultado depende da intercalação das threads, como duas passarem pelo if do saldo antes de sacar"],
+        ["O que synchronized garante?", "Que só uma thread por vez execute o trecho usando o lock daquele objeto"],
+        ["Método synchronized usa o lock de quem? E static synchronized?", "Do objeto (this); o static usa o lock da classe (Classe.class)"],
+        ["Por que o objeto usado como lock deve ser final?", "Se a referência mudar, as threads passam a travar objetos diferentes"],
+        ["sleep solta o lock? E wait?", "sleep NÃO solta; wait solta"],
+        ["Usar uma coleção thread safe deixa meu código thread safe?", "Não: operações compostas (verificar e depois remover) precisam de synchronized no seu método"],
+        ["O que é deadlock?", "Duas threads esperando para sempre um lock que a outra segura"],
+        ["Como evitar o deadlock da aula 227?", "Todas as threads pegam os locks na mesma ordem"],
+        ["Onde ficam wait, notify e notifyAll?", "Na classe Object: todo objeto tem"],
+        ["Regra para chamar wait/notify?", "Estar dentro de synchronized do mesmo objeto, senão IllegalMonitorStateException"],
+        ["notify × notifyAll?", "notify acorda uma thread que espera no objeto; notifyAll acorda todas, que disputam o lock"]
+      ],
+      quiz: [
+        { tipo: 'multipla', pergunta: 'Qual chamada realmente cria uma nova linha de execução?',
+          opcoes: ['t.run()', 't.start()', 'new Thread(r)', 'Thread.currentThread()'],
+          correta: 1,
+          explicacao: 'new Thread(r) só cria o objeto (estado NEW) e run() é uma chamada comum na thread atual. start() pede à JVM uma nova thread, que executará o run().' },
+        { tipo: 'vf', pergunta: 't4.setPriority(Thread.MAX_PRIORITY) garante que t4 execute antes das outras threads.',
+          correta: 1,
+          explicacao: 'Falso. Prioridade é só uma indicação ao scheduler; depende da implementação da JVM. No teste do professor, a T1A começou primeiro mesmo com T4D em prioridade máxima.' },
+        { tipo: 'multipla', pergunta: 'O que faz Thread.sleep(2000) chamado dentro do run() de uma thread T1A?',
+          opcoes: ['Faz todas as threads dormirem 2 segundos', 'Faz a thread main dormir 2 segundos', 'Faz a própria T1A dormir pelo menos 2 segundos', 'Faz T1A dormir 2000 segundos'],
+          correta: 2,
+          explicacao: 'sleep é estático e sempre age na thread atual, em milissegundos. É uma das poucas coisas garantidas: ela dorme pelo menos esse tempo.' },
+        { tipo: 'multipla', pergunta: 'Em t1.start(); t1.join(); t2.start(); dentro do main, o que o join garante?',
+          opcoes: ['Que t1 e t2 rodem em paralelo', 'Que a main só chame t2.start() depois que t1 terminar', 'Que t1 tenha prioridade máxima', 'Que t2 termine antes de t1'],
+          correta: 1,
+          explicacao: 'join bloqueia a thread que chamou (a main) até t1 terminar. Por isso a saída fica KAKAKA... e só depois MEMEME...' },
+        { tipo: 'multipla', pergunta: 'Na conta com saldo 50 da aula 224, por que o saldo às vezes fica −10 mesmo com o if (saldo >= valor)?',
+          opcoes: ['Porque int não aceita negativos', 'Porque as duas threads passam pelo if com saldo 10 antes de qualquer uma sacar', 'Porque o for roda 6 vezes', 'Porque falta o método getBalance'],
+          correta: 1,
+          explicacao: 'É uma condição de corrida: verificar e sacar não são atômicos. Uma thread verifica, o scheduler troca, a outra verifica o mesmo saldo, e as duas sacam.' },
+        { tipo: 'vf', pergunta: 'Se uma thread chama Thread.sleep dentro de um método synchronized, o lock é liberado enquanto ela dorme.',
+          correta: 1,
+          explicacao: 'Falso. sleep não solta o lock: as outras threads continuam bloqueadas até ela sair do bloco. Quem solta o lock enquanto espera é o wait().' },
+        { tipo: 'multipla', pergunta: 'A classe usa Collections.synchronizedList e o método removeFirst faz if (names.size() > 0) names.remove(0). Com um nome e duas threads, o que pode acontecer?',
+          opcoes: ['Nada de errado: a lista é thread safe', 'IndexOutOfBoundsException: as duas passam pelo if antes de uma remover', 'Deadlock', 'IllegalMonitorStateException'],
+          correta: 1,
+          explicacao: 'Cada chamada é sincronizada, mas a sequência verificar-e-remover não. A solução é tornar o próprio removeFirst synchronized.' },
+        { tipo: 'multipla', pergunta: 'Qual a forma de evitar o deadlock da aula 227 (r1 trava lock1→lock2, r2 trava lock2→lock1)?',
+          opcoes: ['Aumentar a prioridade de r1', 'Colocar Thread.sleep entre os synchronized', 'Fazer as duas pegarem os locks na mesma ordem', 'Trocar synchronized por yield'],
+          correta: 2,
+          explicacao: 'O deadlock vem da ordem invertida. Com as duas pegando lock1 e depois lock2, uma sempre espera a outra terminar, sem ciclo. O sleep só torna o deadlock mais provável.' },
+        { tipo: 'discursiva', pergunta: 'Explique as formas de usar synchronized vistas na aula 225 e qual lock cada uma usa.',
+          explicacao: 'Método de instância synchronized: a thread precisa do lock do próprio objeto (this) para entrar no método. Bloco synchronized (obj) { ... }: usa o lock do objeto indicado e trava só o trecho crítico, e o que fica fora roda em paralelo; o objeto do lock deve ser final para a referência não mudar. Método static synchronized: usa o lock da classe, equivalente a synchronized (Classe.class). Em todos os casos, quem não consegue o lock fica bloqueado até ele ser liberado; a ordem de quem entra não é garantida, só que é uma thread por vez; e sleep dentro do trecho não solta o lock. No Laravel, o equivalente seria lockForUpdate numa transação ou Cache::lock.' },
+        { tipo: 'discursiva', pergunta: 'Explique como funciona o sistema de e-mails da aula 228 com wait/notifyAll e o problema do close() no repositório.',
+          explicacao: 'Members guarda uma fila de e-mails e uma flag open. As threads Jiraya e Kakashi (EmailDeliveryService) chamam retrieveEmail: dentro de synchronized (emails), enquanto a fila está vazia e open é true elas chamam emails.wait(), que solta o lock e dorme sem gastar CPU. A main, ao receber um e-mail, entra em synchronized (emails), adiciona e chama notifyAll(), que acorda todas as que esperam. Elas disputam o lock, uma pega o e-mail com poll e o envia (sleep de 2 s simulando a API), e as outras reconferem o while e voltam a esperar. wait/notify só podem ser chamados com o lock do objeto (senão IllegalMonitorStateException), e a espera fica num while porque outra thread pode ter pegado o item antes. O problema: o close() do repositório põe open = false mas não chama notifyAll(), então as threads que estão em wait() nunca acordam para perceber o fechamento e o programa não termina; falta this.emails.notifyAll() dentro do synchronized do close. É o mesmo padrão de uma fila do Laravel com workers.' }
+      ]
+    };
+  </script>
+  <script src="../js/app.js"></script>
+</body>
+</html>
