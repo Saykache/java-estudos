@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>195–202 · Lambdas e Optional</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="topo">
+      <a class="voltar" href="../index.html">← Todas as aulas</a>
+      <h1>195–202 · Lambdas, method reference e Optional</h1>
+      <p>Interfaces funcionais (Predicate, Consumer, Function, Supplier, BiFunction, BiPredicate), os quatro tipos de method reference e o Optional para retornos que podem não existir · <a href="https://www.youtube.com/playlist?list=PL62G310vn6nFIsOCC0H-C2infYgwm8SWW" target="_blank" rel="noopener">playlist</a></p>
+    </header>
+
+    <nav class="abas">
+      <a href="#resumo">Resumo</a>
+      <a href="#flashcards">Flashcards</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#estudo">Material de estudo</a>
+    </nav>
+
+    <p class="aviso">Junta as aulas 195 a 197 (lambdas: Predicate, Consumer e Function), 198 a 200 (method reference: estático, não estático e construtor) e 201 e 202 (Optional). Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. O código (pacotes <code>javacore.ZZClambdas</code> e <code>javacore.ZZDoptional</code>, <code>Anime</code>, <code>AnimeComparators</code>, <code>Manga</code> e <code>MangaRepository</code>) foi conferido no <a href="https://github.com/devdojobr/maratona-java-virado-no-jiraya" target="_blank" rel="noopener">repositório do professor</a>. Os itens marcados como "extra" não estão nos vídeos.</p>
+
+    <section id="resumo">
+      <h2>Resumo</h2>
+      <p>Começa a <strong>programação funcional</strong>. Uma <strong>lambda</strong> é uma função anônima: não tem nome e não pertence a nenhuma classe, por isso o professor prefere chamá-la de "função". O objetivo é deixar o código <strong>conciso</strong>. Toda lambda precisa de um alvo: uma <strong>interface funcional</strong>, que tem <strong>um único método abstrato</strong>, e é esse método que define o "contrato" da lambda (quais parâmetros recebe e o que retorna). Depois vêm os <strong>method references</strong> (<code>Classe::metodo</code>), que encurtam ainda mais uma lambda que só chama um método, e o <strong>Optional</strong>, uma caixa que pode ter ou não um valor e serve para evitar <code>NullPointerException</code> em retornos.</p>
+<pre><code>Predicate&lt;Car&gt;           car -&gt; car.getColor().equals("green")   // T → boolean   (195)
+Consumer&lt;String&gt;        s -&gt; System.out.println(s)              // T → nada      (196)
+Function&lt;String, Integer&gt; s -&gt; s.length()                       // T → R         (197)
+Function&lt;String, Integer&gt; String::length                        // method reference (198–200)
+Optional&lt;Manga&gt;         findByTitle("Drifters").orElseGet(...)   // talvez tenha valor (201–202)</code></pre>
+
+      <h3>195 · Lambdas pt 01: a sintaxe e o Predicate</h3>
+      <p>A <code>CarPredicate</code> da aula 194 ganhou <code>@FunctionalInterface</code> e comentários que resumem a aula:</p>
+<pre><code>@FunctionalInterface
+public interface CarPredicate {
+    // anonimas, funções, conciso
+    boolean test(Car car);
+    //(parametro) -&gt; &lt;expressão&gt;
+    //(Car car) -&gt; car.getColor().equals("green");
+}</code></pre>
+      <ul>
+        <li><strong>Regra 1: só existe lambda com interface funcional.</strong> A interface pode ter métodos <code>default</code> (com corpo), mas só <strong>um abstrato</strong>. Se você criar um segundo método abstrato numa interface com <code>@FunctionalInterface</code>, o compilador acusa erro. O <code>Predicate</code> do Java tem vários métodos, mas só o <code>test</code> é abstrato.</li>
+        <li><strong>Regra 2: o método abstrato é o contrato (o <em>function descriptor</em>).</strong> <code>boolean test(Car car)</code> diz que a lambda recebe um <code>Car</code> e devolve um <code>boolean</code>. Se você devolver outra coisa ou usar um tipo que não bate, o compilador reclama ("incompatible types").</li>
+        <li><strong>Formas da sintaxe</strong>, da mais longa para a mais curta:</li>
+      </ul>
+<pre><code>(Car car) -&gt; { return car.getColor().equals("green"); }  // com chaves: precisa de return e ;
+(Car car) -&gt; car.getColor().equals("green")              // expressão: o return é implícito
+car -&gt; car.getColor().equals("green")                    // o tipo é inferido; 1 parâmetro dispensa ()
+x -&gt; x.getColor().equals("green")                        // o nome não importa, o tipo sim
+() -&gt; "sem parâmetros"                                   // nenhum parâmetro: () obrigatório
+(car, aviao) -&gt; ...                                      // dois ou mais: () obrigatório</code></pre>
+
+      <h3>196 · Lambdas pt 02: Consumer</h3>
+      <p><code>Consumer&lt;T&gt;</code> recebe um <code>T</code>, <strong>executa uma operação e não retorna nada</strong> (<code>void accept(T t)</code>). O professor escreveu uma versão própria do <code>forEach</code>:</p>
+<pre><code>public class LambdaTest01 {
+    public static void main(String[] args) {
+        List&lt;String&gt; strings = List.of("William", "Suane", "Luffy", "Zoro");
+        List&lt;Integer&gt; integers = List.of(1, 2, 3, 4, 5);
+        forEach(strings, s -&gt; System.out.println(s));   // o jeito longo seria (String s) -&gt; ...
+        forEach(integers, i -&gt; System.out.println(i));  // aqui o parâmetro é Integer
+    }
+
+    private static &lt;T&gt; void forEach(List&lt;T&gt; list, Consumer&lt;T&gt; consumer) {
+        for (T e : list) {
+            consumer.accept(e);
+        }
+    }
+}</code></pre>
+      <p>O compilador sabe que <code>s</code> é <code>String</code> e que <code>i</code> é <code>Integer</code> pelo tipo da lista, por isso dá para tirar o tipo e os parênteses.</p>
+
+      <h3>197 · Lambdas pt 03: Function</h3>
+      <p><code>Function&lt;T, R&gt;</code> recebe um <code>T</code> e <strong>devolve um <code>R</code></strong> (<code>R apply(T t)</code>). Os dois tipos podem ser diferentes ou iguais. O método se chama <code>map</code> porque transforma cada elemento em outra coisa:</p>
+<pre><code>public class LambdaTest02 {
+    public static void main(String[] args) {
+        List&lt;String&gt; strings = List.of("Natsu", "Allucard");
+        List&lt;Integer&gt; integers = map(strings, (String s) -&gt; s.length()); // String → Integer
+        List&lt;String&gt; map = map(strings, s -&gt; s.toUpperCase());           // String → String
+        System.out.println(integers); // [5, 8]
+        System.out.println(map);      // [NATSU, ALLUCARD]
+    }
+
+    private static &lt;T, R&gt; List&lt;R&gt; map(List&lt;T&gt; list, Function&lt;T, R&gt; function) {
+        List&lt;R&gt; result = new ArrayList&lt;&gt;();
+        for (T e : list) {
+            R r = function.apply(e);
+            result.add(r);
+        }
+        return result;
+    }
+}</code></pre>
+      <p><strong>Predicate, Consumer e Function</strong> são as três interfaces funcionais mais famosas, e todas estão em <code>java.util.function</code>.</p>
+
+      <h3>198 · Method reference pt 01: método estático</h3>
+      <p>A regrinha: <strong>se a lambda só chama um método</strong>, dá para trocá-la por um <em>method reference</em> com <code>::</code> (sem parênteses). No <code>LambdaTest02</code>, <code>s -&gt; s.length()</code> virou <code>String::length</code>, e <code>s -&gt; s.toUpperCase()</code> virou <code>String::toUpperCase</code>. A documentação da Oracle lista <strong>quatro tipos</strong>, e cada aula mostra um. O primeiro é <strong>referência a método estático</strong>:</p>
+<pre><code>public class AnimeComparators {
+    public static int compareByTitle(Anime a1, Anime a2) {
+        return a1.getTitle().compareTo(a2.getTitle());
+    }
+    public static int compareByEpisodes(Anime a1, Anime a2) {
+        return Integer.compare(a1.getEpisodes(), a2.getEpisodes());
+    }
+}
+
+// Reference to a static method
+List&lt;Anime&gt; animeList = new ArrayList&lt;&gt;(List.of(new Anime("Berserk", 43),
+        new Anime("One piece", 900), new Anime("Naruto", 500)));
+animeList.sort((a1, a2) -&gt; a1.getTitle().compareTo(a2.getTitle())); // lambda
+animeList.sort(AnimeComparators::compareByTitle);                      // o mesmo, com method reference
+animeList.sort(AnimeComparators::compareByEpisodes);
+System.out.println(animeList); // Berserk (43), Naruto (500), One piece (900)</code></pre>
+      <p>Por que funciona? A lambda <strong>só se importa com o <em>target type</em></strong> (o contexto em que ela é usada). O <code>Comparator&lt;Anime&gt;</code> pede <code>int compare(Anime, Anime)</code>, e <code>compareByTitle</code> tem exatamente essa "forma": recebe dois <code>Anime</code> e retorna <code>int</code>. A classe <code>AnimeComparators</code> <strong>não</strong> implementa <code>Comparator</code>, e se você passar <code>new AnimeComparators()</code> para o <code>sort</code>, dá erro. Só dá para trocar por method reference quando há <strong>uma única chamada</strong>: <code>a1.getTitle().compareTo(...)</code> são duas, então essa lambda não vira <code>::</code> diretamente. O professor usou <code>Collections.sort(lista, ...)</code> e depois trocou por <code>lista.sort(...)</code>, que faz o mesmo.</p>
+
+      <h3>199 · Method reference pt 02: métodos não estáticos</h3>
+      <p><strong>Tipo 2: método de instância de um objeto específico</strong> (<code>objeto::metodo</code>). O método não é estático, então precisa de um objeto:</p>
+<pre><code>// em AnimeComparators
+public int compareByEpisodesNonStatic(Anime a1, Anime a2) {
+    return Integer.compare(a1.getEpisodes(), a2.getEpisodes());
+}
+
+//Reference to an instance method of a particular object
+AnimeComparators animeComparators = new AnimeComparators();
+animeList.sort(animeComparators::compareByEpisodesNonStatic);
+animeList.sort((a1, a2) -&gt; animeComparators.compareByEpisodesNonStatic(a1, a2)); // equivalente</code></pre>
+      <p><strong>Tipo 3: método de instância de um objeto arbitrário de um tipo</strong> (<code>Classe::metodoNaoEstatico</code>). Parece o tipo 1, mas o método <strong>não é estático</strong>: o <strong>primeiro parâmetro</strong> da lambda vira o objeto em que o método é chamado. O professor admite que a definição confunde ("na moral, é melhor você só aceitar, dói menos"):</p>
+<pre><code>//Reference to an instance method of an arbitrary object of a particular type
+List&lt;String&gt; list = new ArrayList&lt;&gt;(List.of("Rimuru", "Veldora", "Hikimaru"));
+list.sort(String::compareTo);           // (s1, s2) -&gt; s1.compareTo(s2)
+System.out.println(list);               // [Hikimaru, Rimuru, Veldora]
+
+Function&lt;String, Integer&gt; numStringToInteger = Integer::parseInt; // s -&gt; Integer.parseInt(s)
+Integer num = numStringToInteger.apply("10");
+System.out.println(num);                // 10
+
+BiPredicate&lt;List&lt;String&gt;, String&gt; checkName = List::contains;     // (l, n) -&gt; l.contains(n)
+System.out.println(checkName.test(list, "Rimuru")); // true</code></pre>
+      <p><code>BiPredicate&lt;T, U&gt;</code> é o <code>Predicate</code> com <strong>dois</strong> argumentos (<code>boolean test(T, U)</code>).</p>
+
+      <h3>200 · Method reference pt 03: construtor</h3>
+      <p><strong>Tipo 4: referência a construtor</strong> (<code>Classe::new</code>). Na aula 200 (o professor comenta que o curso anterior inteiro tinha 208 aulas) aparecem mais duas interfaces funcionais:</p>
+<pre><code>//Reference to a constructor
+Supplier&lt;AnimeComparators&gt; newAnimeComparators = AnimeComparators::new; // () -&gt; new AnimeComparators()
+AnimeComparators animeComparators = newAnimeComparators.get();          // o objeto nasce AQUI
+animeList.sort(animeComparators::compareByEpisodesNonStatic);
+
+BiFunction&lt;String, Integer, Anime&gt; animeBiFunction = (title, episodes) -&gt; new Anime(title, episodes);
+BiFunction&lt;String, Integer, Anime&gt; animeBiFunction2 = Anime::new;
+System.out.println(animeBiFunction2.apply("Super campeões", 36));
+// Anime{title='Super campeões', episodes=36}</code></pre>
+      <ul>
+        <li><strong><code>Supplier&lt;T&gt;</code></strong>: não recebe nada e <strong>retorna um <code>T</code></strong> (<code>T get()</code>). Serve para o construtor sem parâmetros.</li>
+        <li><strong><code>BiFunction&lt;T, U, R&gt;</code></strong>: recebe <code>T</code> e <code>U</code> e retorna <code>R</code> (<code>R apply(T, U)</code>). Serve para o construtor <code>Anime(String, int)</code>. Com <code>Supplier&lt;Anime&gt; = Anime::new</code> não compila, porque <code>Anime</code> não tem construtor sem parâmetros.</li>
+        <li><strong>A linha do <code>::new</code> não cria o objeto.</strong> O objeto só é criado quando você chama <code>get()</code> ou <code>apply(...)</code>.</li>
+      </ul>
+
+      <h3>201 · Optional pt 01</h3>
+      <p><code>Optional&lt;T&gt;</code> (Java 8) é um objeto que <strong>encapsula outro objeto, que pode existir ou não</strong>. A intenção é evitar <code>NullPointerException</code> (não todos, mas os de retorno). Em vez de um método retornar <code>null</code>, ele retorna um <code>Optional</code>, e quem chama é "forçado" a pensar no caso negativo: e se não encontrar?</p>
+<pre><code>Optional&lt;String&gt; o1 = Optional.of("Aha uhu o DevDojo é foda."); // valor obrigatório (null → NPE)
+Optional&lt;String&gt; o2 = Optional.ofNullable(null);               // pode ser null → vazio
+Optional&lt;String&gt; o3 = Optional.empty();                        // vazio de propósito
+System.out.println(o1); // Optional[Aha uhu o DevDojo é foda.]
+System.out.println(o2); // Optional.empty
+System.out.println(o3); // Optional.empty
+
+Optional&lt;String&gt; nameOptional = findName("William");
+String empty = nameOptional.orElse("EMPTY");              // o valor, ou "EMPTY" se vazio
+System.out.println(empty);                                // William
+nameOptional.ifPresent(s -&gt; System.out.println(s.toUpperCase())); // WILLIAM (Consumer)
+
+private static Optional&lt;String&gt; findName(String name) {
+    List&lt;String&gt; list = List.of("William", "DevDojo");
+    int i = list.indexOf(name);
+    if (i != -1) {                  // no repositório está "i != 1" (veja o Atenção)
+        return Optional.of(list.get(i));
+    }
+    return Optional.empty();
+}</code></pre>
+      <p>O professor primeiro mostra o problema: um <code>findName</code> que devolve <code>null</code> e, lá na frente, alguém faz <code>name.toUpperCase()</code>, estourando <code>NullPointerException</code>. Depois ele passa pela versão intermediária, que embrulha o resultado com <code>Optional.ofNullable(...)</code>, e chega à ideal: <code>Optional.of</code> quando encontra e <code>Optional.empty()</code> quando não encontra. O <code>orElse</code> é "um if/else em uma linha". O <code>ifPresent</code> recebe um <code>Consumer</code>, que não retorna nada, por isso o <code>println</code> fica dentro da lambda.</p>
+
+      <h3>202 · Optional pt 02: um repositório de mangás</h3>
+      <p><strong>Optional é para retorno de método.</strong> O IntelliJ avisa quando você usa em <strong>parâmetro</strong>, e também não é boa ideia como <strong>atributo</strong> de classe (<code>private Optional&lt;String&gt; name</code>): <code>Optional</code> <strong>não é <code>Serializable</code></strong>, e frameworks como o Hibernate/JPA esperam atributos serializáveis.</p>
+      <p>O repositório simula um banco de dados. Em vez de escrever um <code>findByTitle</code> e um <code>findById</code> com o mesmo <code>for</code>, o professor aplica o que aprendeu nas aulas 193–194 e passa a condição como <code>Predicate</code>:</p>
+<pre><code>public class MangaRepository {
+    private static List&lt;Manga&gt; mangas = List.of(new Manga(1, "Boku no Hero", 50), new Manga(2, "Overlord", 25));
+
+    public static Optional&lt;Manga&gt; findById(Integer id) {
+        return findBy(m -&gt; m.getId().equals(id));
+    }
+
+    public static Optional&lt;Manga&gt; findByTitle(String title) {
+        return findBy(m -&gt; m.getTitle().equals(title));
+    }
+
+    private static Optional&lt;Manga&gt; findBy(Predicate&lt;Manga&gt; predicate) {
+        Manga found = null;
+        for (Manga manga : mangas) {
+            if (predicate.test(manga)) {
+                found = manga;
+            }
+        }
+        return Optional.ofNullable(found);
+    }
+}</code></pre>
+      <p>E os três requisitos, cada um resolvido em uma linha de <code>Optional</code>:</p>
+<pre><code>// 1. Procure por título; se existir, atualize o título
+Optional&lt;Manga&gt; mangaByTitle = MangaRepository.findByTitle("Boku no Hero");
+mangaByTitle.ifPresent(m -&gt; m.setTitle("Boku no Hero 2"));
+System.out.println(mangaByTitle);
+// Optional[Manga{id=1, title='Boku no Hero 2', chapters=50}]
+
+// 2. Procure por id; se não existir, lance IllegalArgumentException
+Manga mangaById = MangaRepository.findById(2).orElseThrow(IllegalArgumentException::new);
+System.out.println(mangaById);
+// Manga{id=2, title='Overlord', chapters=25}
+
+// 3. Procure por título; se não existir, crie um novo
+Manga newManga = MangaRepository.findByTitle("Drifters")
+        .orElseGet(() -&gt; new Manga(3, "Drifters", 20));
+System.out.println(newManga);
+// Manga{id=3, title='Drifters', chapters=20}</code></pre>
+      <ul>
+        <li><strong><code>orElseThrow(Supplier)</code></strong> <strong>extrai</strong> o objeto do Optional (o tipo passa a ser <code>Manga</code>, não <code>Optional&lt;Manga&gt;</code>) ou lança a exceção criada pelo <code>Supplier</code>. Com <code>findById(3)</code>, sai <code>IllegalArgumentException</code>.</li>
+        <li><strong><code>orElse(valor)</code> × <code>orElseGet(Supplier)</code></strong>: os dois extraem o valor ou devolvem uma alternativa. O professor diz que "tanto faz" para esse exemplo.</li>
+        <li>A vantagem, segundo o professor, é a <strong>leitura</strong>: "encontra por título, se estiver presente, faz isso"; até quem não é desenvolvedor entende. Com <code>if/else</code> e <code>null</code> ficaria bem mais difícil de ler.</li>
+      </ul>
+
+      <h3>Atenção</h3>
+      <ul>
+        <li><strong>Lambda só com interface funcional</strong>: exatamente <strong>um</strong> método abstrato (os <code>default</code> e <code>static</code> não contam).</li>
+        <li><strong>Com chaves, <code>return</code> e <code>;</code> são obrigatórios</strong> (se o método retorna algo): <code>car -&gt; { return car.getYear() &lt; 2015; }</code>. Sem chaves, é uma expressão e não tem <code>return</code>.</li>
+        <li><strong>Method reference só quando a lambda faz uma única chamada</strong> com os mesmos argumentos, na mesma ordem. <code>s -&gt; s.length() + 1</code> ou <code>a1.getTitle().compareTo(a2.getTitle())</code> não viram <code>::</code> diretamente.</li>
+        <li><strong><code>Classe::metodo</code> pode ser o tipo 1 ou o tipo 3</strong>: depende de o método ser estático (tipo 1) ou de instância (tipo 3, o primeiro parâmetro vira o objeto). <strong>Correção:</strong> no repositório, <code>Integer::parseInt</code> está no arquivo do tipo 3 (objeto arbitrário), mas <code>parseInt</code> é <strong>estático</strong>, então é uma referência do tipo 1. <code>String::compareTo</code> e <code>List::contains</code> são tipo 3 de verdade.</li>
+        <li><strong><code>::new</code> e <code>::metodo</code> não executam nada</strong>: só criam a "função". A execução acontece em <code>get()</code>, <code>apply()</code>, <code>test()</code>, <code>accept()</code>.</li>
+        <li><strong><code>Optional.of(null)</code> lança <code>NullPointerException</code>.</strong> Se o valor pode ser <code>null</code>, use <code>ofNullable</code>.</li>
+        <li><strong>Correção: no repositório, o <code>findName</code> da aula 201 tem <code>if (i != 1)</code></strong>. O certo é <code>i != -1</code> (o <code>indexOf</code> devolve −1 quando não acha); no vídeo o professor chega a falar em "menos um". Com <code>!= 1</code>, <code>findName("DevDojo")</code> (índice 1) volta vazio e um nome inexistente estoura <code>IndexOutOfBoundsException</code> em <code>list.get(-1)</code>.</li>
+        <li><strong>Extra: <code>orElse</code> × <code>orElseGet</code> não é "tanto faz" sempre.</strong> O argumento do <code>orElse</code> é avaliado <strong>sempre</strong>, mesmo quando o Optional tem valor. Se for caro (<code>orElse(repository.save(...))</code>), use <code>orElseGet(() -&gt; ...)</code>, que só roda quando está vazio.</li>
+        <li><strong>Extra: evite <code>optional.get()</code> sem checar</strong>: com Optional vazio ele lança <code>NoSuchElementException</code>, que é o NPE com outro nome. Prefira <code>orElse</code>, <code>orElseThrow</code> e <code>ifPresent</code>.</li>
+        <li><strong>Extra: <code>findBy</code> não para no primeiro</strong> que encontra (não tem <code>break</code>), então devolve o último que casar. Com ids e títulos únicos não faz diferença.</li>
+      </ul>
+
+      <h3>Paralelo com PHP</h3>
+      <ul>
+        <li><strong>Lambda = closure/arrow function:</strong> <code>fn($s) =&gt; strlen($s)</code> ≈ <code>s -&gt; s.length()</code>. A diferença é que no PHP qualquer <code>callable</code> serve, e no Java a lambda precisa "caber" numa interface funcional (<code>Function&lt;String, Integer&gt;</code>), que é conferida na compilação.</li>
+        <li><strong>As interfaces nas funções de array/Collection:</strong> <code>Predicate</code> ≈ <code>array_filter</code> / <code>collect()-&gt;filter()</code>; <code>Consumer</code> ≈ <code>array_walk</code> / <code>-&gt;each()</code>; <code>Function</code> ≈ <code>array_map</code> / <code>-&gt;map()</code>; <code>Supplier</code> ≈ um <code>fn() =&gt; ...</code> sem parâmetros (como o <code>default</code> de <code>$request-&gt;input('x', fn() =&gt; ...)</code> ou o <code>Cache::remember</code>).</li>
+        <li><strong>Method reference ≈ <em>first-class callable</em> (PHP 8.1):</strong> <code>strlen(...)</code>, <code>Str::upper(...)</code> (estático), <code>$comparators-&gt;compareByEpisodes(...)</code> (objeto específico). Antes do 8.1: <code>'strlen'</code>, <code>[Classe::class, 'metodo']</code>, <code>[$obj, 'metodo']</code>. Não há um <code>Classe::new</code>: o equivalente é <code>fn(...$a) =&gt; new Anime(...$a)</code>.</li>
+        <li><strong>Optional ≈ o que o PHP faz com <code>?</code>:</strong> tipo de retorno <code>?Manga</code>, operador <code>??</code> (≈ <code>orElse</code>), <em>nullsafe</em> <code>$manga?-&gt;title</code> e o helper <code>optional($manga)-&gt;title</code> do Laravel. No Eloquent: <code>Manga::findOrFail($id)</code> ≈ <code>findById(id).orElseThrow(...)</code>, e <code>Manga::firstOrNew(['title' =&gt; 'Drifters'], [...])</code> ≈ o <code>orElseGet(() -&gt; new Manga(...))</code> do requisito 3.</li>
+      </ul>
+    </section>
+
+    <section id="flashcards">
+      <h2>Flashcards</h2>
+      <p style="color:var(--muted);margin-top:-6px">Toque no cartão para virar.</p>
+      <div id="flashcards-app"></div>
+    </section>
+
+    <section id="quiz">
+      <h2>Quiz</h2>
+      <div id="quiz-app"></div>
+    </section>
+
+    <section id="estudo">
+      <h2>Material de estudo</h2>
+
+      <h3>Mapa mental</h3>
+<pre><code>Programação funcional (195–202)
+├── Lambda (195): função anônima, concisa
+│   ├── precisa de interface funcional (1 método abstrato, @FunctionalInterface)
+│   ├── o método abstrato é o contrato (parâmetros + retorno)
+│   └── sintaxe: (Car car) -&gt; { return ...; } → car -&gt; expressão → () -&gt; ... → (a, b) -&gt; ...
+├── java.util.function
+│   ├── Predicate&lt;T&gt;      boolean test(T)       (195) → filter
+│   ├── Consumer&lt;T&gt;       void accept(T)        (196) → forEach, ifPresent
+│   ├── Function&lt;T,R&gt;     R apply(T)            (197) → map
+│   ├── Supplier&lt;T&gt;       T get()               (200) → ::new, orElseGet, orElseThrow
+│   ├── BiPredicate&lt;T,U&gt;  boolean test(T,U)     (199)
+│   └── BiFunction&lt;T,U,R&gt; R apply(T,U)          (200)
+├── Method reference (198–200): lambda que só chama 1 método → ::
+│   ├── 1 estático:              AnimeComparators::compareByTitle, Integer::parseInt
+│   ├── 2 objeto específico:     animeComparators::compareByEpisodesNonStatic
+│   ├── 3 objeto arbitrário:     String::compareTo, String::length, List::contains
+│   └── 4 construtor:            AnimeComparators::new (Supplier), Anime::new (BiFunction)
+└── Optional&lt;T&gt; (201–202): caixa com valor ou vazia (Java 8)
+    ├── criar: of (não null) · ofNullable · empty
+    ├── usar: orElse · orElseGet · orElseThrow · ifPresent
+    ├── só como retorno (não parâmetro, não atributo: não é Serializable)
+    └── MangaRepository: findBy(Predicate) → findById / findByTitle</code></pre>
+
+      <h3>Prática no seu WSL (20 minutos)</h3>
+<pre><code>cd ~/java-lab
+L=src/academy/devdojo/maratonajava/javacore/ZZClambdas
+mkdir -p $L/test
+
+cat > $L/test/FuncionalTest01.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.ZZClambdas.test;
+
+import java.util.*;
+import java.util.function.*;
+
+public class FuncionalTest01 {
+    static class Anime {
+        private final String title;
+        private final int episodes;
+        Anime(String title, int episodes) { this.title = title; this.episodes = episodes; }
+        String getTitle() { return title; }
+        int getEpisodes() { return episodes; }
+        @Override public String toString() { return title + "(" + episodes + ")"; }
+    }
+
+    static int compareByEpisodes(Anime a1, Anime a2) {
+        return Integer.compare(a1.getEpisodes(), a2.getEpisodes());
+    }
+
+    static &lt;T&gt; List&lt;T&gt; filter(List&lt;T&gt; list, Predicate&lt;T&gt; predicate) {
+        List&lt;T&gt; result = new ArrayList&lt;&gt;();
+        for (T e : list) if (predicate.test(e)) result.add(e);
+        return result;
+    }
+
+    static &lt;T&gt; void forEach(List&lt;T&gt; list, Consumer&lt;T&gt; consumer) {
+        for (T e : list) consumer.accept(e);
+    }
+
+    static &lt;T, R&gt; List&lt;R&gt; map(List&lt;T&gt; list, Function&lt;T, R&gt; function) {
+        List&lt;R&gt; result = new ArrayList&lt;&gt;();
+        for (T e : list) result.add(function.apply(e));
+        return result;
+    }
+
+    static Optional&lt;String&gt; findName(String name) {
+        List&lt;String&gt; list = List.of("William", "DevDojo");
+        int i = list.indexOf(name);
+        return i != -1 ? Optional.of(list.get(i)) : Optional.empty();
+    }
+
+    public static void main(String[] args) {
+        List&lt;String&gt; nomes = List.of("Natsu", "Allucard", "Rimuru");
+
+        // Predicate, Consumer, Function
+        System.out.println(filter(nomes, s -&gt; s.length() &gt; 5));        // ?
+        forEach(nomes, s -&gt; System.out.print(s.charAt(0)));             // ?
+        System.out.println();
+        System.out.println(map(nomes, String::length));                 // ?
+        System.out.println(map(nomes, String::toUpperCase));            // ?
+
+        // 1. método estático
+        List&lt;Anime&gt; animes = new ArrayList&lt;&gt;(List.of(new Anime("Berserk", 43),
+                new Anime("One piece", 900), new Anime("Naruto", 500)));
+        animes.sort(FuncionalTest01::compareByEpisodes);
+        System.out.println(animes);                                     // ?
+
+        // 2. objeto específico
+        String prefixo = "Anime: ";
+        Function&lt;String, String&gt; comPrefixo = prefixo::concat;         // s -&gt; prefixo.concat(s)
+        System.out.println(comPrefixo.apply("Berserk"));                // ?
+
+        // 3. objeto arbitrário de um tipo
+        List&lt;String&gt; ordenados = new ArrayList&lt;&gt;(List.of("Rimuru", "Veldora", "Hikimaru"));
+        ordenados.sort(String::compareTo);
+        System.out.println(ordenados);                                  // ?
+        BiPredicate&lt;List&lt;String&gt;, String&gt; contem = List::contains;
+        System.out.println(contem.test(ordenados, "Zoro"));             // ?
+
+        // 4. construtor
+        Supplier&lt;List&lt;String&gt;&gt; novaLista = ArrayList::new;
+        List&lt;String&gt; lista = novaLista.get();
+        lista.add("criada pelo Supplier");
+        System.out.println(lista);                                      // ?
+        BiFunction&lt;String, Integer, Anime&gt; criar = Anime::new;
+        System.out.println(criar.apply("Super campeões", 36));          // ?
+
+        // Optional
+        System.out.println(Optional.of("DevDojo"));                     // ?
+        System.out.println(Optional.ofNullable(null));                  // ?
+        System.out.println(findName("William").orElse("EMPTY"));        // ?
+        System.out.println(findName("Luffy").orElse("EMPTY"));          // ?
+        findName("DevDojo").ifPresent(s -&gt; System.out.println(s.toUpperCase())); // ?
+        findName("Zoro").ifPresent(s -&gt; System.out.println("nunca imprime"));
+        System.out.println(findName("Zoro").orElseGet(() -&gt; "gerado pelo Supplier")); // ?
+        try {
+            findName("Zoro").orElseThrow(IllegalArgumentException::new);
+        } catch (IllegalArgumentException e) {
+            System.out.println("Exceção: " + e.getClass().getSimpleName()); // ?
+        }
+    }
+}
+EOF
+
+javac -d out $(find src -name '*.java')
+java -cp out academy.devdojo.maratonajava.javacore.ZZClambdas.test.FuncionalTest01</code></pre>
+      <details>
+        <summary>Ver a saída esperada</summary>
+<pre><code>[Allucard, Rimuru]
+NAR
+[5, 8, 6]
+[NATSU, ALLUCARD, RIMURU]
+[Berserk(43), Naruto(500), One piece(900)]
+Anime: Berserk
+[Hikimaru, Rimuru, Veldora]
+false
+[criada pelo Supplier]
+Super campeões(36)
+Optional[DevDojo]
+Optional.empty
+William
+EMPTY
+DEVDOJO
+gerado pelo Supplier
+Exceção: IllegalArgumentException</code></pre>
+      </details>
+      <p><strong>Exercícios:</strong></p>
+      <ol>
+        <li>Numa interface sua com <code>@FunctionalInterface</code>, adicione um segundo método abstrato e leia o erro. Depois transforme-o em <code>default</code> com corpo: volta a compilar?</li>
+        <li>Troque <code>s -&gt; s.length() &gt; 5</code> por um method reference. Consegue? Por quê?</li>
+        <li>Escreva <code>Supplier&lt;Anime&gt; s = Anime::new;</code> e leia o erro. Qual interface funcional aceita o construtor de dois parâmetros?</li>
+        <li>Recrie o <code>MangaRepository</code> da aula 202 e faça <code>findById(3).orElseThrow(IllegalArgumentException::new)</code>. Depois troque por <code>orElseThrow(() -&gt; new IllegalArgumentException("Mangá 3 não existe"))</code>.</li>
+        <li>Coloque <code>System.out.println("criando...")</code> dentro de um método <code>criarPadrao()</code> e compare <code>findName("William").orElse(criarPadrao())</code> com <code>findName("William").orElseGet(() -&gt; criarPadrao())</code>. Quantas vezes "criando..." aparece em cada caso?</li>
+      </ol>
+
+      <h3>Glossário</h3>
+      <ul>
+        <li><strong>Programação funcional</strong>: estilo em que funções são passadas como valores (parâmetros, retornos).</li>
+        <li><strong>Lambda</strong>: função anônima, <code>(parâmetros) -&gt; corpo</code>, que implementa uma interface funcional.</li>
+        <li><strong>Interface funcional</strong>: interface com exatamente um método abstrato; <code>@FunctionalInterface</code> faz o compilador garantir isso.</li>
+        <li><strong>Function descriptor</strong>: a assinatura do método abstrato, que define parâmetros e retorno da lambda.</li>
+        <li><strong>Target type</strong>: o tipo esperado no contexto em que a lambda aparece (ex.: <code>Comparator&lt;Anime&gt;</code> no <code>sort</code>).</li>
+        <li><strong><code>Predicate&lt;T&gt;</code> / <code>BiPredicate&lt;T,U&gt;</code></strong>: recebem um ou dois valores e retornam <code>boolean</code>.</li>
+        <li><strong><code>Consumer&lt;T&gt;</code></strong>: recebe um valor e não retorna nada.</li>
+        <li><strong><code>Function&lt;T,R&gt;</code> / <code>BiFunction&lt;T,U,R&gt;</code></strong>: recebem um ou dois valores e retornam um <code>R</code>.</li>
+        <li><strong><code>Supplier&lt;T&gt;</code></strong>: não recebe nada e retorna um <code>T</code>.</li>
+        <li><strong>Method reference</strong>: atalho <code>Classe::metodo</code>, <code>objeto::metodo</code> ou <code>Classe::new</code> para uma lambda que só chama um método.</li>
+        <li><strong><code>Optional&lt;T&gt;</code></strong>: contêiner que tem um valor ou está vazio; usado em retornos para evitar <code>null</code>.</li>
+      </ul>
+
+      <h3>Revisão espaçada</h3>
+      <ul class="revisao">
+        <li><span class="dia">Dia 1</span><span>Todos os flashcards + a prática com previsões.</span></li>
+        <li><span class="dia">Dia 3</span><span>Quiz + exercícios 1 a 3.</span></li>
+        <li><span class="dia">Dia 7</span><span>Exercícios 4 e 5 + escrever de memória a tabela das 6 interfaces (nome, método, entrada, saída).</span></li>
+        <li><span class="dia">Dia 14</span><span>Flashcards que errou + questões discursivas.</span></li>
+      </ul>
+
+      <h3>Para aprofundar</h3>
+      <ul>
+        <li>Quais são as interfaces especializadas para primitivos (<code>IntPredicate</code>, <code>ToIntFunction</code>, <code>IntSupplier</code>...) e por que existem (autoboxing)?</li>
+        <li>O que fazem <code>Optional.map</code>, <code>flatMap</code>, <code>filter</code>, <code>ifPresentOrElse</code> (Java 9) e <code>isEmpty</code> (Java 11)?</li>
+        <li>Como os métodos <code>default</code> <code>and</code>, <code>or</code>, <code>negate</code> (Predicate) e <code>andThen</code>, <code>compose</code> (Function) combinam lambdas?</li>
+        <li>Como <code>Comparator.comparing(Anime::getTitle).thenComparing(Anime::getEpisodes)</code> substitui a classe <code>AnimeComparators</code>?</li>
+        <li>Por que uma lambda não gera um arquivo <code>$1.class</code> como a classe anônima (<code>invokedynamic</code>)?</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    window.AULA = {
+      flashcards: [
+        ["O que é uma lambda?", "Uma função anônima (sem nome, fora de classe) que implementa uma interface funcional, deixando o código conciso"],
+        ["O que é uma interface funcional?", "Uma interface com exatamente um método abstrato (pode ter default e static)"],
+        ["Para que serve @FunctionalInterface?", "Faz o compilador garantir que a interface tenha só um método abstrato"],
+        ["O que define o 'contrato' de uma lambda?", "O método abstrato da interface funcional: tipos dos parâmetros e do retorno (function descriptor)"],
+        ["Quando os parênteses do parâmetro são opcionais?", "Com exatamente um parâmetro e sem tipo explícito: car -> ..."],
+        ["Lambda sem parâmetros e com dois parâmetros?", "() -> ... e (a, b) -> ..."],
+        ["Quando a lambda precisa de return?", "Quando o corpo está entre chaves { } e o método retorna algo"],
+        ["Predicate<T>: método e retorno?", "boolean test(T t)"],
+        ["Consumer<T>: método e retorno?", "void accept(T t): executa uma operação e não retorna nada"],
+        ["Function<T, R>: método e retorno?", "R apply(T t): recebe T e devolve R (podem ser o mesmo tipo)"],
+        ["Supplier<T>: método e retorno?", "T get(): não recebe nada e retorna um T"],
+        ["O que são BiPredicate e BiFunction?", "As versões com dois argumentos: boolean test(T, U) e R apply(T, U)"],
+        ["Em que pacote ficam Predicate, Consumer, Function e Supplier?", "java.util.function"],
+        ["Quando uma lambda pode virar method reference?", "Quando ela só chama um único método, repassando os argumentos"],
+        ["Quais os 4 tipos de method reference?", "Método estático, método de instância de um objeto específico, método de instância de um objeto arbitrário de um tipo, construtor"],
+        ["s -> s.length() como method reference?", "String::length (tipo 3: objeto arbitrário)"],
+        ["AnimeComparators::compareByTitle precisa que a classe implemente Comparator?", "Não: basta o método ter a mesma forma de compare (dois Anime → int)"],
+        ["String::compareTo no sort equivale a qual lambda?", "(s1, s2) -> s1.compareTo(s2): o primeiro parâmetro vira o objeto"],
+        ["Anime::new com construtor (String, int) cabe em qual interface?", "BiFunction<String, Integer, Anime>"],
+        ["Supplier<X> s = X::new cria o objeto nessa linha?", "Não: o objeto só é criado em s.get()"],
+        ["Para que serve o Optional?", "Encapsular um valor que pode não existir, para evitar null e NullPointerException em retornos"],
+        ["Diferença entre Optional.of, ofNullable e empty?", "of exige valor não nulo (null → NPE); ofNullable aceita null (vira vazio); empty cria vazio"],
+        ["O que fazem orElse, orElseGet e orElseThrow?", "Extraem o valor; se vazio devolvem uma alternativa, a de um Supplier, ou lançam a exceção do Supplier"],
+        ["O que faz ifPresent?", "Executa um Consumer só se o Optional tiver valor"],
+        ["Onde (não) usar Optional?", "Use em retorno de método; evite em parâmetro e em atributo (não é Serializable)"]
+      ],
+      quiz: [
+        { tipo: 'multipla', pergunta: 'O que é obrigatório para usar uma lambda?',
+          opcoes: ['Uma classe abstrata', 'Uma interface funcional (um único método abstrato)', 'Uma interface com a anotação @Override', 'Um método estático'],
+          correta: 1,
+          explicacao: 'A lambda implementa o único método abstrato de uma interface funcional. @FunctionalInterface é opcional, mas faz o compilador conferir isso.' },
+        { tipo: 'vf', pergunta: 'Consumer<T> recebe um T e retorna um valor do mesmo tipo.',
+          correta: 1,
+          explicacao: 'Falso. Consumer tem void accept(T): executa uma operação e não retorna nada. Quem retorna é Function (R apply(T)).' },
+        { tipo: 'multipla', pergunta: 'Qual interface funcional representa "recebe uma String e devolve um Integer", como Integer.parseInt?',
+          opcoes: ['Predicate<String>', 'Consumer<String>', 'Supplier<Integer>', 'Function<String, Integer>'],
+          correta: 3,
+          explicacao: 'Function<T, R> recebe T e devolve R: Function<String, Integer> f = Integer::parseInt; f.apply("10") → 10.' },
+        { tipo: 'multipla', pergunta: 'Com o map genérico da aula 197, o que imprime System.out.println(map(List.of("Natsu", "Allucard"), String::length))?',
+          opcoes: ['[Natsu, Allucard]', '[5, 8]', '13', '[NATSU, ALLUCARD]'],
+          correta: 1,
+          explicacao: 'String::length equivale a s -> s.length(). "Natsu" tem 5 letras e "Allucard" tem 8, então a lista resultante é [5, 8].' },
+        { tipo: 'vf', pergunta: 'A lambda s -> s.length() + 1 pode ser trocada diretamente por String::length.',
+          correta: 1,
+          explicacao: 'Falso. Method reference só substitui uma lambda que faz uma única chamada de método. O "+ 1" é uma operação extra, e String::length daria o tamanho sem somar 1.' },
+        { tipo: 'multipla', pergunta: 'animeList.sort(animeComparators::compareByEpisodesNonStatic) é qual tipo de method reference?',
+          opcoes: ['Referência a método estático', 'Referência a método de instância de um objeto específico', 'Referência a método de instância de um objeto arbitrário de um tipo', 'Referência a construtor'],
+          correta: 1,
+          explicacao: 'O método não é estático e é chamado em um objeto já existente (animeComparators). Equivale a (a1, a2) -> animeComparators.compareByEpisodesNonStatic(a1, a2).' },
+        { tipo: 'multipla', pergunta: 'Em Supplier<AnimeComparators> s = AnimeComparators::new; quando o objeto AnimeComparators é criado?',
+          opcoes: ['Na própria linha do ::new', 'Quando s.get() é chamado', 'Quando o Supplier é coletado pelo garbage collector', 'Nunca, Supplier não cria objetos'],
+          correta: 1,
+          explicacao: 'O ::new só guarda a "receita" (() -> new AnimeComparators()). Cada chamada a get() executa o construtor e devolve um novo objeto.' },
+        { tipo: 'multipla', pergunta: 'O que acontece em Optional.of(null)?',
+          opcoes: ['Retorna Optional.empty', 'Retorna Optional[null]', 'Lança NullPointerException', 'Não compila'],
+          correta: 2,
+          explicacao: 'Optional.of exige um valor não nulo. Para algo que pode ser null, use Optional.ofNullable, que devolve Optional.empty.' },
+        { tipo: 'discursiva', pergunta: 'Explique os quatro tipos de method reference, com um exemplo de cada das aulas e a lambda equivalente.',
+          explicacao: '1) Método estático, Classe::metodoEstatico: AnimeComparators::compareByTitle ≈ (a1, a2) -> AnimeComparators.compareByTitle(a1, a2); Integer::parseInt ≈ s -> Integer.parseInt(s). 2) Método de instância de um objeto específico, objeto::metodo: animeComparators::compareByEpisodesNonStatic ≈ (a1, a2) -> animeComparators.compareByEpisodesNonStatic(a1, a2). 3) Método de instância de um objeto arbitrário de um tipo, Classe::metodoDeInstancia, em que o primeiro parâmetro vira o objeto: String::compareTo ≈ (s1, s2) -> s1.compareTo(s2); List::contains ≈ (l, n) -> l.contains(n); String::length ≈ s -> s.length(). 4) Construtor, Classe::new: AnimeComparators::new num Supplier ≈ () -> new AnimeComparators(); Anime::new numa BiFunction<String, Integer, Anime> ≈ (t, e) -> new Anime(t, e). Em todos, o compilador escolhe a forma pelo target type (a interface funcional esperada).' },
+        { tipo: 'discursiva', pergunta: 'Descreva os três requisitos do repositório de mangás da aula 202, como cada um foi resolvido com Optional, e por que o Optional deve ser usado só em retornos.',
+          explicacao: '1) Buscar por título e, se existir, atualizar o título: findByTitle("Boku no Hero").ifPresent(m -> m.setTitle("Boku no Hero 2")). 2) Buscar por id e, se não existir, lançar IllegalArgumentException: findById(2).orElseThrow(IllegalArgumentException::new), que extrai o Manga ou lança a exceção criada pelo Supplier. 3) Buscar por título e, se não existir, criar um novo: findByTitle("Drifters").orElseGet(() -> new Manga(3, "Drifters", 20)). O repositório evita duplicar o for com um findBy(Predicate<Manga>) que devolve Optional.ofNullable(found). O código fica legível sem if/else com null. O Optional é recomendado só como retorno porque em parâmetro ele complica a chamada (o IntelliJ avisa) e em atributo ele não é Serializable, o que causa problemas com frameworks como Hibernate/JPA. No PHP/Laravel, o equivalente seria ?Manga com ??, findOrFail e firstOrNew.' }
+      ]
+    };
+  </script>
+  <script src="../js/app.js"></script>
+</body>
+</html>
