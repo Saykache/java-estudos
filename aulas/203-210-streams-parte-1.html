@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>203–210 · Streams parte 1</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="topo">
+      <a class="voltar" href="../index.html">← Todas as aulas</a>
+      <h1>203–210 · Streams (parte 1)</h1>
+      <p>Do for com if e break ao pipeline declarativo: sorted, filter, limit, map, collect, distinct, count, flatMap, anyMatch/allMatch/noneMatch, findAny/findFirst, max e reduce · <a href="https://www.youtube.com/playlist?list=PL62G310vn6nFIsOCC0H-C2infYgwm8SWW" target="_blank" rel="noopener">playlist</a></p>
+    </header>
+
+    <nav class="abas">
+      <a href="#resumo">Resumo</a>
+      <a href="#flashcards">Flashcards</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#estudo">Material de estudo</a>
+    </nav>
+
+    <p class="aviso">Junta as aulas 203 a 205 (introdução), 206 e 207 (flatMap), 208 (finding and matching) e 209 e 210 (reduce). Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. <strong>A aula 206 não tem legenda no YouTube</strong>: a seção dela usa o código do professor e um resumo do vídeo enviado pelo autor. O código (pacote <code>javacore.ZZEstreams</code>, <code>LightNovel</code>, <code>StreamTest01</code> a <code>StreamTest08</code>) foi conferido no <a href="https://github.com/devdojobr/maratona-java-virado-no-jiraya" target="_blank" rel="noopener">repositório do professor</a>. Os itens marcados como "extra" não estão nos vídeos.</p>
+
+    <section id="resumo">
+      <h2>Resumo</h2>
+      <p><strong>Streams</strong> (Java 8, "uma das melhores coisas que adicionaram", segundo o professor) são uma forma <strong>declarativa</strong> de processar os dados de uma coleção, parecida com uma consulta num banco de dados: você diz <em>o que</em> quer (ordene, filtre, limite, pegue o título) em vez de <em>como</em> fazer (for, if, break). Uma frase do professor resume a diferença: <strong>coleções guardam dados no espaço</strong> (na memória), <strong>streams são uma sequência de elementos no tempo</strong>: não guardam nada, só fazem os dados passarem pelas operações.</p>
+<pre><code>List&lt;String&gt; titles = lightNovels.stream()         // fonte: coleção → Stream&lt;LightNovel&gt;
+        .sorted(Comparator.comparing(LightNovel::getTitle)) // intermediária
+        .filter(ln -&gt; ln.getPrice() &lt;= 4)                  // intermediária
+        .limit(3)                                           // intermediária
+        .map(LightNovel::getTitle)                          // intermediária: Stream&lt;String&gt;
+        .collect(Collectors.toList());                      // terminal: volta para uma coleção</code></pre>
+      <ul>
+        <li><strong>Operação intermediária</strong>: retorna outro <code>Stream</code>, então dá para encadear (<code>sorted</code>, <code>filter</code>, <code>limit</code>, <code>map</code>, <code>distinct</code>, <code>flatMap</code>).</li>
+        <li><strong>Operação terminal</strong>: fecha o stream e produz um resultado que não é stream: uma coleção (<code>collect</code>), um número (<code>count</code>), um <code>boolean</code> (<code>anyMatch</code>), um <code>Optional</code> (<code>findFirst</code>, <code>max</code>, <code>reduce</code>) ou nada (<code>forEach</code>).</li>
+      </ul>
+
+      <h3>203 · Introdução pt 01: o jeito antigo</h3>
+      <p>O domínio é uma <code>LightNovel</code> (os livros que geralmente dão origem aos animes) com <code>title</code> e <code>price</code>. Os requisitos:</p>
+<pre><code>//1. Order LightNovel by title
+//2. Retrieve the first 3 titles light novels with price less than 4
+public class StreamTest01 {
+    private static List&lt;LightNovel&gt; lightNovels = new ArrayList&lt;&gt;(List.of(
+            new LightNovel("Tensei Shittara", 8.99),
+            new LightNovel("Overlord", 3.99),
+            new LightNovel("Violet Evergarden", 5.99),
+            new LightNovel("No Game no life", 2.99),
+            new LightNovel("Fullmetal Alchemist", 5.99),
+            new LightNovel("Kumo desuga", 1.99),
+            new LightNovel("Monogatari", 4.00)
+    ));
+    public static void main(String[] args) {
+        lightNovels.sort(Comparator.comparing(LightNovel::getTitle));
+        List&lt;String&gt; titles = new ArrayList&lt;&gt;();
+        for (LightNovel lightNovel : lightNovels) {
+            if (lightNovel.getPrice() &lt;= 4) {
+                titles.add(lightNovel.getTitle());
+            }
+            if (titles.size() &gt;= 3) {
+                break;
+            }
+        }
+        System.out.println(lightNovels);
+        System.out.println(titles); // [Kumo desuga, Monogatari, No Game no life]
+    }
+}</code></pre>
+      <p><code>Comparator.comparing(LightNovel::getTitle)</code> é novidade: recebe uma <code>Function</code> que extrai a chave e monta o <code>Comparator</code> sozinho, sem escrever <code>(l1, l2) -&gt; l1.getTitle().compareTo(l2.getTitle())</code>. O código funciona, mas é cheio de blocos: <code>for</code>, dois <code>if</code>, <code>break</code> e uma lista auxiliar.</p>
+
+      <h3>204 · Introdução pt 02: o mesmo com stream</h3>
+<pre><code>List&lt;String&gt; titles = lightNovels.stream()
+        .sorted(Comparator.comparing(LightNovel::getTitle))
+        .filter(ln -&gt; ln.getPrice() &lt;= 4)
+        .limit(3)
+        .map(LightNovel::getTitle)
+        .collect(Collectors.toList());
+System.out.println(titles); // [Kumo desuga, Monogatari, No Game no life]</code></pre>
+      <ul>
+        <li><code>coleção.stream()</code> devolve um <code>Stream&lt;LightNovel&gt;</code>.</li>
+        <li><code>sorted(Comparator)</code> ordena. Se o tipo já implementa <code>Comparable</code>, dá para chamar <code>sorted()</code> sem argumento.</li>
+        <li><code>filter(Predicate)</code> mantém só quem passa no teste (a aula 194 de novo).</li>
+        <li><code>limit(3)</code> para depois de 3 elementos, o <code>break</code> do código antigo.</li>
+        <li><code>map(Function)</code> transforma cada elemento: <code>LightNovel</code> → <code>String</code>. "Quando você precisa de um atributo específico, você usa o <code>map</code>."</li>
+        <li><code>collect(Collectors.toList())</code> é a terminal: agrupa a sequência "do tempo de volta para o espaço", numa lista (poderia ser um <code>Set</code>, um <code>Map</code>...).</li>
+      </ul>
+      <p>O resultado é o mesmo, mas lido de cima para baixo como uma frase: ordena, filtra, limita a três, pega o título, junta numa lista. Uma pessoa nova no código entende isso mais fácil do que o <code>for</code> com <code>if</code> e <code>break</code>.</p>
+
+      <h3>205 · Introdução pt 03: forEach, count, distinct e o stream fechado</h3>
+<pre><code>// LightNovel ganhou equals e hashCode pelo title
+private static List&lt;LightNovel&gt; lightNovels = new ArrayList&lt;&gt;(List.of(
+        /* ...as mesmas... */
+        new LightNovel("Kumo desuga", 1.99),
+        new LightNovel("Kumo desuga", 1.99),   // repetido de propósito
+        new LightNovel("Monogatari", 4.00)));
+
+Stream&lt;LightNovel&gt; stream = lightNovels.stream();
+lightNovels.forEach(System.out::println);        // forEach da coleção (Iterable)
+
+long count = stream
+        .distinct()                              // remove repetidos (usa equals/hashCode)
+        .filter(ln -&gt; ln.getPrice() &lt;= 4)
+        .count();                                // terminal: long
+System.out.println(count);                       // 4 (sem o distinct, 5)</code></pre>
+      <ul>
+        <li><strong><code>forEach</code> existe em dois lugares</strong>: <code>stream().forEach(...)</code> é uma operação <strong>terminal</strong> do stream; <code>lista.forEach(...)</code> é só um método <code>default</code> da interface <code>Iterable</code>. Os dois recebem um <code>Consumer</code>. <strong>Não abra um stream só para imprimir</strong> (<code>lista.stream().forEach(...)</code>): é desperdício, use <code>lista.forEach(...)</code> direto.</li>
+        <li><strong><code>count()</code></strong> é terminal e devolve <code>long</code>. É o <code>SELECT COUNT(*) ... WHERE</code> do banco.</li>
+        <li><strong><code>distinct()</code></strong> é intermediária e compara com <code>equals</code>/<code>hashCode</code>. Na gravação o <code>distinct</code> não funcionou de primeira porque a <code>LightNovel</code> ainda não tinha <code>equals</code> e <code>hashCode</code>. O professor gerou os dois pelo <code>title</code>, e aí a contagem caiu de 5 para 4.</li>
+        <li><strong>Stream fechado não reabre</strong>: depois de uma operação terminal, usar o mesmo objeto <code>Stream</code> de novo lança <code>IllegalStateException</code> ("stream has already been operated upon or closed"). Para processar de novo, chame <code>lightNovels.stream()</code> outra vez. O professor conta que um candidato numa entrevista de emprego foi reprovado, entre outras coisas, por abrir streams sem necessidade.</li>
+      </ul>
+
+      <h3>206 · FlatMap pt 01: listas dentro de lista</h3>
+      <p><em>Esta aula não tem legenda no YouTube; o texto vem do código do professor e do resumo do vídeo.</em> O <code>flatMap</code> é uma operação intermediária para <strong>"achatar"</strong> estruturas aninhadas: coleções dentro de coleções. A DevDojo é uma lista de equipes, e cada equipe é uma lista de pessoas:</p>
+<pre><code>public class StreamTest04 {
+    public static void main(String[] args) {
+        List&lt;List&lt;String&gt;&gt; devdojo = new ArrayList&lt;&gt;();
+        List&lt;String&gt; graphicDesigners = List.of("Wildnei Suane", "Catarina Santos", "Sandy Carolina");
+        List&lt;String&gt; developers = List.of("William", "David", "Harisson");
+        List&lt;String&gt; students = List.of("Édipo", "Gustavo Lima", "Gustavo Mendes", "Guilherme");
+        devdojo.add(graphicDesigners);
+        devdojo.add(developers);
+        devdojo.add(students);
+
+        for (List&lt;String&gt; people : devdojo) {      // o jeito antigo: for dentro de for
+            for (String person : people) {
+                System.out.println(person);
+            }
+        }
+        System.out.println("----");
+        devdojo.stream().flatMap(Collection::stream).forEach(System.out::println);
+    }
+}</code></pre>
+      <ul>
+        <li><code>devdojo.stream()</code> é um <code>Stream&lt;List&lt;String&gt;&gt;</code>: cada elemento é uma lista inteira.</li>
+        <li><strong><code>map</code></strong> transforma cada elemento em <strong>um</strong> outro objeto. Com <code>map(Collection::stream)</code>, você teria um <code>Stream&lt;Stream&lt;String&gt;&gt;</code>: streams dentro de stream.</li>
+        <li><strong><code>flatMap</code></strong> transforma cada elemento em um <strong>stream</strong> e <strong>concatena</strong> todos esses streams num único <code>Stream&lt;String&gt;</code> plano, com os 10 nomes. O resultado impresso é o mesmo do <code>for</code> duplo.</li>
+        <li>Com o stream plano dá para filtrar ou contar os elementos que estavam "aninhados": <code>devdojo.stream().flatMap(Collection::stream).filter(p -&gt; p.startsWith("G")).count()</code> → 3.</li>
+      </ul>
+
+      <h3>207 · FlatMap pt 02: palavras em letras</h3>
+<pre><code>List&lt;String&gt; words = List.of("Gomu", "Gomu", "No", "Mi");
+String[] letters = words.get(0).split("");               // split("") separa letra por letra
+System.out.println(Arrays.toString(letters));             // [G, o, m, u]
+
+List&lt;String[]&gt; collect = words.stream().map(w -&gt; w.split("")).collect(Collectors.toList());
+Stream&lt;String&gt; stream = Arrays.stream(letters);          // array → stream
+List&lt;String&gt; letters2 = words.stream()
+        .map(w -&gt; w.split(""))   //Stream&lt;String[]&gt;
+        .flatMap(Arrays::stream) // Stream&lt;String&gt;
+        .collect(Collectors.toList());
+System.out.println(letters2); // [G, o, m, u, G, o, m, u, N, o, M, i]</code></pre>
+      <p>Só com <code>map</code>, o resultado é uma <code>List&lt;String[]&gt;</code>: uma lista de arrays, uma estrutura interna que precisa ser extraída. O truque é <code>Arrays.stream(array)</code>, que transforma um array em stream. O <code>flatMap(Arrays::stream)</code> faz isso para cada array e junta tudo. A dica do professor: <strong>quando vir algo aninhado, muito provavelmente você precisa de <code>flatMap</code></strong>.</p>
+
+      <h3>208 · Finding and matching</h3>
+<pre><code>// Overlord agora custa 10.99
+System.out.println(lightNovels.stream().anyMatch(ln -&gt; ln.getPrice() &gt; 9));  // true
+System.out.println(lightNovels.stream().allMatch(ln -&gt; ln.getPrice() &gt; 0));  // true
+System.out.println(lightNovels.stream().noneMatch(ln -&gt; ln.getPrice() &lt; 0)); // true
+
+lightNovels.stream()
+        .filter(ln -&gt; ln.getPrice() &gt; 3)
+        .findAny()                                  // qualquer um: Optional
+        .ifPresent(System.out::println);
+
+lightNovels.stream()
+        .filter(ln -&gt; ln.getPrice() &gt; 3)
+        .sorted(Comparator.comparing(LightNovel::getPrice).reversed())
+        .findFirst()                                // o primeiro, respeitando a ordem
+        .ifPresent(System.out::println);            // Overlord 10.99
+
+lightNovels.stream()
+        .filter(ln -&gt; ln.getPrice() &gt; 3)
+        .max(Comparator.comparing(LightNovel::getPrice))
+        .ifPresent(System.out::println);            // Overlord 10.99</code></pre>
+      <ul>
+        <li><strong><code>anyMatch</code></strong>: existe <strong>algum</strong> que satisfaz? <strong><code>allMatch</code></strong>: <strong>todos</strong> satisfazem? <strong><code>noneMatch</code></strong>: <strong>nenhum</strong> satisfaz? Todos recebem um <code>Predicate</code> e devolvem <code>boolean</code> (terminais). Com <code>&gt; 10</code> no lugar de <code>&gt; 9</code>, o <code>anyMatch</code> dá <code>false</code>.</li>
+        <li>O <code>noneMatch</code> embaralha a cabeça (o professor admite que também se confunde): <code>noneMatch(p &lt; 0)</code> é <code>true</code> porque nenhum preço é negativo; <code>noneMatch(p &gt; 0)</code> é <code>false</code> porque todos são positivos.</li>
+        <li><strong><code>findAny</code></strong>: devolve qualquer elemento, <strong>sem garantia de qual</strong>. Use quando não se importa com a ordem. Num stream sequencial costuma vir sempre o primeiro, mas isso não é garantido.</li>
+        <li><strong><code>findFirst</code></strong>: o primeiro, respeitando a ordem da fonte (ou a do <code>sorted</code>). Sem ordenar, dá o primeiro da lista com preço &gt; 3 (<code>Tensei Shittara</code>). Ordenando por preço dá <code>Monogatari</code> (4.00). Com <code>.reversed()</code>, dá <code>Overlord</code>.</li>
+        <li>Como pode não haver resultado, <code>findAny</code>, <code>findFirst</code> e <code>max</code> <strong>devolvem <code>Optional</code></strong>. Daí o <code>ifPresent</code> (aulas 201–202).</li>
+        <li><strong><code>max(Comparator)</code></strong> faz o mesmo que ordenar ao contrário e pegar o primeiro, sem precisar ordenar tudo. Existe também <code>min</code>.</li>
+      </ul>
+
+      <h3>209 · Reduce pt 01</h3>
+      <p><code>reduce</code> é uma operação terminal que <strong>aplica repetidamente uma operação aos elementos</strong> até sobrar <strong>um resultado único</strong>: soma, produto, maior... Ela recebe um <code>BinaryOperator&lt;T&gt;</code> (dois <code>T</code> entram, um <code>T</code> sai).</p>
+<pre><code>List&lt;Integer&gt; integers = List.of(1, 2, 3, 4, 5, 6);
+
+integers.stream().reduce((x, y) -&gt; x + y).ifPresent(System.out::println); // 21 (Optional)
+System.out.println(integers.stream().reduce(0, (x, y) -&gt; x + y));         // 21 (valor inicial 0)
+
+integers.stream().reduce(Integer::sum).ifPresent(System.out::println);      // 21
+System.out.println(integers.stream().reduce(0, Integer::sum));              // 21
+
+integers.stream().reduce((x, y) -&gt; x * y).ifPresent(System.out::println);  // 720
+System.out.println(integers.stream().reduce(1, (x, y) -&gt; x * y));          // 720 (com 0 daria 0!)
+
+integers.stream().reduce((x, y) -&gt; x &gt; y ? x : y).ifPresent(System.out::println); // 6
+System.out.println(integers.stream().reduce(0, Integer::max));                    // 6</code></pre>
+      <ul>
+        <li><strong>Sem valor inicial</strong>, retorna <code>Optional</code>, porque a lista pode estar vazia.</li>
+        <li><strong>Com valor inicial (a identidade)</strong>, retorna o valor direto: se a lista estiver vazia, devolve a própria identidade. Na soma a identidade é <code>0</code>; na multiplicação é <strong><code>1</code></strong>. Na gravação o professor pôs <code>0</code> na multiplicação e o resultado deu 0 ("passar vergonha"). Colocando <code>1</code> na soma, o resultado vira 22.</li>
+        <li><code>Integer::sum</code> e <code>Integer::max</code> são method references que já são <code>BinaryOperator</code>. O <code>Integer</code> não tem um método de multiplicar, por isso a multiplicação fica na lambda.</li>
+        <li><code>reduce(10, Integer::max)</code> devolve 10 se nenhum elemento for maior: o valor inicial entra na conta, então só use se fizer sentido na regra de negócio.</li>
+      </ul>
+
+      <h3>210 · Reduce pt 02: objetos e streams de primitivos</h3>
+<pre><code>// soma dos preços acima de 3 (lista da aula 208)
+lightNovels.stream()
+        .map(LightNovel::getPrice)          // Stream&lt;Double&gt; (autoboxing)
+        .filter(price -&gt; price &gt; 3)
+        .reduce(Double::sum)
+        .ifPresent(System.out::println);    // 35.96
+
+double sum = lightNovels.stream()           // Stream&lt;LightNovel&gt;
+        .mapToDouble(LightNovel::getPrice)  // DoubleStream (primitivo)
+        .filter(price -&gt; price &gt; 3)
+        .sum();                             // double direto, sem Optional</code></pre>
+      <ul>
+        <li>Com objetos, primeiro use o <code>map</code> para extrair o atributo que você quer reduzir. Dá para filtrar antes ou depois do <code>map</code>, e o IntelliJ sugere trocar a ordem.</li>
+        <li><code>map(LightNovel::getPrice)</code> gera <code>Stream&lt;Double&gt;</code>: cada <code>double</code> vira um <code>Double</code> (<em>boxing</em>) e volta na soma (<em>unboxing</em>). É permitido, mas numa aplicação de alta performance esse vai e volta custa.</li>
+        <li><strong>Streams de primitivos</strong>: <code>IntStream</code>, <code>LongStream</code> e <code>DoubleStream</code> (não existe <code>FloatStream</code>, <code>CharStream</code> etc.). Você chega neles com <code>mapToInt</code>, <code>mapToLong</code> e <code>mapToDouble</code>, e eles já têm operações numéricas prontas, como <code>sum()</code>, que devolve o primitivo direto.</li>
+      </ul>
+
+      <h3>Atenção</h3>
+      <ul>
+        <li><strong>Nada acontece sem uma operação terminal.</strong> As intermediárias são <em>lazy</em>: só montam o pipeline. Um <code>lista.stream().filter(...)</code> sozinho não filtra nada.</li>
+        <li><strong>Stream não é reutilizável</strong>: depois da terminal, usar o mesmo objeto dá <code>IllegalStateException</code>. Crie outro com <code>lista.stream()</code>.</li>
+        <li><strong>Stream não altera a coleção de origem.</strong> <code>stream().sorted()</code> não ordena a lista; <code>lista.sort(...)</code> ordena (aula 203).</li>
+        <li><strong>A ordem das operações importa</strong>: <code>limit(3)</code> antes do <code>filter</code> pega os 3 primeiros e depois filtra (pode sobrar menos de 3), e <code>sorted</code> depois do <code>limit</code> ordena só esses 3.</li>
+        <li><strong><code>distinct</code> depende de <code>equals</code>/<code>hashCode</code></strong> (aulas 161–164): sem eles, dois objetos iguais continuam "diferentes".</li>
+        <li><strong><code>findAny</code> não garante qual elemento vem</strong>; <code>findFirst</code> garante o primeiro da ordem.</li>
+        <li><strong>A identidade do <code>reduce</code> tem de ser neutra</strong>: 0 para soma, 1 para produto. Senão o resultado sai errado.</li>
+        <li><strong>Extra: <code>Collectors.toList()</code> × <code>.toList()</code></strong>: a partir do Java 16 existe <code>stream.toList()</code>, que devolve uma lista <strong>imutável</strong>. O <code>Collectors.toList()</code> da aula devolve (na prática) um <code>ArrayList</code> mutável.</li>
+        <li><strong>Extra: <code>limit</code> e <code>findFirst</code> fazem curto-circuito</strong>: as operações seguintes param assim que o resultado é conhecido, assim como o <code>break</code> do código da aula 203. <code>anyMatch</code>, <code>allMatch</code> e <code>noneMatch</code> também param cedo.</li>
+      </ul>
+
+      <h3>Paralelo com PHP</h3>
+      <ul>
+        <li><strong>Stream ≈ Collection do Laravel</strong>: <code>collect($novels)-&gt;sortBy('title')-&gt;filter(fn($n) =&gt; $n-&gt;price &lt;= 4)-&gt;take(3)-&gt;pluck('title')-&gt;values()-&gt;all()</code> é a aula 204 em Laravel. O mapeamento: <code>sorted</code> ≈ <code>sortBy</code>, <code>filter</code> ≈ <code>filter</code>, <code>limit</code> ≈ <code>take</code>, <code>map(getTitle)</code> ≈ <code>pluck</code>/<code>map</code>, <code>collect(toList())</code> ≈ <code>all()</code>/<code>toArray()</code>, <code>count</code> ≈ <code>count</code>, <code>distinct</code> ≈ <code>unique</code>.</li>
+        <li><strong>A diferença importante</strong>: a <code>Collection</code> do Laravel executa cada passo na hora e cria uma coleção nova a cada método (<em>eager</em>). O stream do Java é <em>lazy</em>, só roda na terminal, e é de uso único. A <code>LazyCollection</code> do Laravel (<code>cursor()</code>, <code>LazyCollection::make</code>) é a mais parecida.</li>
+        <li><strong>flatMap</strong> ≈ <code>-&gt;flatMap(fn($equipe) =&gt; $equipe)</code> ou <code>-&gt;flatten(1)</code> / <code>-&gt;collapse()</code>. <code>str_split("Gomu")</code> ≈ <code>"Gomu".split("")</code>.</li>
+        <li><strong>anyMatch/allMatch/noneMatch</strong> ≈ <code>-&gt;contains(fn...)</code> / <code>-&gt;every(fn...)</code> / <code>! -&gt;contains(fn...)</code>. <code>findFirst</code> ≈ <code>-&gt;first(fn...)</code> (que devolve <code>null</code>, não Optional). <code>max(Comparator)</code> ≈ <code>-&gt;sortByDesc('price')-&gt;first()</code>; o <code>-&gt;max('price')</code> do Laravel devolve só o valor.</li>
+        <li><strong>reduce</strong> ≈ <code>array_reduce($ints, fn($x, $y) =&gt; $x + $y, 0)</code> / <code>-&gt;reduce(...)</code>. O terceiro argumento é a identidade. <code>mapToDouble(...).sum()</code> ≈ <code>-&gt;sum('price')</code> ou <code>array_sum(array_column(...))</code>.</li>
+      </ul>
+    </section>
+
+    <section id="flashcards">
+      <h2>Flashcards</h2>
+      <p style="color:var(--muted);margin-top:-6px">Toque no cartão para virar.</p>
+      <div id="flashcards-app"></div>
+    </section>
+
+    <section id="quiz">
+      <h2>Quiz</h2>
+      <div id="quiz-app"></div>
+    </section>
+
+    <section id="estudo">
+      <h2>Material de estudo</h2>
+
+      <h3>Mapa mental</h3>
+<pre><code>Streams parte 1 (Java 8)
+├── Ideia (203–204): declarativo, "como um SELECT"
+│   ├── coleção = dados no espaço · stream = sequência no tempo
+│   └── fonte (lista.stream()) → intermediárias → 1 terminal
+├── Intermediárias (retornam Stream, lazy)
+│   ├── sorted(Comparator.comparing(LightNovel::getTitle))
+│   ├── filter(Predicate) · limit(n) · distinct() (equals/hashCode)
+│   ├── map(Function) → extrai/transforma
+│   └── flatMap (206–207): cada elemento → stream, tudo concatenado
+│       ├── List&lt;List&lt;String&gt;&gt; → flatMap(Collection::stream)
+│       └── Stream&lt;String[]&gt; → flatMap(Arrays::stream)
+├── Terminais (fecham o stream: não reutilize → IllegalStateException)
+│   ├── collect(Collectors.toList()) · forEach(Consumer) · count() → long
+│   ├── anyMatch / allMatch / noneMatch (208) → boolean
+│   ├── findAny / findFirst / max / min (208) → Optional
+│   └── reduce (209–210): BinaryOperator
+│       ├── reduce(op) → Optional · reduce(identidade, op) → valor
+│       └── identidade: 0 soma, 1 produto
+└── Primitivos (210): mapToInt/Long/Double → IntStream/LongStream/DoubleStream
+    └── sum() direto, sem boxing</code></pre>
+
+      <h3>Prática no seu WSL (20 minutos)</h3>
+<pre><code>cd ~/java-lab
+S=src/academy/devdojo/maratonajava/javacore/ZZEstreams
+mkdir -p $S/test
+
+cat > $S/test/StreamsPraticaTest01.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.ZZEstreams.test;
+
+import java.util.*;
+import java.util.stream.*;
+
+public class StreamsPraticaTest01 {
+    static class LightNovel {
+        private final String title;
+        private final double price;
+        LightNovel(String title, double price) { this.title = title; this.price = price; }
+        String getTitle() { return title; }
+        double getPrice() { return price; }
+        @Override public boolean equals(Object o) {
+            return o instanceof LightNovel &amp;&amp; title.equals(((LightNovel) o).title);
+        }
+        @Override public int hashCode() { return title.hashCode(); }
+        @Override public String toString() { return title + "(" + price + ")"; }
+    }
+
+    public static void main(String[] args) {
+        List&lt;LightNovel&gt; novels = List.of(
+                new LightNovel("Tensei Shittara", 8.99),
+                new LightNovel("Overlord", 3.99),
+                new LightNovel("Violet Evergarden", 5.99),
+                new LightNovel("No Game no life", 2.99),
+                new LightNovel("Fullmetal Alchemist", 5.99),
+                new LightNovel("Kumo desuga", 1.99),
+                new LightNovel("Kumo desuga", 1.99),
+                new LightNovel("Monogatari", 4.00));
+
+        // 203–205
+        System.out.println(novels.stream()
+                .sorted(Comparator.comparing(LightNovel::getTitle))
+                .filter(ln -&gt; ln.getPrice() &lt;= 4)
+                .limit(3)
+                .map(LightNovel::getTitle)
+                .collect(Collectors.toList()));                                  // ?
+        System.out.println(novels.stream()
+                .sorted(Comparator.comparing(LightNovel::getTitle))
+                .distinct()
+                .filter(ln -&gt; ln.getPrice() &lt;= 4)
+                .limit(3)
+                .map(LightNovel::getTitle)
+                .collect(Collectors.toList()));                                  // ?
+        System.out.println(novels.stream().filter(ln -&gt; ln.getPrice() &lt;= 4).count());            // ?
+        System.out.println(novels.stream().distinct().filter(ln -&gt; ln.getPrice() &lt;= 4).count()); // ?
+
+        // 206–207
+        List&lt;List&lt;String&gt;&gt; devdojo = List.of(
+                List.of("Wildnei Suane", "Catarina Santos"),
+                List.of("William", "David"));
+        System.out.println(devdojo.stream()
+                .flatMap(Collection::stream)
+                .filter(p -&gt; p.startsWith("W"))
+                .collect(Collectors.toList()));                                  // ?
+        System.out.println(Stream.of("Gomu", "Gomu", "No", "Mi")
+                .map(w -&gt; w.split(""))
+                .flatMap(Arrays::stream)
+                .distinct()
+                .collect(Collectors.joining()));                                 // ?
+
+        // 208
+        System.out.println(novels.stream().anyMatch(ln -&gt; ln.getPrice() &gt; 8));   // ?
+        System.out.println(novels.stream().allMatch(ln -&gt; ln.getPrice() &lt; 5));   // ?
+        System.out.println(novels.stream().noneMatch(ln -&gt; ln.getPrice() &gt; 10)); // ?
+        novels.stream().filter(ln -&gt; ln.getPrice() &gt; 5).findFirst().ifPresent(System.out::println); // ?
+        novels.stream().max(Comparator.comparing(LightNovel::getPrice)).ifPresent(System.out::println); // ?
+        novels.stream().min(Comparator.comparing(LightNovel::getPrice)).ifPresent(System.out::println); // ?
+
+        // 209–210
+        List&lt;Integer&gt; ints = List.of(1, 2, 3, 4, 5, 6);
+        System.out.println(ints.stream().reduce(0, Integer::sum));               // ?
+        System.out.println(ints.stream().reduce(1, (x, y) -&gt; x * y));           // ?
+        System.out.println(ints.stream().reduce(Integer::max));                  // ?
+        System.out.println(new ArrayList&lt;Integer&gt;().stream().reduce(Integer::sum)); // ?
+        System.out.println(novels.stream()
+                .mapToDouble(LightNovel::getPrice)
+                .filter(p -&gt; p &gt; 3)
+                .sum());                                                         // ?
+
+        // stream fechado
+        Stream&lt;LightNovel&gt; stream = novels.stream();
+        System.out.println(stream.count());                                      // ?
+        try {
+            stream.count();
+        } catch (IllegalStateException e) {
+            System.out.println("IllegalStateException: " + e.getMessage());     // ?
+        }
+    }
+}
+EOF
+
+javac -d out $(find src -name '*.java')
+java -cp out academy.devdojo.maratonajava.javacore.ZZEstreams.test.StreamsPraticaTest01</code></pre>
+      <details>
+        <summary>Ver a saída esperada</summary>
+<pre><code>[Kumo desuga, Kumo desuga, Monogatari]
+[Kumo desuga, Monogatari, No Game no life]
+5
+4
+[Wildnei Suane, William]
+GomuNMi
+true
+false
+true
+Tensei Shittara(8.99)
+Tensei Shittara(8.99)
+Kumo desuga(1.99)
+21
+720
+Optional[6]
+Optional.empty
+28.96
+8
+IllegalStateException: stream has already been operated upon or closed</code></pre>
+      </details>
+      <p>Repare nas duas primeiras linhas: sem <code>distinct</code>, o "Kumo desuga" repetido ocupa duas das três vagas do <code>limit(3)</code>.</p>
+      <p><strong>Exercícios:</strong></p>
+      <ol>
+        <li>Troque a ordem de <code>limit(3)</code> e <code>filter</code> na primeira consulta. O resultado muda? Por quê?</li>
+        <li>Comente o <code>equals</code> e o <code>hashCode</code> da <code>LightNovel</code> e rode de novo. Quais linhas mudam?</li>
+        <li>Com a lista <code>devdojo</code> completa da aula 206 (três equipes), conte quantas pessoas começam com "G" usando <code>flatMap</code>.</li>
+        <li>Calcule a média dos preços com <code>mapToDouble(...).average()</code>. Que tipo ele devolve e por quê?</li>
+        <li>Escreva com <code>reduce</code> a concatenação de todos os títulos separados por " | ". Depois faça o mesmo com <code>Collectors.joining(" | ")</code>.</li>
+      </ol>
+
+      <h3>Glossário</h3>
+      <ul>
+        <li><strong>Stream</strong>: sequência de elementos de uma fonte que passa por um pipeline de operações; não armazena dados.</li>
+        <li><strong>Pipeline</strong>: fonte + zero ou mais operações intermediárias + uma operação terminal.</li>
+        <li><strong>Operação intermediária</strong>: devolve outro <code>Stream</code> e é <em>lazy</em> (<code>filter</code>, <code>map</code>, <code>sorted</code>...).</li>
+        <li><strong>Operação terminal</strong>: dispara o processamento, fecha o stream e produz o resultado (<code>collect</code>, <code>count</code>, <code>reduce</code>...).</li>
+        <li><strong>Declarativo</strong>: descrever o que se quer, não o passo a passo (imperativo).</li>
+        <li><strong><code>Collectors</code></strong>: fábrica de coletores para o <code>collect</code> (<code>toList</code>, <code>toSet</code>, <code>joining</code>...).</li>
+        <li><strong><code>flatMap</code></strong>: mapeia cada elemento para um stream e concatena todos num único stream.</li>
+        <li><strong>Curto-circuito</strong>: operação que pode terminar sem percorrer tudo (<code>limit</code>, <code>findFirst</code>, <code>anyMatch</code>).</li>
+        <li><strong><code>reduce</code></strong>: combina todos os elementos num único resultado com um <code>BinaryOperator</code>.</li>
+        <li><strong>Identidade</strong>: valor inicial neutro do <code>reduce</code> (0 na soma, 1 no produto).</li>
+        <li><strong><code>IntStream</code>/<code>LongStream</code>/<code>DoubleStream</code></strong>: streams de primitivos, sem boxing, com <code>sum</code>, <code>average</code>, <code>max</code>...</li>
+      </ul>
+
+      <h3>Revisão espaçada</h3>
+      <ul class="revisao">
+        <li><span class="dia">Dia 1</span><span>Todos os flashcards + a prática com previsões.</span></li>
+        <li><span class="dia">Dia 3</span><span>Quiz + exercícios 1 a 3.</span></li>
+        <li><span class="dia">Dia 7</span><span>Exercícios 4 e 5 + reescrever o <code>StreamTest01</code> (for/if/break) como stream, de memória.</span></li>
+        <li><span class="dia">Dia 14</span><span>Flashcards que errou + questões discursivas.</span></li>
+      </ul>
+
+      <h3>Para aprofundar</h3>
+      <ul>
+        <li>O que é <em>lazy evaluation</em>? Coloque <code>peek(System.out::println)</code> entre as operações e veja em que ordem os elementos passam (um por um pelo pipeline todo, não etapa por etapa).</li>
+        <li>O que faz <code>parallelStream()</code> e por que o <code>findAny</code> existe justamente por causa dele?</li>
+        <li>Como <code>IntStream.range(0, 10)</code> e <code>Stream.iterate</code> criam streams sem coleção?</li>
+        <li>Qual a versão de <code>reduce</code> com três argumentos (identidade, acumulador, combinador) e quando ela é necessária?</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    window.AULA = {
+      flashcards: [
+        ["O que é um Stream?", "Uma sequência de elementos que passa por operações de forma declarativa; não guarda dados"],
+        ["Coleção × Stream, na frase do professor?", "Coleção: dados no espaço (memória). Stream: sequência de elementos no tempo"],
+        ["Como obter um Stream de uma lista?", "lista.stream()"],
+        ["O que é uma operação intermediária?", "Uma operação que retorna outro Stream e pode ser encadeada (filter, map, sorted, limit, distinct, flatMap)"],
+        ["O que é uma operação terminal?", "Uma operação que fecha o stream e produz o resultado (collect, count, forEach, reduce, anyMatch, findFirst...)"],
+        ["O que faz Comparator.comparing(LightNovel::getTitle)?", "Cria um Comparator que compara pela chave extraída pela Function (o título)"],
+        ["Para que serve o map no stream?", "Transformar cada elemento, por exemplo extrair um atributo: LightNovel → String"],
+        ["O que faz limit(3)?", "Deixa passar no máximo 3 elementos (o break do código antigo)"],
+        ["Como juntar o resultado numa lista?", "collect(Collectors.toList())"],
+        ["O que count() devolve?", "Um long com a quantidade de elementos"],
+        ["Do que depende o distinct()?", "De equals e hashCode"],
+        ["O que acontece ao reutilizar um stream já fechado?", "IllegalStateException: stream has already been operated upon or closed"],
+        ["lista.forEach × lista.stream().forEach?", "O primeiro é método default de Iterable; o segundo é uma terminal de stream. Para só percorrer, use lista.forEach"],
+        ["map × flatMap?", "map: cada elemento vira um objeto. flatMap: cada elemento vira um stream, e todos são concatenados num só"],
+        ["Como achatar uma List<List<String>>?", "lista.stream().flatMap(Collection::stream)"],
+        ["Como transformar um array em stream?", "Arrays.stream(array)"],
+        ["anyMatch, allMatch, noneMatch?", "Algum, todos, nenhum satisfaz o Predicate; devolvem boolean"],
+        ["findAny × findFirst?", "findAny: qualquer um, sem garantia; findFirst: o primeiro na ordem. Ambos retornam Optional"],
+        ["Por que findFirst e max retornam Optional?", "Porque o stream pode estar vazio (ou o filtro pode não deixar nada)"],
+        ["O que faz reduce?", "Aplica repetidamente um BinaryOperator até sobrar um único resultado"],
+        ["reduce(op) × reduce(identidade, op)?", "Sem identidade retorna Optional; com identidade retorna o valor (a identidade, se vazio)"],
+        ["Qual a identidade da soma e do produto?", "0 para soma e 1 para produto"],
+        ["Method references prontos para reduce?", "Integer::sum, Integer::max, Integer::min, Double::sum"],
+        ["Quais os streams de primitivos?", "IntStream, LongStream e DoubleStream (via mapToInt, mapToLong, mapToDouble)"],
+        ["Vantagem de mapToDouble(...).sum()?", "Evita boxing/unboxing e devolve o double direto, sem Optional"]
+      ],
+      quiz: [
+        { tipo: 'multipla', pergunta: 'Qual destas é uma operação terminal?',
+          opcoes: ['filter', 'map', 'collect', 'sorted'],
+          correta: 2,
+          explicacao: 'collect fecha o stream e produz uma coleção. filter, map e sorted são intermediárias: retornam outro Stream.' },
+        { tipo: 'vf', pergunta: 'lightNovels.stream().sorted(...) deixa a lista lightNovels ordenada.',
+          correta: 1,
+          explicacao: 'Falso. Stream não altera a fonte; o sorted só ordena os elementos que passam pelo pipeline. Para ordenar a lista, use lightNovels.sort(...), como na aula 203.' },
+        { tipo: 'multipla', pergunta: 'Na lista da aula 203, qual o resultado de sorted(por título) → filter(preço <= 4) → limit(3) → map(título)?',
+          opcoes: ['[Overlord, No Game no life, Kumo desuga]', '[Kumo desuga, Monogatari, No Game no life]', '[Kumo desuga, No Game no life, Overlord]', '[Fullmetal Alchemist, Kumo desuga, Monogatari]'],
+          correta: 1,
+          explicacao: 'Em ordem alfabética: Fullmetal (5.99, fora), Kumo desuga (1.99), Monogatari (4.00), No Game no life (2.99), e o limit(3) para aí.' },
+        { tipo: 'multipla', pergunta: 'Na aula 205, por que o distinct() só passou a remover o "Kumo desuga" repetido depois de uma alteração?',
+          opcoes: ['Porque faltava chamar sorted antes', 'Porque a LightNovel ainda não tinha equals e hashCode', 'Porque distinct só funciona com Strings', 'Porque faltava o Collectors.toSet()'],
+          correta: 1,
+          explicacao: 'distinct compara com equals/hashCode. Sem eles, dois objetos criados com new são sempre diferentes. O professor gerou os dois pelo title, e a contagem caiu de 5 para 4.' },
+        { tipo: 'vf', pergunta: 'Depois de chamar count() num objeto Stream, é possível chamar filter(...) nesse mesmo objeto.',
+          correta: 1,
+          explicacao: 'Falso. A operação terminal fecha o stream; reutilizá-lo lança IllegalStateException. É preciso criar outro com lista.stream().' },
+        { tipo: 'multipla', pergunta: 'O que words.stream().map(w -> w.split("")).collect(Collectors.toList()) retorna, com words = ["Gomu", "No"]?',
+          opcoes: ['List<String> com as letras', 'List<String[]>, uma lista de arrays', 'String "GomuNo"', 'Stream<String>'],
+          correta: 1,
+          explicacao: 'O map transforma cada palavra num String[], então sobra uma lista de arrays. Para ter as letras soltas é preciso .flatMap(Arrays::stream) antes do collect.' },
+        { tipo: 'multipla', pergunta: 'Com preços todos positivos, o que imprime lista.stream().noneMatch(ln -> ln.getPrice() > 0)?',
+          opcoes: ['true', 'false', 'Optional.empty', 'Lança exceção'],
+          correta: 1,
+          explicacao: 'noneMatch é true só se NENHUM elemento satisfizer o predicado. Como todos têm preço > 0, a resposta é false.' },
+        { tipo: 'multipla', pergunta: 'Qual o resultado de List.of(1, 2, 3, 4, 5, 6).stream().reduce(0, (x, y) -> x * y)?',
+          opcoes: ['720', '0', '21', 'Optional[720]'],
+          correta: 1,
+          explicacao: 'A identidade 0 entra na multiplicação e zera tudo; foi o que aconteceu na gravação. Para produto a identidade é 1 (resultado 720). Com identidade, o retorno é o valor, não Optional.' },
+        { tipo: 'discursiva', pergunta: 'Explique a diferença entre map e flatMap usando os dois exemplos das aulas 206 e 207.',
+          explicacao: 'map transforma cada elemento em exatamente um outro objeto. flatMap transforma cada elemento num stream e concatena todos esses streams num único stream plano. Na 206, devdojo é uma List<List<String>> (equipes com pessoas): devdojo.stream() dá Stream<List<String>>; com map(Collection::stream) teríamos Stream<Stream<String>>; com flatMap(Collection::stream) temos um Stream<String> com todas as pessoas, o equivalente ao for dentro de for. Na 207, words.stream().map(w -> w.split("")) dá Stream<String[]> (arrays de letras); flatMap(Arrays::stream) transforma cada array em stream e junta tudo num Stream<String> de letras: [G, o, m, u, G, o, m, u, N, o, M, i]. Regra do professor: viu algo aninhado, pense em flatMap.' },
+        { tipo: 'discursiva', pergunta: 'Reescreva a soma dos preços acima de 3 da aula 210 de duas formas e explique a diferença entre elas (e compare com o Laravel).',
+          explicacao: 'Forma 1: lightNovels.stream().map(LightNovel::getPrice).filter(p -> p > 3).reduce(Double::sum).ifPresent(System.out::println). O map gera Stream<Double> (boxing de cada double), e o reduce sem identidade devolve Optional<Double>. Forma 2: lightNovels.stream().mapToDouble(LightNovel::getPrice).filter(p -> p > 3).sum(). O mapToDouble gera um DoubleStream de primitivos, sem boxing/unboxing, e sum() devolve um double direto (0.0 se vazio), melhor para desempenho. No Laravel seria collect($novels)->filter(fn($n) => $n->price > 3)->sum("price"), mas lá cada passo executa na hora (eager), enquanto o stream é lazy e só roda na operação terminal.' }
+      ]
+    };
+  </script>
+  <script src="../js/app.js"></script>
+</body>
+</html>
