@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>211–219 · Streams parte 2</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="topo">
+      <a class="voltar" href="../index.html">← Todas as aulas</a>
+      <h1>211–219 · Streams (parte 2)</h1>
+      <p>Gerando streams (range, of, Arrays.stream, Files.lines, iterate, generate), Collectors (counting, summarizing, joining, groupingBy, mapping, collectingAndThen) e parallel streams · <a href="https://www.youtube.com/playlist?list=PL62G310vn6nFIsOCC0H-C2infYgwm8SWW" target="_blank" rel="noopener">playlist</a></p>
+    </header>
+
+    <nav class="abas">
+      <a href="#resumo">Resumo</a>
+      <a href="#flashcards">Flashcards</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#estudo">Material de estudo</a>
+    </nav>
+
+    <p class="aviso">Junta as aulas 211 e 212 (gerando streams), 213 a 217 (Collectors e groupingBy) e 218 e 219 (parallel streams). Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. <strong>As aulas 213 e 216 não têm legenda no YouTube</strong>: as seções delas usam o código do professor e um resumo de cada vídeo enviado pelo autor. O código (pacote <code>javacore.ZZEstreams</code>, <code>StreamTest09</code> a <code>StreamTest16</code>, enums <code>Category</code> e <code>Promotion</code>) foi conferido no <a href="https://github.com/devdojobr/maratona-java-virado-no-jiraya" target="_blank" rel="noopener">repositório do professor</a>. A aula 219 é só teoria (não existe a branch <code>video219</code>). Os itens marcados como "extra" não estão nos vídeos.</p>
+
+    <section id="resumo">
+      <h2>Resumo</h2>
+      <p>Até aqui todo stream nasceu de uma lista. Agora ele nasce <strong>direto</strong>: de uma faixa de números, de valores soltos, de um array, das linhas de um arquivo ou de uma regra infinita. Depois, a operação terminal mais poderosa, o <strong><code>collect</code> com <code>Collectors</code></strong>: contar, somar, tirar estatísticas, juntar textos e, principalmente, <strong>agrupar</strong> (<code>groupingBy</code>), que é o <code>GROUP BY</code> do SQL. Por fim, os <strong>parallel streams</strong>, que dividem o trabalho entre várias threads com uma única chamada, mas nem sempre ficam mais rápidos.</p>
+<pre><code>IntStream.rangeClosed(1, 50)              // 211 · gerar
+Stream.iterate(1, n -&gt; n + 2).limit(10)   // 212 · infinito + limit
+collect(Collectors.summarizingDouble(...)) // 213 · estatísticas
+collect(groupingBy(LightNovel::getCategory, counting())) // 214–217 · agrupar
+LongStream.rangeClosed(1, n).parallel().sum()            // 218–219 · paralelo</code></pre>
+
+      <h3>211 · Gerando streams pt 01</h3>
+<pre><code>IntStream.rangeClosed(1, 50).filter(n -&gt; n % 2 == 0).forEach(n -&gt; System.out.print(n + " "));
+System.out.println(); // 2 4 6 ... 48 50
+IntStream.range(1, 50).filter(n -&gt; n % 2 == 0).forEach(n -&gt; System.out.print(n + " "));
+System.out.println(); // 2 4 6 ... 48   (o 50 fica de fora)
+
+Stream.of("Eleve ", "O ", "Cosmo ", "no seu coração")
+        .map(String::toUpperCase)
+        .forEach(s -&gt; System.out.print(s + " "));
+
+int num[] = {1, 2, 3, 4, 5};
+Arrays.stream(num)            // array de int → IntStream (sem boxing)
+        .average()            // OptionalDouble
+        .ifPresent(System.out::println); // 3.0
+
+try (Stream&lt;String&gt; lines = Files.lines(Paths.get("file.txt"))) {
+    lines.filter(l -&gt; l.contains("Java")).forEach(System.out::println);
+} catch (IOException e) {
+    e.printStackTrace();
+}</code></pre>
+      <ul>
+        <li><strong><code>IntStream.range(a, b)</code></strong> exclui o final; <strong><code>rangeClosed(a, b)</code></strong> inclui. Os dois geram primitivos, o que o professor recomenda para alta performance.</li>
+        <li><strong><code>Stream.of(...)</code></strong> recebe varargs de qualquer tipo.</li>
+        <li><strong><code>Arrays.stream(int[])</code></strong> devolve um <code>IntStream</code>, que já tem <code>sum</code>, <code>min</code>, <code>max</code> e <code>average</code>. O <code>average</code> devolve <code>OptionalDouble</code>, porque o array pode estar vazio.</li>
+        <li><strong><code>Files.lines(path)</code></strong> (NIO, aulas 144+) devolve um <code>Stream&lt;String&gt;</code> com uma linha por elemento. Ele mantém o arquivo aberto, então use <strong>try-with-resources</strong>: o stream é fechado sozinho no fim. No exemplo, o arquivo tinha frases como "Java é legal" e "Java vai me deixar rico", e o filtro trouxe só as linhas com "Java".</li>
+      </ul>
+
+      <h3>212 · Gerando streams pt 02: streams infinitos</h3>
+<pre><code>Stream.iterate(1, n -&gt; n + 2)        // semente 1, depois aplica n + 2 para sempre
+        .limit(10)                   // sem limit, roda até estourar a memória
+        .forEach(System.out::println);  // 1 3 5 7 ... 19
+
+// Fibonacci: 0,1,1,2,3,5,8,13,21,34
+// (0,1) (1,1) (1,2) (2,3) (3,5) (5,8)
+Stream.iterate(new int[]{0, 1}, n -&gt; new int[]{n[1], n[0] + n[1]})
+        .limit(10)
+        .forEach(a -&gt; System.out.println(Arrays.toString(a)));  // [0, 1] [1, 1] [1, 2] ...
+
+Stream.iterate(new int[]{0, 1}, n -&gt; new int[]{n[1], n[0] + n[1]})
+        .limit(10)
+        .map(a -&gt; a[0])
+        .forEach(System.out::println);  // 0 1 1 2 3 5 8 13 21 34
+
+ThreadLocalRandom random = ThreadLocalRandom.current();
+Stream.generate(() -&gt; random.nextInt(1, 10000))   // Supplier: sem entrada
+        .limit(90)
+        .forEach(System.out::println);</code></pre>
+      <ul>
+        <li><strong><code>Stream.iterate(semente, UnaryOperator)</code></strong>: o próximo elemento é calculado a partir do anterior. <code>UnaryOperator&lt;T&gt;</code> é uma <code>Function&lt;T, T&gt;</code>: entra um <code>T</code> e sai um <code>T</code>.</li>
+        <li><strong>Fibonacci</strong>: cada par <code>(a, b)</code> gera <code>(b, a + b)</code>. A posição 0 do novo array é a posição 1 do anterior, e a posição 1 é a soma das duas. O <code>map(a -&gt; a[0])</code> extrai só o número da sequência.</li>
+        <li><strong><code>Stream.generate(Supplier)</code></strong>: cada elemento vem de um <code>Supplier</code>, independente do anterior. É bom para valores aleatórios (<code>ThreadLocalRandom.current().nextInt(origem, limite)</code>, com o limite exclusivo).</li>
+        <li>Ambos são <strong>infinitos</strong>: sem <code>limit</code> (ou outra operação de curto-circuito), a terminal nunca termina.</li>
+      </ul>
+
+      <h3>213 · Collectors pt 01: contar, somar, estatísticas e juntar</h3>
+      <p><em>Esta aula não tem legenda no YouTube; o texto vem do código do professor e do resumo do vídeo.</em> <code>Collectors</code> é a classe com os coletores prontos para o <code>collect</code>. Vários deles fazem a mesma coisa que métodos que já vimos, mas funcionam também <strong>dentro de um agrupamento</strong> (aulas 214–217), que é onde eles brilham:</p>
+<pre><code>// lista da aula 208 (8 light novels, Overlord a 10.99, Kumo desuga repetido)
+System.out.println(lightNovels.stream().count());                           // 8
+System.out.println(lightNovels.stream().collect(Collectors.counting()));    // 8
+
+lightNovels.stream().max(Comparator.comparing(LightNovel::getPrice)).ifPresent(System.out::println);
+lightNovels.stream().collect(Collectors.maxBy(Comparator.comparing(LightNovel::getPrice)))
+        .ifPresent(System.out::println);                                    // Overlord, 10.99
+
+System.out.println(lightNovels.stream().mapToDouble(LightNovel::getPrice).sum());
+System.out.println(lightNovels.stream().collect(Collectors.summingDouble(LightNovel::getPrice))); // ≈ 42.93
+
+lightNovels.stream().mapToDouble(LightNovel::getPrice).average().ifPresent(System.out::println);
+System.out.println(lightNovels.stream().collect(Collectors.averagingDouble(LightNovel::getPrice))); // ≈ 5.37
+
+DoubleSummaryStatistics collect = lightNovels.stream()
+        .collect(Collectors.summarizingDouble(LightNovel::getPrice));
+System.out.println(collect);
+// DoubleSummaryStatistics{count=8, sum=42,930000, min=1,990000, average=5,366250, max=10,990000}
+
+String titles = lightNovels.stream().map(LightNovel::getTitle).collect(Collectors.joining(", "));
+System.out.println(titles); // Tensei Shittara, Overlord, Violet Evergarden, ...</code></pre>
+      <ul>
+        <li><code>count()</code> ≈ <code>counting()</code> → <code>long</code> / <code>Long</code></li>
+        <li><code>max(comp)</code> / <code>min(comp)</code> ≈ <code>maxBy(comp)</code> / <code>minBy(comp)</code> → <code>Optional&lt;T&gt;</code></li>
+        <li><code>mapToDouble(f).sum()</code> ≈ <code>summingDouble(f)</code> (e <code>summingInt</code>/<code>summingLong</code>) → <code>double</code> / <code>Double</code></li>
+        <li><code>mapToDouble(f).average()</code> ≈ <code>averagingDouble(f)</code> → <code>OptionalDouble</code> / <code>Double</code> (0.0 se vazio)</li>
+        <li><code>mapToDouble(f).summaryStatistics()</code> ≈ <code>summarizingDouble(f)</code> → <code>DoubleSummaryStatistics</code></li>
+        <li>sem equivalente no stream: <code>joining(", ")</code> → <code>String</code></li>
+      </ul>
+      <p><strong><code>DoubleSummaryStatistics</code></strong> traz tudo de uma vez: <code>getCount()</code>, <code>getSum()</code>, <code>getMin()</code>, <code>getAverage()</code> e <code>getMax()</code>. Existem as variantes <code>summarizingInt</code> e <code>summarizingLong</code>. <strong><code>joining</code></strong> concatena <code>String</code>s com um separador (e tem uma versão com prefixo e sufixo: <code>joining(", ", "[", "]")</code>).</p>
+
+      <h3>214 · Collectors pt 02: groupingBy pt 01</h3>
+      <p>A <code>LightNovel</code> ganhou uma <code>Category</code> (enum <code>DRAMA, FANTASY, ROMANCE</code>) e um segundo construtor, para não quebrar o código das aulas anteriores. Objetivo: um <code>Map&lt;Category, List&lt;LightNovel&gt;&gt;</code>. Sem stream:</p>
+<pre><code>Map&lt;Category, List&lt;LightNovel&gt;&gt; categoryLightNovelMap = new HashMap&lt;&gt;();
+List&lt;LightNovel&gt; fantasy = new ArrayList&lt;&gt;();
+List&lt;LightNovel&gt; drama = new ArrayList&lt;&gt;();
+List&lt;LightNovel&gt; romance = new ArrayList&lt;&gt;();
+for (LightNovel lightNovel : lightNovels) {
+    switch (lightNovel.getCategory()) {
+        case DRAMA: drama.add(lightNovel); break;
+        case FANTASY: fantasy.add(lightNovel); break;
+        case ROMANCE: romance.add(lightNovel); break;
+    }
+}
+categoryLightNovelMap.put(Category.DRAMA, drama);
+categoryLightNovelMap.put(Category.FANTASY, fantasy);
+categoryLightNovelMap.put(Category.ROMANCE, romance);</code></pre>
+      <p>Uma nova categoria obriga a mexer no <code>switch</code>, criar outra lista e outro <code>put</code>. Com stream, tudo isso vira uma linha:</p>
+<pre><code>Map&lt;Category, List&lt;LightNovel&gt;&gt; collect = lightNovels.stream()
+        .collect(Collectors.groupingBy(LightNovel::getCategory));
+// {FANTASY=[Tensei Shittara, Overlord, No Game no life, Fullmetal Alchemist, Kumo desuga, Kumo desuga],
+//  DRAMA=[Violet Evergarden], ROMANCE=[Monogatari]}   (a ordem das chaves pode variar)</code></pre>
+      <p><code>groupingBy(função classificadora)</code> aplica a função a cada elemento; o resultado vira a <strong>chave</strong>, e os elementos com a mesma chave vão para uma <strong>lista</strong>.</p>
+
+      <h3>215 · groupingBy pt 02: chave calculada e agrupamento dentro de agrupamento</h3>
+      <p>Um novo enum, <code>Promotion { UNDER_PROMOTION, NORMAL_PRICE }</code>, que <strong>não</strong> é atributo da <code>LightNovel</code>: a chave vem de uma regra (preço menor que 6 está em promoção). Então a classificadora é uma lambda:</p>
+<pre><code>import static academy.devdojo.maratonajava.javacore.ZZEstreams.dominio.Promotion.*;
+import static java.util.stream.Collectors.groupingBy;
+
+Map&lt;Promotion, List&lt;LightNovel&gt;&gt; collect = lightNovels.stream()
+        .collect(groupingBy(ln -&gt; ln.getPrice() &lt; 6 ? UNDER_PROMOTION : NORMAL_PRICE));
+// {NORMAL_PRICE=[Tensei Shittara, Overlord], UNDER_PROMOTION=[os outros 6]}
+
+// Map&lt;Category, Map&lt;Promotion, List&lt;LightNovel&gt;&gt;&gt;
+Map&lt;Category, Map&lt;Promotion, List&lt;LightNovel&gt;&gt;&gt; collect1 = lightNovels.stream()
+        .collect(groupingBy(LightNovel::getCategory,
+                groupingBy(ln -&gt; ln.getPrice() &lt; 6 ? UNDER_PROMOTION : NORMAL_PRICE)));</code></pre>
+      <ul>
+        <li><strong><code>groupingBy</code> é sobrecarregado</strong>: o segundo argumento é um <strong>coletor "de baixo" (<em>downstream</em>)</strong>, que decide o que fazer com os elementos de cada grupo. O padrão é <code>toList()</code>, e passando outro <code>groupingBy</code> você agrupa dentro do grupo.</li>
+        <li>O resultado aninhado é difícil de ler. O professor aconselha: <strong>se der para fazer esse agrupamento no banco de dados, faça lá</strong>.</li>
+        <li>Para enxugar: <strong><code>import static</code></strong> (Alt+Enter no IntelliJ) em <code>groupingBy</code> e nas constantes do enum, e extrair a lambda para um método (o que ele faz na aula seguinte).</li>
+      </ul>
+
+      <h3>216 · groupingBy pt 03: counting, maxBy e collectingAndThen</h3>
+      <p><em>Esta aula não tem legenda no YouTube; o texto vem do código do professor e do resumo do vídeo.</em> Primeiro, a lambda da promoção virou um método, usado por method reference:</p>
+<pre><code>private static Promotion getPromotion(LightNovel ln) {
+    return ln.getPrice() &lt; 6 ? UNDER_PROMOTION : NORMAL_PRICE;
+}
+// ...collect(groupingBy(StreamTest13::getPromotion))
+// ...collect(groupingBy(LightNovel::getCategory, groupingBy(StreamTest13::getPromotion)))</code></pre>
+      <p>Depois, coletores de baixo que <strong>resumem</strong> cada grupo em vez de guardar a lista:</p>
+<pre><code>Map&lt;Category, Long&gt; collect = lightNovels.stream()
+        .collect(groupingBy(LightNovel::getCategory, Collectors.counting()));
+// {FANTASY=6, DRAMA=1, ROMANCE=1}
+
+Map&lt;Category, Optional&lt;LightNovel&gt;&gt; collect1 = lightNovels.stream()
+        .collect(groupingBy(LightNovel::getCategory,
+                Collectors.maxBy(Comparator.comparing(LightNovel::getPrice))));
+// {FANTASY=Optional[Overlord 10.99], DRAMA=Optional[Violet Evergarden], ROMANCE=Optional[Monogatari]}
+
+Map&lt;Category, LightNovel&gt; collect2 = lightNovels.stream()
+        .collect(groupingBy(LightNovel::getCategory,
+                Collectors.collectingAndThen(
+                        Collectors.maxBy(Comparator.comparing(LightNovel::getPrice)),
+                        Optional::get)));
+// {FANTASY=Overlord 10.99, DRAMA=Violet Evergarden, ROMANCE=Monogatari}
+
+Map&lt;Category, LightNovel&gt; collect3 = lightNovels.stream()
+        .collect(Collectors.toMap(LightNovel::getCategory, Function.identity(),
+                BinaryOperator.maxBy(Comparator.comparing(LightNovel::getPrice))));</code></pre>
+      <ul>
+        <li><strong><code>counting()</code></strong> como downstream: quantos em cada grupo (<code>Map&lt;Category, Long&gt;</code>).</li>
+        <li><strong><code>maxBy</code></strong> como downstream: o mais caro de cada grupo, mas embrulhado em <code>Optional</code>, porque o <code>maxBy</code> não sabe que o grupo nunca está vazio.</li>
+        <li><strong><code>collectingAndThen(coletor, função)</code></strong>: aplica uma função no resultado do coletor. Aqui, <code>Optional::get</code> tira o valor do <code>Optional</code>. É seguro porque o <code>groupingBy</code> só cria um grupo quando existe pelo menos um elemento.</li>
+        <li><strong><code>toMap(chave, valor, merge)</code></strong> chega no mesmo resultado: a chave é a categoria, o valor é o próprio objeto (<code>Function.identity()</code>, ou seja <code>x -&gt; x</code>) e, quando duas novels caem na mesma chave, o <code>BinaryOperator.maxBy</code> fica com a mais cara.</li>
+      </ul>
+
+      <h3>217 · groupingBy pt 04: summarizing, mapping, toSet e toCollection</h3>
+<pre><code>import static java.util.stream.Collectors.*;
+
+Map&lt;Category, DoubleSummaryStatistics&gt; collect = lightNovels.stream()
+        .collect(groupingBy(LightNovel::getCategory, summarizingDouble(LightNovel::getPrice)));
+// FANTASY: count=6, sum=32,94, min=1,99, average=5,49, max=10,99
+
+// Map&lt;Category, List&lt;Promotion&gt;&gt;
+Map&lt;Category, Set&lt;Promotion&gt;&gt; collect1 = lightNovels.stream()
+        .collect(groupingBy(LightNovel::getCategory, mapping(StreamTest15::getPromotion, toSet())));
+
+Map&lt;Category, LinkedHashSet&lt;Promotion&gt;&gt; collect2 = lightNovels.stream()
+        .collect(groupingBy(LightNovel::getCategory, mapping(StreamTest15::getPromotion,
+                toCollection(LinkedHashSet::new))));
+// FANTASY=[NORMAL_PRICE, UNDER_PROMOTION], DRAMA=[UNDER_PROMOTION], ROMANCE=[UNDER_PROMOTION]</code></pre>
+      <ul>
+        <li><strong>Estatísticas por grupo</strong>: <code>summarizingDouble</code> como downstream. Em FANTASY há 6 novels, que somam 32,94, a mais barata custa 1,99, a média é 5,49 e a mais cara 10,99; calcular isso na mão daria "um bom trabalho". Cuidado para não fechar o parêntese do <code>groupingBy</code> logo depois do <code>getCategory</code>: o coletor é o <strong>segundo argumento</strong>.</li>
+        <li>Passar <code>groupingBy(StreamTest15::getPromotion)</code> como downstream dá um <code>Map</code> dentro do <code>Map</code>, e não era isso que se queria. O objetivo era "categoria → <strong>quais promoções</strong> ela tem".</li>
+        <li><strong><code>mapping(função, coletor)</code></strong> é o <code>map</code> + <code>collect</code> dentro do grupo: transforma cada elemento (<code>LightNovel</code> → <code>Promotion</code>) e coleta com o coletor seguinte. Com <code>toList()</code>, FANTASY teria <code>[NORMAL_PRICE, NORMAL_PRICE, UNDER_PROMOTION, ...]</code>, repetidos.</li>
+        <li><strong><code>toSet()</code></strong> elimina os repetidos, mas a implementação é um <code>HashSet</code>, sem ordem garantida. <strong><code>toCollection(LinkedHashSet::new)</code></strong> deixa escolher a coleção (<code>Supplier</code>); o <code>LinkedHashSet</code> mantém a ordem de inserção.</li>
+        <li>O professor diz que saber agrupar com streams pode garantir "uma boa entrevista" para vagas de júnior e até pleno.</li>
+      </ul>
+
+      <h3>218 · Parallel streams pt 01</h3>
+      <p>O processador tem <strong>núcleos</strong>, e cada núcleo roda <strong>threads</strong>, que são como "trabalhadores". Quanto mais trabalhadores, mais processamento em paralelo. Escrever código paralelo à mão é complicado (concorrência vem depois, nas aulas 220+), e o parallel stream <strong>abstrai</strong> essa complexidade: basta chamar <code>.parallel()</code> (ou <code>colecao.parallelStream()</code>) em qualquer ponto do pipeline, como uma flag.</p>
+<pre><code>System.out.println(Runtime.getRuntime().availableProcessors()); // processadores lógicos da máquina
+long num = 100_000_000;
+
+// for: result += i                                          → o mais rápido nas primeiras rodadas
+Stream.iterate(1L, i -&gt; i + 1).limit(num).reduce(0L, Long::sum);            // lento: boxing de 1 em 1
+Stream.iterate(1L, i -&gt; i + 1).limit(num).parallel().reduce(0L, Long::sum); // AINDA mais lento
+LongStream.rangeClosed(1L, num).reduce(0L, Long::sum);                      // bem melhor: primitivo
+LongStream.rangeClosed(1L, num).parallel().reduce(0L, Long::sum);           // o mais rápido de todos
+// todos dão 5000000050000000</code></pre>
+      <ul>
+        <li><strong><code>Stream.iterate</code> é ruim para paralelizar</strong>: cada elemento depende do anterior, e o tamanho não é conhecido. As threads não têm como dividir o trabalho antecipadamente ("você faz daqui até aqui, você daqui até ali"). Além disso, é tudo <code>Long</code>, com boxing e unboxing. Na máquina do professor, a versão paralela levou mais tempo que a sequencial e fez a CPU e a memória dispararem.</li>
+        <li><strong><code>LongStream.rangeClosed</code></strong> já sabe quantos valores tem (1 a 100 milhões), então pode ser dividido entre as threads, e trabalha com primitivos. Sequencial, caiu de cerca de 1 segundo para 164 ms. Paralelo, foi para 25 ms, mais rápido até que o <code>for</code>.</li>
+        <li>A divisão entre threads é feita pelo escalonador do sistema: você não controla qual trabalhador pega qual pedaço.</li>
+        <li><strong>Lição</strong>: parallel <strong>não é</strong> sinônimo de mais rápido. Depende do tipo de problema.</li>
+      </ul>
+
+      <h3>219 · Parallel streams pt 02: quando usar</h3>
+      <ul>
+        <li><strong>Meça</strong> (benchmark). A melhor forma de decidir é comparar o tempo com e sem <code>parallel</code>, com uma biblioteca ou pegando o tempo no início e no fim.</li>
+        <li><strong>Cuidado com boxing/unboxing</strong>: ele custa, com ou sem múltiplas threads. Prefira <code>IntStream</code>/<code>LongStream</code>/<code>DoubleStream</code>.</li>
+        <li><strong>Operações que dependem de ordem são ruins em paralelo</strong>: <code>limit</code> e <code>findFirst</code> precisam saber quem veio primeiro. <code>findAny</code> é bom: a primeira thread que achar já resolve.</li>
+        <li><strong>Custo total = elementos × processamento por elemento</strong>. Quanto mais pesado o processamento por elemento, mais o paralelo compensa.</li>
+        <li><strong>Pouco dado não vale a pena</strong>: dividir e juntar custa mais do que uma thread só fazer tudo.</li>
+        <li><strong>A fonte importa</strong> (facilidade de dividir): <code>ArrayList</code> e <code>IntStream.range</code> são excelentes; <code>HashSet</code> e <code>TreeSet</code> são bons; <code>LinkedList</code> e <code>Stream.iterate</code> são ruins (é preciso percorrer tudo para dividir).</li>
+        <li><strong>Tamanho conhecido</strong>: streams com tamanho definido dividem melhor que streams gerados dinamicamente.</li>
+        <li><strong>Custo de juntar (o <em>merge</em>)</strong>: se combinar os resultados parciais for caro, o ganho some.</li>
+      </ul>
+      <p>Por baixo dos panos, o parallel stream usa o framework <strong>Fork/Join</strong>, que o professor desenhou assim:</p>
+<pre><code>resolver(tarefa):
+    se a tarefa é pequena (não dá para dividir)
+        faça sequencialmente
+    senão
+        divida a tarefa em duas            ← fork
+        chame resolver() em cada metade (recursivamente)
+        espere as duas terminarem
+        combine os resultados              ← join</code></pre>
+      <p>A tarefa grande vai sendo quebrada em duas, e depois em duas de novo, até ficar pequena. Aí cada pedaço é calculado e os resultados são juntados de volta, dois a dois, até o resultado final. "Se precisar responder numa entrevista, pelo menos você vai ter uma ideia."</p>
+
+      <h3>Atenção</h3>
+      <ul>
+        <li><strong><code>range</code> exclui o fim, <code>rangeClosed</code> inclui.</strong></li>
+        <li><strong><code>iterate</code> e <code>generate</code> são infinitos</strong>: sem <code>limit</code>, o programa não termina (ou estoura a memória).</li>
+        <li><strong><code>Files.lines</code> precisa de try-with-resources</strong>, porque o stream segura o arquivo aberto.</li>
+        <li><strong>A ordem das chaves de um <code>groupingBy</code> não é garantida</strong>: por padrão ele cria um <code>HashMap</code>. <strong>Extra:</strong> para ordenar, use a versão com três argumentos, <code>groupingBy(classificadora, TreeMap::new, downstream)</code> (ou <code>() -&gt; new EnumMap&lt;&gt;(Category.class)</code>).</li>
+        <li><strong><code>toSet()</code> não mantém ordem</strong>; para isso, <code>toCollection(LinkedHashSet::new)</code> ou <code>TreeSet::new</code>.</li>
+        <li><strong><code>maxBy</code>/<code>minBy</code> como downstream devolvem <code>Optional</code></strong>; tire com <code>collectingAndThen(..., Optional::get)</code>.</li>
+        <li><strong>Extra: <code>toMap</code> sem a função de merge lança <code>IllegalStateException</code></strong> ("Duplicate key") quando duas entradas têm a mesma chave. Com a lista da aula, isso aconteceria com FANTASY.</li>
+        <li><strong>Extra: o <code>toString</code> de <code>DoubleSummaryStatistics</code> usa <code>%f</code></strong>, que depende do locale: numa máquina em português sai <code>sum=42,930000</code>; em inglês, <code>sum=42.930000</code>. Os valores com vírgula no código acima assumem português.</li>
+        <li><strong>Extra: soma de <code>double</code> não é exata.</strong> <code>8.99 + 10.99 + ...</code> pode aparecer como <code>42.93000000000001</code>, conforme a forma de somar (o <code>sum()</code> e o <code>summingDouble</code> usam soma compensada e costumam dar <code>42.93</code>). Para dinheiro de verdade, use <code>BigDecimal</code>.</li>
+        <li><strong>Extra: o paralelo usa o <em>common pool</em> do Fork/Join</strong>, com <code>availableProcessors() - 1</code> threads trabalhadoras mais a thread que chamou. Ele é compartilhado pela aplicação inteira: uma tarefa lenta (I/O, banco) dentro de um parallel stream trava as outras.</li>
+        <li><strong>Extra: <code>forEach</code> em paralelo imprime fora de ordem</strong>; <code>forEachOrdered</code> e <code>collect(toList())</code> respeitam a ordem da fonte.</li>
+      </ul>
+
+      <h3>Paralelo com PHP</h3>
+      <ul>
+        <li><strong>Gerar</strong>: <code>range(1, 50)</code> do PHP <strong>inclui</strong> o fim (≈ <code>rangeClosed</code>); <code>array_filter(range(1, 50), fn($n) =&gt; $n % 2 === 0)</code>. <code>Stream.iterate</code>/<code>generate</code> ≈ <em>generators</em> com <code>yield</code> (<code>function fib() { [$a, $b] = [0, 1]; while (true) { yield $a; [$a, $b] = [$b, $a + $b]; } }</code>) ou a <code>LazyCollection::make(function () { ... })-&gt;take(10)</code>. <code>Files.lines</code> ≈ <code>new SplFileObject</code> / <code>LazyCollection::make(fn() =&gt; yield from file(...))</code>.</li>
+        <li><strong>Collectors × Collection do Laravel</strong>: <code>counting()</code> ≈ <code>-&gt;count()</code>; <code>summingDouble</code> ≈ <code>-&gt;sum('price')</code>; <code>averagingDouble</code> ≈ <code>-&gt;avg('price')</code>; <code>maxBy</code> ≈ <code>-&gt;sortByDesc('price')-&gt;first()</code>; <code>joining(", ")</code> ≈ <code>-&gt;implode('title', ', ')</code> / <code>implode(', ', $titles)</code>.</li>
+        <li><strong><code>groupingBy</code> ≈ <code>-&gt;groupBy('category')</code></strong>, que também aceita uma closure (<code>-&gt;groupBy(fn($n) =&gt; $n-&gt;price &lt; 6 ? 'UNDER' : 'NORMAL')</code>) e um array de chaves para agrupamento aninhado (<code>-&gt;groupBy(['category', fn...])</code>). O downstream vira um <code>-&gt;map</code> depois: <code>-&gt;groupBy('category')-&gt;map-&gt;count()</code> ≈ <code>counting()</code>; <code>-&gt;map(fn($g) =&gt; $g-&gt;sortByDesc('price')-&gt;first())</code> ≈ <code>maxBy</code> + <code>collectingAndThen</code>; <code>-&gt;map(fn($g) =&gt; $g-&gt;map(...)-&gt;unique()-&gt;values())</code> ≈ <code>mapping(..., toSet())</code>.</li>
+        <li><strong>No banco</strong> (como o professor recomenda): <code>SELECT category, COUNT(*), MAX(price), AVG(price) FROM light_novels GROUP BY category</code>, ou no Eloquent <code>LightNovel::selectRaw('category, count(*) as total, max(price) as maior')-&gt;groupBy('category')-&gt;get()</code>.</li>
+        <li><strong>Paralelo</strong>: o PHP (modelo request/response) não tem um equivalente embutido. Paralelismo vem de processos: filas do Laravel com vários <em>workers</em>, <code>Concurrency::run([...])</code> (Laravel 11+), <code>pcntl_fork</code> ou a extensão <em>parallel</em>. A lição de "dividir custa caro, meça antes" vale igual.</li>
+      </ul>
+    </section>
+
+    <section id="flashcards">
+      <h2>Flashcards</h2>
+      <p style="color:var(--muted);margin-top:-6px">Toque no cartão para virar.</p>
+      <div id="flashcards-app"></div>
+    </section>
+
+    <section id="quiz">
+      <h2>Quiz</h2>
+      <div id="quiz-app"></div>
+    </section>
+
+    <section id="estudo">
+      <h2>Material de estudo</h2>
+
+      <h3>Mapa mental</h3>
+<pre><code>Streams parte 2
+├── Gerar (211–212)
+│   ├── IntStream.range (exclui fim) · rangeClosed (inclui)
+│   ├── Stream.of(varargs) · Arrays.stream(int[]) → IntStream (average → OptionalDouble)
+│   ├── Files.lines(path) → Stream&lt;String&gt; (try-with-resources)
+│   └── infinitos: iterate(semente, UnaryOperator) · generate(Supplier) → sempre com limit
+├── Collectors (213)
+│   ├── counting · maxBy/minBy · summingDouble · averagingDouble
+│   ├── summarizingDouble → DoubleSummaryStatistics (count, sum, min, average, max)
+│   └── joining(", ")
+├── groupingBy (214–217) → Map (HashMap: ordem não garantida)
+│   ├── groupingBy(classificadora) → Map&lt;K, List&lt;T&gt;&gt;
+│   ├── classificadora com lógica: ln -&gt; preço &lt; 6 ? UNDER_PROMOTION : NORMAL_PRICE
+│   ├── downstream: groupingBy (aninhado) · counting · maxBy · summarizingDouble
+│   ├── collectingAndThen(maxBy(...), Optional::get) → tira o Optional
+│   ├── mapping(f, toList() | toSet() | toCollection(LinkedHashSet::new))
+│   └── toMap(chave, Function.identity(), BinaryOperator.maxBy(...))
+└── Parallel (218–219): .parallel() / parallelStream()
+    ├── Fork/Join: divide (fork) até ficar pequeno, calcula, junta (join)
+    ├── bom: muito dado, processamento pesado, fonte divisível (ArrayList, range), primitivos
+    ├── ruim: pouco dado, iterate, LinkedList, boxing, limit/findFirst
+    └── sempre: medir (benchmark)</code></pre>
+
+      <h3>Prática no seu WSL (20 minutos)</h3>
+<pre><code>cd ~/java-lab
+S=src/academy/devdojo/maratonajava/javacore/ZZEstreams
+mkdir -p $S/test
+
+cat > $S/test/StreamsPraticaTest02.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.ZZEstreams.test;
+
+import java.util.*;
+import java.util.stream.*;
+
+import static java.util.stream.Collectors.*;
+
+public class StreamsPraticaTest02 {
+    enum Category { DRAMA, FANTASY, ROMANCE }
+    enum Promotion { UNDER_PROMOTION, NORMAL_PRICE }
+
+    static class LightNovel {
+        private final String title;
+        private final double price;
+        private final Category category;
+        LightNovel(String title, double price, Category category) {
+            this.title = title; this.price = price; this.category = category;
+        }
+        String getTitle() { return title; }
+        double getPrice() { return price; }
+        Category getCategory() { return category; }
+    }
+
+    static Promotion getPromotion(LightNovel ln) {
+        return ln.getPrice() &lt; 6 ? Promotion.UNDER_PROMOTION : Promotion.NORMAL_PRICE;
+    }
+
+    public static void main(String[] args) {
+        // 211–212 · gerar
+        System.out.println(IntStream.rangeClosed(1, 10).filter(n -&gt; n % 2 == 0).boxed().collect(toList())); // ?
+        System.out.println(IntStream.range(1, 10).filter(n -&gt; n % 2 == 0).boxed().collect(toList()));       // ?
+        System.out.println(Stream.of("Eleve", "o", "Cosmo").map(String::toUpperCase).collect(joining(" "))); // ?
+        System.out.println(Arrays.stream(new int[]{1, 2, 3, 4, 5}).average());                             // ?
+        System.out.println(Stream.iterate(new int[]{0, 1}, n -&gt; new int[]{n[1], n[0] + n[1]})
+                .limit(10).map(a -&gt; a[0]).collect(toList()));                                               // ?
+        System.out.println(Stream.generate(() -&gt; "Jiraya").limit(3).collect(toList()));                    // ?
+
+        List&lt;LightNovel&gt; novels = List.of(
+                new LightNovel("Tensei Shittara", 8.99, Category.FANTASY),
+                new LightNovel("Overlord", 10.99, Category.FANTASY),
+                new LightNovel("Violet Evergarden", 5.99, Category.DRAMA),
+                new LightNovel("No Game no life", 2.99, Category.FANTASY),
+                new LightNovel("Fullmetal Alchemist", 5.99, Category.FANTASY),
+                new LightNovel("Kumo desuga", 1.99, Category.FANTASY),
+                new LightNovel("Kumo desuga", 1.99, Category.FANTASY),
+                new LightNovel("Monogatari", 4.00, Category.ROMANCE));
+
+        // 213 · Collectors
+        System.out.println(novels.stream().collect(counting()));                                          // ?
+        DoubleSummaryStatistics stats = novels.stream().collect(summarizingDouble(LightNovel::getPrice));
+        System.out.println("min=" + stats.getMin() + " max=" + stats.getMax() + " count=" + stats.getCount()); // ?
+        System.out.println(novels.stream().map(LightNovel::getTitle).distinct().collect(joining(", ")));  // ?
+
+        // 214–217 · groupingBy (TreeMap::new só para a saída sair sempre na mesma ordem)
+        System.out.println(novels.stream().collect(groupingBy(LightNovel::getCategory, TreeMap::new, counting()))); // ?
+        System.out.println(novels.stream().collect(groupingBy(LightNovel::getCategory, TreeMap::new,
+                mapping(LightNovel::getTitle, toList()))));                                               // ?
+        System.out.println(novels.stream().collect(groupingBy(StreamsPraticaTest02::getPromotion, TreeMap::new, counting()))); // ?
+        System.out.println(novels.stream().collect(groupingBy(LightNovel::getCategory, TreeMap::new,
+                collectingAndThen(maxBy(Comparator.comparing(LightNovel::getPrice)), o -&gt; o.get().getTitle())))); // ?
+        System.out.println(novels.stream().collect(groupingBy(LightNovel::getCategory, TreeMap::new,
+                mapping(StreamsPraticaTest02::getPromotion, toCollection(LinkedHashSet::new)))));         // ?
+
+        // 218–219 · paralelo
+        System.out.println(LongStream.rangeClosed(1, 100_000_000).parallel().sum());                      // ?
+        System.out.println(IntStream.rangeClosed(1, 10).parallel().map(n -&gt; n * 2).boxed().collect(toList())); // ?
+        IntStream.rangeClosed(1, 10).parallel().forEach(n -&gt; System.out.print(n + " "));                 // ?
+        System.out.println();
+    }
+}
+EOF
+
+javac -d out $(find src -name '*.java')
+java -cp out academy.devdojo.maratonajava.javacore.ZZEstreams.test.StreamsPraticaTest02</code></pre>
+      <details>
+        <summary>Ver a saída esperada</summary>
+<pre><code>[2, 4, 6, 8, 10]
+[2, 4, 6, 8]
+ELEVE O COSMO
+OptionalDouble[3.0]
+[0, 1, 1, 2, 3, 5, 8, 13, 21, 34]
+[Jiraya, Jiraya, Jiraya]
+8
+min=1.99 max=10.99 count=8
+Tensei Shittara, Overlord, Violet Evergarden, No Game no life, Fullmetal Alchemist, Kumo desuga, Monogatari
+{DRAMA=1, FANTASY=6, ROMANCE=1}
+{DRAMA=[Violet Evergarden], FANTASY=[Tensei Shittara, Overlord, No Game no life, Fullmetal Alchemist, Kumo desuga, Kumo desuga], ROMANCE=[Monogatari]}
+{UNDER_PROMOTION=6, NORMAL_PRICE=2}
+{DRAMA=Violet Evergarden, FANTASY=Overlord, ROMANCE=Monogatari}
+{DRAMA=[UNDER_PROMOTION], FANTASY=[NORMAL_PRICE, UNDER_PROMOTION], ROMANCE=[UNDER_PROMOTION]}
+5000000050000000
+[2, 4, 6, 8, 10, 12, 14, 16, 18, 20]
+7 6 9 10 8 2 1 4 3 5     ← a ordem muda a cada execução</code></pre>
+      </details>
+      <p>O <code>TreeMap</code> ordena as chaves do enum pela ordem de declaração (DRAMA, FANTASY, ROMANCE; UNDER_PROMOTION antes de NORMAL_PRICE). Repare nas duas últimas linhas: com <code>parallel</code>, o <code>collect(toList())</code> mantém a ordem e o <code>forEach</code> não.</p>
+      <p><strong>Exercícios:</strong></p>
+      <ol>
+        <li>Tire o <code>TreeMap::new</code> de um dos <code>groupingBy</code> e rode algumas vezes. A ordem muda? (Com enums, o <code>hashCode</code> é o de identidade, então pode mudar entre execuções.)</li>
+        <li>Crie um <code>file.txt</code> com 5 linhas, algumas com "Java", e leia com <code>Files.lines</code> + <code>filter</code>, como na aula 211.</li>
+        <li>Monte o <code>Map&lt;Category, Map&lt;Promotion, List&lt;String&gt;&gt;&gt;</code> (títulos, não objetos) com dois <code>groupingBy</code> e um <code>mapping</code>.</li>
+        <li>Troque <code>collectingAndThen(maxBy(...), ...)</code> por <code>toMap(LightNovel::getCategory, Function.identity(), BinaryOperator.maxBy(...))</code>. Depois tire o terceiro argumento e leia a exceção.</li>
+        <li>Reproduza o benchmark da aula 218 com 10 milhões e depois com 100 milhões. Anote os tempos de <code>for</code>, <code>iterate</code>, <code>iterate</code> paralelo, <code>LongStream</code> e <code>LongStream</code> paralelo na sua máquina.</li>
+      </ol>
+
+      <h3>Glossário</h3>
+      <ul>
+        <li><strong><code>IntStream.range</code>/<code>rangeClosed</code></strong>: geram inteiros em sequência; o primeiro exclui o fim, o segundo inclui.</li>
+        <li><strong><code>Stream.iterate</code></strong>: stream infinito em que cada elemento é calculado a partir do anterior (<code>UnaryOperator</code>).</li>
+        <li><strong><code>Stream.generate</code></strong>: stream infinito em que cada elemento vem de um <code>Supplier</code>.</li>
+        <li><strong><code>UnaryOperator&lt;T&gt;</code></strong>: <code>Function&lt;T, T&gt;</code>, recebe e devolve o mesmo tipo.</li>
+        <li><strong><code>Collectors</code></strong>: classe com os coletores prontos para <code>collect</code>.</li>
+        <li><strong><code>DoubleSummaryStatistics</code></strong>: count, sum, min, average e max numa passada só.</li>
+        <li><strong><code>groupingBy</code></strong>: agrupa elementos num <code>Map</code> pela chave que a função classificadora devolve.</li>
+        <li><strong>Downstream collector</strong>: coletor aplicado a cada grupo (<code>counting</code>, <code>maxBy</code>, <code>mapping</code>, outro <code>groupingBy</code>...).</li>
+        <li><strong><code>mapping</code></strong>: transforma os elementos do grupo antes de coletar.</li>
+        <li><strong><code>collectingAndThen</code></strong>: aplica uma função final ao resultado de um coletor.</li>
+        <li><strong>Parallel stream</strong>: stream processado por várias threads, via <code>parallel()</code>/<code>parallelStream()</code>.</li>
+        <li><strong>Fork/Join</strong>: dividir a tarefa recursivamente (fork) e combinar os resultados (join).</li>
+        <li><strong>Benchmark</strong>: medição de desempenho para comparar alternativas.</li>
+      </ul>
+
+      <h3>Revisão espaçada</h3>
+      <ul class="revisao">
+        <li><span class="dia">Dia 1</span><span>Todos os flashcards + a prática com previsões.</span></li>
+        <li><span class="dia">Dia 3</span><span>Quiz + exercícios 1 a 3.</span></li>
+        <li><span class="dia">Dia 7</span><span>Exercícios 4 e 5 + escrever de memória o <code>groupingBy</code> com <code>counting</code>, <code>maxBy</code>+<code>collectingAndThen</code> e <code>mapping</code>+<code>toSet</code>.</span></li>
+        <li><span class="dia">Dia 14</span><span>Flashcards que errou + questões discursivas.</span></li>
+      </ul>
+
+      <h3>Para aprofundar</h3>
+      <ul>
+        <li>O que faz <code>Collectors.partitioningBy</code> e em que ele difere de um <code>groupingBy</code> com chave booleana?</li>
+        <li>Como <code>Stream.iterate(semente, condição, próximo)</code> (Java 9) e <code>takeWhile</code>/<code>dropWhile</code> criam streams finitos sem <code>limit</code>?</li>
+        <li>Como <code>Collectors.teeing</code> (Java 12) combina dois coletores numa passada só?</li>
+        <li>Como rodar um parallel stream num <code>ForkJoinPool</code> próprio, em vez do <em>common pool</em>?</li>
+        <li>Por que <code>ArrayList</code> se divide bem (<code>Spliterator</code>) e <code>LinkedList</code> não?</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    window.AULA = {
+      flashcards: [
+        ["Diferença entre IntStream.range e rangeClosed?", "range exclui o valor final; rangeClosed inclui"],
+        ["Como criar um stream a partir de valores soltos?", "Stream.of(\"a\", \"b\", \"c\") (varargs)"],
+        ["O que Arrays.stream(int[]) devolve?", "Um IntStream (primitivo), com sum, min, max e average"],
+        ["Por que average() devolve OptionalDouble?", "Porque o stream pode estar vazio"],
+        ["Como ler as linhas de um arquivo como stream?", "Files.lines(Paths.get(\"file.txt\")), dentro de um try-with-resources"],
+        ["Stream.iterate × Stream.generate?", "iterate: semente + UnaryOperator (cada elemento vem do anterior); generate: Supplier (cada elemento independente)"],
+        ["O que acontece com iterate/generate sem limit?", "O stream é infinito: a terminal não termina (ou estoura a memória)"],
+        ["Como gerar Fibonacci com iterate?", "iterate(new int[]{0,1}, n -> new int[]{n[1], n[0]+n[1]}).limit(10).map(a -> a[0])"],
+        ["Coletores equivalentes a count, max, sum e average?", "counting, maxBy, summingDouble, averagingDouble"],
+        ["O que summarizingDouble devolve?", "DoubleSummaryStatistics: count, sum, min, average e max"],
+        ["Como juntar títulos separados por vírgula?", "map(LightNovel::getTitle).collect(Collectors.joining(\", \"))"],
+        ["O que groupingBy(LightNovel::getCategory) devolve?", "Map<Category, List<LightNovel>>"],
+        ["A chave do groupingBy precisa ser um atributo?", "Não: pode ser qualquer lógica, ex.: ln -> ln.getPrice() < 6 ? UNDER_PROMOTION : NORMAL_PRICE"],
+        ["O que é o segundo argumento do groupingBy?", "Um coletor downstream, aplicado a cada grupo (padrão: toList())"],
+        ["Como contar quantos há em cada categoria?", "groupingBy(LightNovel::getCategory, Collectors.counting()) → Map<Category, Long>"],
+        ["Por que groupingBy + maxBy dá Map<K, Optional<V>>?", "O maxBy devolve Optional, porque não sabe que o grupo nunca está vazio"],
+        ["Como tirar o Optional do maxBy no agrupamento?", "collectingAndThen(maxBy(...), Optional::get)"],
+        ["Para que serve Collectors.mapping?", "Transformar os elementos do grupo antes de coletar, ex.: mapping(getPromotion, toSet())"],
+        ["toSet × toCollection(LinkedHashSet::new)?", "toSet é HashSet (sem ordem); toCollection deixa escolher a coleção, e LinkedHashSet mantém a ordem de inserção"],
+        ["A ordem das chaves do groupingBy é garantida?", "Não: o padrão é HashMap. Use groupingBy(f, TreeMap::new, downstream) para ordenar"],
+        ["Como tornar um stream paralelo?", "Chamando .parallel() (em qualquer ponto do pipeline) ou colecao.parallelStream()"],
+        ["Por que Stream.iterate em paralelo ficou mais lento?", "Cada elemento depende do anterior e o tamanho é desconhecido: não dá para dividir; além disso, tem boxing"],
+        ["Por que LongStream.rangeClosed paraleliza bem?", "O tamanho é conhecido (dá para dividir entre as threads) e trabalha com primitivos"],
+        ["Quando parallel compensa?", "Muito dado, processamento pesado por elemento, fonte fácil de dividir, primitivos, e medindo (benchmark)"],
+        ["Como funciona o Fork/Join?", "Divide a tarefa recursivamente até ficar pequena (fork), calcula cada pedaço e combina os resultados (join)"]
+      ],
+      quiz: [
+        { tipo: 'multipla', pergunta: 'O que imprime IntStream.range(1, 5).forEach(n -> System.out.print(n + " "))?',
+          opcoes: ['1 2 3 4 5', '1 2 3 4', '0 1 2 3 4', '2 3 4 5'],
+          correta: 1,
+          explicacao: 'range exclui o valor final. Para incluir o 5, use rangeClosed(1, 5).' },
+        { tipo: 'vf', pergunta: 'Stream.iterate(1, n -> n + 2).forEach(System.out::println) imprime 10 números e termina.',
+          correta: 1,
+          explicacao: 'Falso. iterate gera um stream infinito; sem limit(10), ele imprime para sempre (até você parar o programa ou a memória acabar).' },
+        { tipo: 'multipla', pergunta: 'Qual interface funcional o Stream.generate recebe?',
+          opcoes: ['UnaryOperator<T>', 'Function<T, R>', 'Supplier<T>', 'Consumer<T>'],
+          correta: 2,
+          explicacao: 'generate recebe um Supplier (não tem entrada), por exemplo () -> random.nextInt(1, 10000). O iterate é que recebe um UnaryOperator.' },
+        { tipo: 'multipla', pergunta: 'Qual coletor devolve count, sum, min, average e max de uma vez?',
+          opcoes: ['Collectors.counting()', 'Collectors.summingDouble(...)', 'Collectors.summarizingDouble(...)', 'Collectors.averagingDouble(...)'],
+          correta: 2,
+          explicacao: 'summarizingDouble devolve um DoubleSummaryStatistics com getCount, getSum, getMin, getAverage e getMax.' },
+        { tipo: 'multipla', pergunta: 'Qual o tipo de lightNovels.stream().collect(groupingBy(LightNovel::getCategory, counting()))?',
+          opcoes: ['Map<Category, List<LightNovel>>', 'Map<Category, Long>', 'Map<Category, Integer>', 'List<Long>'],
+          correta: 1,
+          explicacao: 'counting() como downstream conta os elementos de cada grupo e devolve Long.' },
+        { tipo: 'vf', pergunta: 'Com groupingBy(LightNovel::getCategory), as chaves do Map sempre saem na ordem em que as categorias foram declaradas no enum.',
+          correta: 1,
+          explicacao: 'Falso. O groupingBy padrão usa HashMap, que não garante ordem. Para ordenar, use a versão groupingBy(classificadora, TreeMap::new, downstream).' },
+        { tipo: 'multipla', pergunta: 'Para que serve o collectingAndThen(maxBy(...), Optional::get) da aula 216?',
+          opcoes: ['Ordenar o grupo pelo preço', 'Transformar o Map<Category, Optional<LightNovel>> em Map<Category, LightNovel>', 'Remover os grupos vazios', 'Converter o Map em lista'],
+          correta: 1,
+          explicacao: 'maxBy devolve Optional; o collectingAndThen aplica Optional::get ao resultado de cada grupo. É seguro porque o groupingBy nunca cria um grupo vazio.' },
+        { tipo: 'multipla', pergunta: 'Na aula 218, qual versão da soma de 1 a 100 milhões foi a mais rápida?',
+          opcoes: ['Stream.iterate(...).parallel().reduce(...)', 'Stream.iterate(...).reduce(...)', 'LongStream.rangeClosed(...).parallel().reduce(...)', 'Todas levaram o mesmo tempo'],
+          correta: 2,
+          explicacao: 'LongStream.rangeClosed tem tamanho conhecido e usa primitivos, então divide bem entre as threads (cerca de 25 ms). O iterate paralelo foi o pior: não dá para dividir e tem boxing.' },
+        { tipo: 'discursiva', pergunta: 'Explique o que é um coletor downstream no groupingBy e dê três exemplos das aulas 215 a 217 com o tipo de Map resultante.',
+          explicacao: 'O groupingBy(classificadora, downstream) aplica a classificadora para achar a chave de cada elemento e, em vez de simplesmente guardar os elementos numa lista (o padrão, toList()), aplica o coletor downstream a cada grupo. Exemplos: groupingBy(getCategory, groupingBy(getPromotion)) → Map<Category, Map<Promotion, List<LightNovel>>> (agrupamento aninhado, 215); groupingBy(getCategory, counting()) → Map<Category, Long> (216); groupingBy(getCategory, collectingAndThen(maxBy(comparing(getPrice)), Optional::get)) → Map<Category, LightNovel> (216); groupingBy(getCategory, summarizingDouble(getPrice)) → Map<Category, DoubleSummaryStatistics> (217); groupingBy(getCategory, mapping(getPromotion, toSet())) → Map<Category, Set<Promotion>> (217). No Laravel seria ->groupBy("category")->map(fn($g) => ...).' },
+        { tipo: 'discursiva', pergunta: 'Quando vale a pena usar parallel streams? Cite os critérios da aula 219 e explique o Fork/Join.',
+          explicacao: 'Critérios: medir com benchmark antes de decidir; evitar boxing/unboxing (preferir IntStream/LongStream); evitar operações dependentes de ordem como limit e findFirst (findAny é bom); o custo total (número de elementos × processamento por elemento) precisa ser alto; pouco dado não compensa, porque dividir e juntar custa mais; a fonte deve ser fácil de dividir (ArrayList, IntStream.range são ótimos; LinkedList e Stream.iterate são ruins); tamanho conhecido ajuda; e o custo de combinar os resultados (merge) não pode ser alto. O Fork/Join é o mecanismo por baixo: se a tarefa é pequena, faz sequencialmente; senão, divide em duas (fork), resolve cada metade recursivamente, espera as duas e combina os resultados (join), até chegar ao resultado final.' }
+      ]
+    };
+  </script>
+  <script src="../js/app.js"></script>
+</body>
+</html>
