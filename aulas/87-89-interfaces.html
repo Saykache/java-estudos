@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>87–89 · Interfaces</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="topo">
+      <a class="voltar" href="../index.html">← Todas as aulas</a>
+      <h1>87–89 · Interfaces</h1>
+      <p>Interface como contrato, implements, múltiplas interfaces, métodos default, constantes e métodos estáticos · <a href="https://www.youtube.com/playlist?list=PL62G310vn6nFIsOCC0H-C2infYgwm8SWW" target="_blank" rel="noopener">playlist</a></p>
+    </header>
+
+    <nav class="abas">
+      <a href="#resumo">Resumo</a>
+      <a href="#flashcards">Flashcards</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#estudo">Material de estudo</a>
+    </nav>
+
+    <p class="aviso">Junta as aulas 87 (introdução), 88 (implementando múltiplas interfaces) e 89 (atributos e métodos estáticos). Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. O código (pacote <code>javacore.Minterfaces</code>, <code>DataLoader</code>, <code>DatabaseLoader</code>, <code>FileLoader</code>) foi conferido no <a href="https://github.com/devdojobr/maratona-java-virado-no-jiraya" target="_blank" rel="noopener">repositório do professor</a>. Os itens marcados como "extra" não estão nos vídeos.</p>
+
+    <section id="resumo">
+      <h2>Resumo</h2>
+      <p>Uma <strong>interface</strong> é "bem parecida com a classe abstrata", mas a principal diferença é que ela <strong>não é uma classe</strong>. Ela nasceu para ser um <strong>contrato</strong>: diz <em>o que</em> quem a implementa precisa saber fazer, sem dizer <em>como</em>. Até o Java 7, todos os métodos de uma interface eram abstratos. A partir do Java 8, ela também pode ter métodos <code>default</code> e <code>static</code> com corpo. E uma classe pode implementar <strong>várias</strong> interfaces, coisa que não dá com <code>extends</code>.</p>
+
+      <h3>87 · O contrato e o implements</h3>
+<pre><code>public interface DataLoader {
+    public abstract void load();     // "public abstract" é redundante: void load(); é igual
+}
+
+public class DatabaseLoader implements DataLoader {   // implements, não extends
+    @Override
+    public void load() {
+        System.out.println("Carregando dados do banco de dados");
+    }
+}
+
+public class FileLoader implements DataLoader {
+    @Override
+    public void load() {
+        System.out.println("Carregando dados de um arquivo");
+    }
+}
+
+new DatabaseLoader().load();   // Carregando dados do banco de dados
+new FileLoader().load();       // Carregando dados de um arquivo</code></pre>
+      <ul>
+        <li>Cria-se com <code>public interface DataLoader</code> (um "carregador de dados"; o William usa nomes em inglês, que é o comum no mercado).</li>
+        <li><strong>Todo método de interface é, por padrão, <code>public abstract</code>.</strong> Escrever os dois é redundante: na vida real você vai ver só <code>void load();</code>. Na aula ele escreve para fixar.</li>
+        <li>Método abstrato na interface segue a mesma regra: sem corpo, termina com <code>;</code>.</li>
+        <li>Interface <strong>não pode ser <code>final</code></strong>: o contrato existe para ser implementado.</li>
+        <li>A classe usa <strong><code>implements</code></strong> (não <code>extends</code>) e é <strong>obrigada</strong> a implementar os métodos abstratos, como na classe abstrata.</li>
+        <li>Não faria sentido um <code>DataLoader</code> concreto: você carrega <strong>do banco</strong> ou <strong>de um arquivo</strong>. Cada classe dá a sua implementação. Interfaces "fazem muito mais sentido" com polimorfismo (aulas 90–94).</li>
+      </ul>
+
+      <h3>88 · Várias interfaces e métodos default</h3>
+<pre><code>public interface DataRemover {
+    public abstract void remove();
+}
+
+public class DatabaseLoader implements DataLoader, DataRemover {   // várias, separadas por vírgula
+    @Override public void load()   { System.out.println("Carregando dados do banco de dados"); }
+    @Override public void remove() { System.out.println("Removendo dados do banco de dados"); }
+}
+
+public interface DataLoader {
+    public abstract void load();
+
+    public default void checkPermission() {           // Java 8+: método com corpo
+        System.out.println("Fazendo checagem de permissões");
+    }
+}</code></pre>
+      <ul>
+        <li><strong>Uma classe pode implementar quantas interfaces quiser</strong> (<code>implements DataLoader, DataRemover</code>), ao contrário do <code>extends</code>, que aceita uma classe só. É uma das diferenças entre classe abstrata e interface.</li>
+        <li><strong>Por que o <code>default</code> existe:</strong> adicionar um método abstrato numa interface quebra <strong>todas</strong> as classes que a implementam. Com duas classes, tudo bem. Mas a interface <code>Collection</code> existe desde o Java 1.2 e é usada no planeta inteiro. Para evoluir a linguagem sem quebrar o código de ninguém (compatibilidade com versões anteriores), o Java 8 trouxe os métodos <code>default</code>, como o <code>removeIf</code> da <code>Collection</code>.</li>
+        <li>Método <code>default</code> <strong>tem corpo</strong> e <strong>não é obrigatório</strong> implementar. <code>fileLoader.checkPermission()</code> imprime "Fazendo checagem de permissões" direto da interface.</li>
+        <li>A classe <strong>pode sobrescrever</strong> o <code>default</code> se quiser: <code>DatabaseLoader</code> passa a imprimir "Checando permissões no banco de dados" e <code>FileLoader</code> "Checando permissões no arquivo".</li>
+        <li>O método <code>default</code> também é <code>public</code> por padrão, então escrever <code>public</code> é redundante.</li>
+      </ul>
+
+      <h3>89 · Modificador na sobrescrita, constantes e static</h3>
+<pre><code>public interface DataLoader {
+    public static final int MAX_DATA_SIZE = 10;          // todo atributo é constante
+
+    public static void retrieveMaxDataSize() {          // Java 8+: método estático
+        System.out.println("Dentro do retrieveMaxDataSize na interface");
+    }
+}
+
+public class DatabaseLoader implements DataLoader, DataRemover {
+    // private -> default -> protected -> public
+    public static void retrieveMaxDataSize() {          // NÃO é sobrescrita (@Override dá erro)
+        System.out.println("Dentro do retrieveMaxDataSize na classe DatabaseLoader");
+    }
+}
+
+DataLoader.retrieveMaxDataSize();      // ... na interface
+DatabaseLoader.retrieveMaxDataSize();  // ... na classe DatabaseLoader</code></pre>
+      <ul>
+        <li><strong>Não dá <code>new DataLoader()</code></strong>, mas dá para usar a interface como <strong>tipo da variável</strong>. Isso é polimorfismo. As classes anônimas, que parecem um <code>new</code> de interface, vêm lá na frente.</li>
+        <li><strong>Regra da sobrescrita (cai em prova e entrevista):</strong> o modificador de acesso <strong>nunca pode ser mais restritivo</strong> que o original. Do mais restritivo ao mais liberal: <code>private</code> → <em>default</em> (de pacote, sem palavra) → <code>protected</code> → <code>public</code>.</li>
+        <li>Como os métodos da interface são <code>public</code>, tirar o <code>public</code> do <code>checkPermission</code> no <code>DatabaseLoader</code> <strong>não compila</strong>: ele viraria "de pacote", mais restritivo. Numa classe abstrata com método <code>protected</code>, a sobrescrita pode ser <code>protected</code> ou <code>public</code>, nunca <em>default</em> ou <code>private</code>.</li>
+        <li><strong>Todo atributo de interface é <code>public static final</code></strong> (constante): <code>int MAX_DATA_SIZE = 10;</code> já é tudo isso.</li>
+        <li><strong>Método <code>static</code> em interface</strong> (Java 8+) pertence à interface e <strong>nunca é sobrescrito</strong>. A classe pode ter um estático de mesmo nome, mas são dois métodos independentes: cada um se chama pelo seu nome de tipo.</li>
+        <li>O William fecha dizendo que praticamente todo framework usa interfaces: <strong>programação orientada a interface</strong> desacopla o código e melhora a manutenção.</li>
+      </ul>
+
+      <h3>Atenção</h3>
+      <ul>
+        <li><strong>Classe <code>implements</code> interface; interface <code>extends</code> interface.</strong> Extra: uma interface pode estender várias outras (<code>interface Repo extends DataLoader, DataRemover</code>).</li>
+        <li><strong>Extra: <code>extends</code> vem antes de <code>implements</code>:</strong> <code>class Gerente extends Funcionario implements DataLoader, DataRemover</code>.</li>
+        <li><strong>Extra: o estático da interface não é herdado.</strong> <code>FileLoader.retrieveMaxDataSize()</code> não compila (o <code>FileLoader</code> não tem o próprio). Só <code>DataLoader.retrieveMaxDataSize()</code>.</li>
+        <li><strong>Extra: dois <code>default</code> com o mesmo nome</strong> em duas interfaces implementadas geram erro de compilação. A classe precisa sobrescrever e pode escolher um com <code>DataLoader.super.checkPermission();</code>.</li>
+        <li><strong>Extra: classe abstrata que implementa interface</strong> não é obrigada a implementar os métodos. A regra da "primeira classe concreta" das aulas 84–86 vale aqui também.</li>
+        <li><strong>Extra: diferença-chave em relação à classe abstrata:</strong> a interface não tem estado (atributos de instância) nem construtor. Só constantes.</li>
+      </ul>
+
+      <h3>Paralelo com PHP</h3>
+      <ul>
+        <li><strong>Base igual:</strong> <code>interface DataLoader { public function load(): void; }</code> e <code>class DatabaseLoader implements DataLoader, DataRemover</code>. Todos os métodos de interface são <code>public</code> também no PHP.</li>
+        <li><strong>Constantes:</strong> <code>const MAX_DATA_SIZE = 10;</code> na interface, acessada com <code>DataLoader::MAX_DATA_SIZE</code>, igual ao <code>public static final</code>.</li>
+        <li><strong>Não existe <code>default</code> no PHP:</strong> interface do PHP não tem corpo de método. O papel do <code>default</code> costuma ficar com uma <strong>trait</strong> (<code>use ChecaPermissao;</code>) ou uma classe abstrata base.</li>
+        <li><strong>Laravel é construído sobre interfaces:</strong> os <code>Illuminate\Contracts\...</code> (<code>Cache\Repository</code>, <code>Queue\ShouldQueue</code>...). No service container, <code>$this-&gt;app-&gt;bind(DataLoader::class, DatabaseLoader::class)</code> faz quem pede <code>DataLoader</code> no construtor receber a implementação. É a "programação orientada a interface" de que o William fala, e é o que o Spring faz em Java.</li>
+        <li><code>ShouldQueue</code> é uma interface <strong>sem métodos</strong> (interface de marcação). Em Java, <code>Serializable</code> é o equivalente clássico.</li>
+      </ul>
+    </section>
+
+    <section id="flashcards">
+      <h2>Flashcards</h2>
+      <p style="color:var(--muted);margin-top:-6px">Toque no cartão para virar.</p>
+      <div id="flashcards-app"></div>
+    </section>
+
+    <section id="quiz">
+      <h2>Quiz</h2>
+      <div id="quiz-app"></div>
+    </section>
+
+    <section id="estudo">
+      <h2>Material de estudo</h2>
+
+      <h3>Mapa mental</h3>
+<pre><code>interface
+├── Contrato (87)
+│   ├── public interface DataLoader { void load(); }
+│   ├── métodos: public abstract por padrão (redundante escrever)
+│   ├── classe usa implements e é obrigada a implementar
+│   └── não pode ser final · não dá new
+├── Várias interfaces e default (88)
+│   ├── implements DataLoader, DataRemover (sem limite)
+│   ├── extends: só uma classe
+│   ├── default (Java 8): método com corpo, opcional
+│   ├── motivo: evoluir Collection sem quebrar ninguém
+│   └── a classe pode sobrescrever o default
+└── Regras finais (89)
+    ├── sobrescrita: nunca mais restritivo
+    │   └── private → default → protected → public
+    ├── atributos: public static final (constantes)
+    ├── static (Java 8): pertence à interface, não é sobrescrito
+    └── interface como tipo de variável → polimorfismo</code></pre>
+
+      <h3>Prática no seu WSL (20 minutos)</h3>
+<pre><code>cd ~/java-lab
+M=src/academy/devdojo/maratonajava/javacore/Minterfaces
+mkdir -p $M/dominio $M/test
+
+cat > $M/dominio/DataLoader.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Minterfaces.dominio;
+
+public interface DataLoader {
+    int MAX_DATA_SIZE = 10;            // public static final implícito
+
+    void load();                       // public abstract implícito
+
+    default void checkPermission() {
+        System.out.println("Fazendo checagem de permissões");
+    }
+
+    static void retrieveMaxDataSize() {
+        System.out.println("Dentro do retrieveMaxDataSize na interface");
+    }
+}
+EOF
+
+cat > $M/dominio/DataRemover.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Minterfaces.dominio;
+
+public interface DataRemover {
+    void remove();
+}
+EOF
+
+cat > $M/dominio/DatabaseLoader.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Minterfaces.dominio;
+
+public class DatabaseLoader implements DataLoader, DataRemover {
+    @Override
+    public void load() { System.out.println("Carregando dados do banco de dados"); }
+
+    @Override
+    public void remove() { System.out.println("Removendo dados do banco de dados"); }
+
+    @Override
+    public void checkPermission() { System.out.println("Checando permissões no banco de dados"); }
+
+    public static void retrieveMaxDataSize() {
+        System.out.println("Dentro do retrieveMaxDataSize na classe DatabaseLoader");
+    }
+}
+EOF
+
+cat > $M/dominio/FileLoader.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Minterfaces.dominio;
+
+public class FileLoader implements DataLoader, DataRemover {
+    @Override
+    public void load() { System.out.println("Carregando dados de um arquivo"); }
+
+    @Override
+    public void remove() { System.out.println("Removendo dados de um arquivo"); }
+}
+EOF
+
+cat > $M/test/DataLoaderTest01.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Minterfaces.test;
+
+import academy.devdojo.maratonajava.javacore.Minterfaces.dominio.DataLoader;
+import academy.devdojo.maratonajava.javacore.Minterfaces.dominio.DatabaseLoader;
+import academy.devdojo.maratonajava.javacore.Minterfaces.dominio.FileLoader;
+
+public class DataLoaderTest01 {
+    public static void main(String[] args) {
+        DatabaseLoader databaseLoader = new DatabaseLoader();
+        FileLoader fileLoader = new FileLoader();
+        databaseLoader.load();                    // ?
+        fileLoader.remove();                      // ?
+        databaseLoader.checkPermission();         // ?
+        fileLoader.checkPermission();             // ? (FileLoader não sobrescreveu)
+        DataLoader.retrieveMaxDataSize();         // ?
+        DatabaseLoader.retrieveMaxDataSize();     // ?
+        System.out.println(DataLoader.MAX_DATA_SIZE);   // ?
+        DataLoader loader = new FileLoader();     // interface como tipo
+        loader.load();                            // ?
+    }
+}
+EOF
+
+javac -d out $(find src -name '*.java')
+java -cp out academy.devdojo.maratonajava.javacore.Minterfaces.test.DataLoaderTest01</code></pre>
+      <details>
+        <summary>Ver a saída esperada</summary>
+<pre><code>Carregando dados do banco de dados
+Removendo dados de um arquivo
+Checando permissões no banco de dados
+Fazendo checagem de permissões
+Dentro do retrieveMaxDataSize na interface
+Dentro do retrieveMaxDataSize na classe DatabaseLoader
+10
+Carregando dados de um arquivo</code></pre>
+      </details>
+      <p><strong>Exercícios:</strong></p>
+      <ol>
+        <li>Tire o <code>public</code> do <code>checkPermission</code> em <code>DatabaseLoader</code> e leia o erro ("attempting to assign weaker access privileges").</li>
+        <li>No teste, faça <code>DataLoader.MAX_DATA_SIZE = 20;</code> e <code>new DataLoader();</code>. Leia os dois erros.</li>
+        <li>Coloque <code>@Override</code> no <code>retrieveMaxDataSize</code> do <code>DatabaseLoader</code> e explique o erro. Depois tente <code>FileLoader.retrieveMaxDataSize()</code>.</li>
+        <li>Com <code>DataLoader loader = new FileLoader();</code>, tente <code>loader.remove()</code>. Por que não compila, se o objeto tem <code>remove()</code>? (Guarde a resposta para as aulas 90–94.)</li>
+        <li>Crie <code>DataRemover.checkPermission()</code> também como <code>default</code>, veja o conflito no <code>FileLoader</code> e resolva com <code>DataLoader.super.checkPermission();</code>.</li>
+      </ol>
+
+      <h3>Glossário</h3>
+      <ul>
+        <li><strong>Interface</strong>: tipo que define um contrato (métodos) sem ser classe; não pode ser instanciada.</li>
+        <li><strong><code>implements</code></strong>: palavra usada pela classe para assumir o contrato de uma ou mais interfaces.</li>
+        <li><strong>Método <code>default</code></strong>: método de interface com corpo (Java 8+), herdado por quem implementa e opcionalmente sobrescrito.</li>
+        <li><strong>Método estático de interface</strong>: pertence à interface, chamado por <code>DataLoader.metodo()</code>, nunca sobrescrito.</li>
+        <li><strong>Compatibilidade retroativa</strong>: evoluir a linguagem sem quebrar código antigo; o motivo do <code>default</code>.</li>
+        <li><strong>Modificador de acesso <em>default</em></strong>: sem palavra nenhuma, visível só no pacote. Não confundir com o método <code>default</code> de interface.</li>
+        <li><strong>Programação orientada a interface</strong>: depender do contrato (<code>DataLoader</code>), não da implementação (<code>DatabaseLoader</code>), para desacoplar o código.</li>
+      </ul>
+
+      <h3>Revisão espaçada</h3>
+      <ul class="revisao">
+        <li><span class="dia">Dia 1</span><span>Todos os flashcards + a prática com previsões.</span></li>
+        <li><span class="dia">Dia 3</span><span>Quiz + exercícios 1 a 3.</span></li>
+        <li><span class="dia">Dia 7</span><span>Exercícios 4 e 5 + tabela classe abstrata × interface de memória.</span></li>
+        <li><span class="dia">Dia 14</span><span>Flashcards que errou + questões discursivas.</span></li>
+      </ul>
+
+      <h3>Para aprofundar</h3>
+      <ul>
+        <li>Métodos <code>private</code> em interfaces (Java 9): para que servem, se ninguém de fora pode chamá-los?</li>
+        <li>O que são interfaces funcionais (<code>@FunctionalInterface</code>) e como se ligam às lambdas?</li>
+        <li>Por que o <em>Effective Java</em> diz "prefira interfaces a classes abstratas"? Quando a classe abstrata ainda vence?</li>
+        <li>Como o Spring escolhe qual implementação injetar quando há dois beans da mesma interface (<code>@Primary</code>, <code>@Qualifier</code>)?</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    window.AULA = {
+      flashcards: [
+        ["O que é uma interface em Java?", "Um contrato: define métodos que as classes que a implementam precisam ter. Não é uma classe"],
+        ["Qual palavra a classe usa para assumir uma interface?", "implements"],
+        ["Qual o modificador padrão dos métodos abstratos de uma interface?", "public abstract (escrever é redundante)"],
+        ["Até qual versão todos os métodos de interface eram abstratos?", "Java 7; a partir do Java 8 existem default e static"],
+        ["Uma interface pode ser final?", "Não: o contrato existe para ser implementado"],
+        ["Dá para fazer new DataLoader()?", "Não, mas DataLoader pode ser o tipo da variável (DataLoader l = new FileLoader())"],
+        ["Quantas interfaces uma classe pode implementar?", "Quantas quiser: implements DataLoader, DataRemover"],
+        ["Quantas classes uma classe pode estender?", "Uma só"],
+        ["O que é um método default?", "Método de interface com corpo (Java 8+), herdado por quem implementa"],
+        ["Por que o Java 8 criou os métodos default?", "Para adicionar métodos em interfaces como Collection sem quebrar todo o código existente"],
+        ["A classe é obrigada a implementar um método default?", "Não, mas pode sobrescrevê-lo"],
+        ["Exemplo de default citado na aula em Collection?", "removeIf"],
+        ["Qual a ordem dos modificadores de acesso, do mais restritivo ao mais liberal?", "private → default (pacote) → protected → public"],
+        ["Qual a regra do modificador ao sobrescrever?", "Nunca pode ser mais restritivo que o método original"],
+        ["Por que tirar o public do checkPermission na classe não compila?", "Métodos de interface são public; sem public ele viraria de pacote (mais restritivo)"],
+        ["O que todo atributo de interface é, implicitamente?", "public static final (constante)"],
+        ["Método static de interface pode ser sobrescrito?", "Não: pertence à interface; @Override dá erro"],
+        ["DataLoader e DatabaseLoader têm retrieveMaxDataSize() estático. Qual roda em DatabaseLoader.retrieveMaxDataSize()?", "O da classe: são dois métodos independentes"],
+        ["Método static da interface é herdado pela classe?", "Não (extra): FileLoader.retrieveMaxDataSize() não compila"],
+        ["Como uma interface herda de outra?", "extends (e pode estender várias) — extra"],
+        ["Em que ordem vêm extends e implements?", "extends primeiro: class A extends B implements C, D — extra"],
+        ["O que acontece se duas interfaces têm o mesmo default?", "A classe precisa sobrescrever; pode chamar X.super.metodo() — extra"],
+        ["O que é programação orientada a interface?", "Depender do contrato, não da implementação, para desacoplar o código"],
+        ["Qual o equivalente PHP do método default?", "Não existe em interface; usa-se trait ou classe abstrata"]
+      ],
+      quiz: [
+        { tipo: 'multipla', pergunta: 'Qual declaração faz DatabaseLoader assumir o contrato de DataLoader?', opcoes: ['class DatabaseLoader extends DataLoader', 'class DatabaseLoader implements DataLoader', 'class DatabaseLoader uses DataLoader', 'interface DatabaseLoader implements DataLoader'], correta: 1,
+          explicacao: 'Classe usa implements para interfaces. extends é para herdar de classe (ou para uma interface estender outra).' },
+        { tipo: 'vf', pergunta: 'Em uma interface, void load(); é implicitamente public abstract.', correta: 0,
+          explicacao: 'Verdadeiro. Por isso escrever public abstract é redundante e raramente aparece em código real.' },
+        { tipo: 'vf', pergunta: 'Uma classe pode implementar apenas uma interface, assim como só pode estender uma classe.', correta: 1,
+          explicacao: 'Falso. A limitação de "uma só" vale para extends. Com interfaces: implements DataLoader, DataRemover, sem limite.' },
+        { tipo: 'multipla', pergunta: 'FileLoader implementa DataLoader e não sobrescreve checkPermission(), que é default na interface. O que imprime fileLoader.checkPermission()?', opcoes: ['Nada, o método é abstrato', 'Erro de compilação em FileLoader', '"Fazendo checagem de permissões"', '"Checando permissões no arquivo"'], correta: 2,
+          explicacao: 'Método default tem corpo e é herdado. Só quem sobrescreve (como DatabaseLoader) muda o comportamento.' },
+        { tipo: 'multipla', pergunta: 'Por que os métodos default foram criados no Java 8?', opcoes: ['Para permitir herança múltipla de estado', 'Para evoluir interfaces como Collection sem quebrar as classes que já as implementam', 'Para substituir as classes abstratas', 'Para permitir métodos privados em interfaces'], correta: 1,
+          explicacao: 'Adicionar um método abstrato quebraria todas as implementações existentes. Com default, o método novo já vem com corpo (ex.: removeIf).' },
+        { tipo: 'multipla', pergunta: 'A interface tem default void checkPermission(). Na classe, qual sobrescrita compila?', opcoes: ['void checkPermission() { }', 'protected void checkPermission() { }', 'private void checkPermission() { }', 'public void checkPermission() { }'], correta: 3,
+          explicacao: 'Métodos de interface são public, e a sobrescrita nunca pode ser mais restritiva. Só public serve.' },
+        { tipo: 'vf', pergunta: 'Em int MAX_DATA_SIZE = 10; dentro de uma interface, é possível fazer DataLoader.MAX_DATA_SIZE = 20; em outra classe.', correta: 1,
+          explicacao: 'Falso. Todo atributo de interface é public static final: uma constante. Reatribuir não compila.' },
+        { tipo: 'multipla', pergunta: 'DataLoader tem static void retrieveMaxDataSize() e DatabaseLoader declara um static de mesmo nome. O que é verdade?', opcoes: ['DatabaseLoader sobrescreveu o método e deve usar @Override', 'São dois métodos independentes; cada um é chamado pelo seu tipo', 'Não compila: nome repetido', 'DataLoader.retrieveMaxDataSize() passa a executar a versão da classe'], correta: 1,
+          explicacao: 'Métodos estáticos pertencem ao tipo em que foram declarados e nunca são sobrescritos. @Override ali dá erro de compilação.' },
+        { tipo: 'discursiva', pergunta: 'Monte uma comparação entre classe abstrata (aulas 84–86) e interface (aulas 87–89): o que têm em comum e quais as diferenças?',
+          explicacao: 'Em comum: nenhuma das duas pode ser instanciada com new; ambas podem ter métodos abstratos que obrigam a primeira classe concreta a implementar; ambas servem como tipo de variável. Diferenças: interface não é classe; a classe implementa várias interfaces, mas estende só uma classe (implements x extends); interface não tem construtor nem atributos de instância, só constantes public static final; os métodos da interface são public por padrão, enquanto a classe abstrata aceita qualquer modificador e métodos concretos normais. Na interface, corpo só em default e static (Java 8+).' },
+        { tipo: 'discursiva', pergunta: 'Como você faria o DataLoader com DatabaseLoader e FileLoader em PHP/Laravel, e o que muda em relação ao método default?',
+          explicacao: 'interface DataLoader { const MAX_DATA_SIZE = 10; public function load(): void; } e class DatabaseLoader implements DataLoader, DataRemover { ... }. A constante se acessa com DataLoader::MAX_DATA_SIZE. Interface do PHP não tem corpo, então o checkPermission padrão iria para uma trait (use ChecaPermissao) ou uma classe abstrata base. No Laravel, bind(DataLoader::class, DatabaseLoader::class) no service container faz quem pede DataLoader no construtor receber a implementação: programação orientada a interface.' }
+      ]
+    };
+  </script>
+  <script src="../js/app.js"></script>
+</body>
+</html>
