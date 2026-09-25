@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>95–99 · Exceções</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="topo">
+      <a class="voltar" href="../index.html">← Todas as aulas</a>
+      <h1>95–99 · Exceções: Error, RuntimeException e Exception</h1>
+      <p>Hierarquia de Throwable, checked × unchecked, try/catch, printStackTrace, throw e throws · <a href="https://www.youtube.com/playlist?list=PL62G310vn6nFIsOCC0H-C2infYgwm8SWW" target="_blank" rel="noopener">playlist</a></p>
+    </header>
+
+    <nav class="abas">
+      <a href="#resumo">Resumo</a>
+      <a href="#flashcards">Flashcards</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#estudo">Material de estudo</a>
+    </nav>
+
+    <p class="aviso">Junta as aulas 95 (Errors), 96 (RuntimeException), 97 (Exception), 98 (lançando exceção unchecked) e 99 (lançando exceção checked). Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. O código (pacote <code>javacore.Oexception</code>, com os subpacotes <code>error</code>, <code>runtime</code> e <code>exception</code>) foi conferido no <a href="https://github.com/devdojobr/maratona-java-virado-no-jiraya" target="_blank" rel="noopener">repositório do professor</a>. O professor usa Windows (<code>"arquivo\\teste.txt"</code>); a prática abaixo usa <code>/</code> para funcionar no WSL. Os itens marcados como "extra" não estão nos vídeos.</p>
+
+    <section id="resumo">
+      <h2>Resumo</h2>
+      <p>Até agora o curso seguiu o <strong>fluxo feliz</strong>. <strong>Exceções</strong> são as <strong>condições anormais</strong> do programa. Algumas estão <strong>sob seu controle</strong>: idade negativa, divisão por zero. Outras estão <strong>fora dele</strong>: o arquivo mudou de lugar ou perdeu a permissão, a internet caiu, o banco saiu do ar. Em Java, como tudo é objeto, o que é "lançado" (<em>thrown</em>) é um objeto de uma subclasse de <strong><code>Throwable</code></strong>.</p>
+<pre><code>                 Throwable
+                /         \
+           Error           Exception ─────────────── checked (IOException, ...)
+     (StackOverflowError,       \
+      OutOfMemoryError)          RuntimeException ─── unchecked
+                                 (NullPointerException, ArrayIndexOutOfBoundsException,
+                                  ClassCastException, ArithmeticException,
+                                  IllegalArgumentException, NumberFormatException)</code></pre>
+
+      <h3>95 · Error: não tem conserto em tempo de execução</h3>
+<pre><code>package academy.devdojo.maratonajava.javacore.Oexception.error.test;
+
+public class StackOverflowTest01 {
+    public static void main(String[] args) {
+        recursividade();
+    }
+
+    public static void recursividade() {
+        recursividade();          // chama a si mesmo para sempre
+    }
+}
+// Exception in thread "main" java.lang.StackOverflowError</code></pre>
+      <ul>
+        <li><strong><code>Error</code></strong> são situações de que <strong>não dá para se recuperar</strong>: acabou a memória (<code>OutOfMemoryError</code>) ou estourou a pilha (<code>StackOverflowError</code>). Normalmente a JVM para. Você corrige o código e roda de novo.</li>
+        <li><strong>A pilha (stack):</strong> cada chamada de método (<code>main</code> → <code>calcularImposto</code> → <code>produto.calcularImposto</code>...) ocupa memória na pilha, que cresce na chamada e é limpa quando o método volta.</li>
+        <li><strong>Recursão sem condição de parada</strong> empilha chamadas até a memória acabar: <code>StackOverflowError</code>. A solução é consertar o código (colocar um limite ou tirar a recursão).</li>
+        <li><code>StackOverflowError</code> estende <code>VirtualMachineError</code>, que estende <code>Error</code>.</li>
+      </ul>
+
+      <h3>96 · RuntimeException: unchecked</h3>
+<pre><code>package academy.devdojo.maratonajava.javacore.Oexception.runtime.test;
+
+public class RuntimeExceptionTest01 {
+    public static void main(String[] args) {
+        // Checked e Unchecked
+        int[] nums = {1, 2};
+        System.out.println(nums[2]);   // ArrayIndexOutOfBoundsException
+    }
+}
+
+Object o = null;
+o.toString();                          // NullPointerException</code></pre>
+      <ul>
+        <li><strong>Vocabulário técnico (certificação):</strong> "aconteceu um <strong>erro</strong>" = o que foi lançado é subclasse de <code>Error</code>. "Aconteceu uma <strong>exceção</strong>" = subclasse de <code>Exception</code>.</li>
+        <li><strong>Checked</strong> (checadas): filhas de <code>Exception</code> que <strong>não</strong> são <code>RuntimeException</code>. Se não forem tratadas, o código <strong>não compila</strong>. Exemplo: <code>IOException</code> (entrada e saída, arquivos).</li>
+        <li><strong>Unchecked</strong> (não checadas): <code>RuntimeException</code> e as filhas dela. O tratamento é <strong>opcional</strong> e o código compila sem ele.</li>
+        <li>Quando o próprio Java lança uma unchecked, em quase 100% dos casos <strong>o problema é o seu código</strong>: acessar posição que não existe, chamar método em referência <code>null</code>, cast inválido (aula 93), converter "abc" em número. "Você, como desenvolvedor, deveria ter tomado cuidado."</li>
+        <li>Você não precisa decorar todas as <code>RuntimeException</code>s da documentação, mas conhecer as principais ajuda em entrevista e certificação.</li>
+      </ul>
+
+      <h3>97 · Exception: checked, try/catch e printStackTrace</h3>
+<pre><code>package academy.devdojo.maratonajava.javacore.Oexception.exception.test;
+
+import java.io.File;
+import java.io.IOException;
+
+public class ExceptionTest01 {
+    public static void main(String[] args) {
+        criarNovoArquivo();
+    }
+
+    private static void criarNovoArquivo() {
+        File file = new File("arquivo\\teste.txt");      // \\ = uma barra invertida (Windows)
+        try {
+            boolean isCriado = file.createNewFile();      // assinatura: throws IOException
+            System.out.println("Arquivo criado " + isCriado);
+        } catch (IOException e) {
+            e.printStackTrace();                          // NUNCA deixe o catch vazio
+        }
+    }
+}</code></pre>
+      <ul>
+        <li>Na documentação, <code>File.createNewFile()</code> declara <strong><code>throws IOException</code></strong>. Como <code>IOException</code> é filha direta de <code>Exception</code> (checked), chamar o método sem tratar <strong>não compila</strong>. É "uma camada de segurança": você não controla o disco.</li>
+        <li><strong><code>try</code></strong> = "tenta executar". <strong><code>catch (IOException e)</code></strong> = "se der essa exceção, pega". O Java cria o objeto da exceção e o referencia em <code>e</code>.</li>
+        <li><strong>Fluxo:</strong> se a linha do <code>createNewFile</code> der certo, a próxima linha roda e o <code>catch</code> é pulado. Se falhar, o resto do <code>try</code> é <strong>pulado</strong> e a execução vai direto para o <code>catch</code>.</li>
+        <li>Não dá para ter <code>catch</code> de uma exceção checked que nada no <code>try</code> pode lançar (erro de compilação). A exceção é <code>Exception</code>, porque ela também engloba as <code>RuntimeException</code>s.</li>
+        <li><strong>Prefira a exceção mais específica.</strong> Com <code>catch (Exception e)</code> você não sabe se o problema foi no arquivo ou na conversão de número, e o tratamento fica pior.</li>
+        <li><strong>"Nem que a vaca tussa" deixe o <code>catch</code> em branco.</strong> Isso engole o problema sem avisar ninguém. O William diz que, numa entrevista, ignora o resto do teste de quem faz isso. No mínimo, <code>e.printStackTrace()</code>.</li>
+        <li><strong>Não coloque regra de negócio no <code>catch</code>.</strong> Ele serve para lidar com a exceção.</li>
+        <li><strong>Stack trace:</strong> a exceção "sobe" a pilha até alguém tratar. Se ninguém tratar, o programa para. O trace mostra a sequência (linha 8 chamou a 14, que chamou <code>File.createNewFile</code>, que chamou um método nativo...). O William deixa uma dica de carreira: <strong>aprenda a ler o stack trace</strong> e pesquise a mensagem antes de perguntar. Quase certamente alguém já passou por isso.</li>
+        <li>Na aula, ele tira a permissão de escrita da pasta e o resultado é <code>IOException: Acesso negado</code>. A linha "Arquivo criado" nunca roda.</li>
+      </ul>
+
+      <h3>98 · Lançando exceção unchecked: throw</h3>
+<pre><code>public class RuntimeExceptionTest02 {
+    public static void main(String[] args) {
+        divisao(1, 0);
+        System.out.println("Código finalizado");   // não imprime: ninguém tratou a exceção
+    }
+
+    /**
+     * @param a
+     * @param b não pode ser zero
+     * @return
+     * @throws IllegalArgumentException caso b seja zero
+     */
+    private static int divisao(int a, int b) {
+        if (b == 0) {
+            throw new IllegalArgumentException("Argumento ilegal, não pode ser 0");
+        }
+        return a / b;
+    }
+}</code></pre>
+      <ul>
+        <li><code>1 / 0</code> com inteiros lança <strong><code>ArithmeticException</code></strong> (unchecked). Dá para tratar com <code>catch (ArithmeticException e)</code> ou, por polimorfismo, <code>catch (RuntimeException e)</code>.</li>
+        <li><strong>O problema do <code>return 0</code> no catch:</strong> o método precisa retornar algo em todos os caminhos. Retornar 0 "funciona", mas 0 é um resultado <strong>inválido</strong> que finge ser válido.</li>
+        <li><strong>Jeito certo: validar e lançar.</strong> <code>throw new IllegalArgumentException("...")</code> interrompe o método na hora, e o código abaixo do <code>if</code> não roda. Use a <strong>exceção mais específica</strong> possível, para quem usa o seu método entender o que houve.</li>
+        <li><code>throw</code> (sem s) <strong>lança</strong> um objeto de exceção. <code>throws</code> (com s), na assinatura, <strong>avisa</strong> que o método pode lançar.</li>
+        <li>Para unchecked, o <code>throws IllegalArgumentException</code> na assinatura é <strong>opcional</strong> (com ou sem ele, o resultado é o mesmo). O comum é documentar no <strong>Javadoc</strong> com <code>@throws</code>, que aparece para quem chama (Ctrl+Q no IntelliJ).</li>
+        <li>Idade negativa, idade acima de 150... Toda validação de argumento se trata <strong>com exceção, não com um retorno "mágico"</strong> (0, -1).</li>
+        <li>Se o método declarar <code>throws IOException</code> (checked), quem chama <strong>é obrigado</strong> a tratar ou repassar. Se o <code>main</code> repassar, não sobra ninguém para capturar e a JVM para.</li>
+      </ul>
+
+      <h3>99 · Lançando exceção checked: tratar, repassar ou os dois</h3>
+<pre><code>public class ExceptionTest02 {
+    public static void main(String[] args) throws IOException {   // main repassa: se estourar, a JVM para
+        criarNovoArquivo();
+    }
+
+    public static void criarNovoArquivo() throws IOException {
+        File file = new File("arquivo\\teste.txt");
+        try {
+            boolean isCriado = file.createNewFile();
+            System.out.println("Arquivo criado " + isCriado);
+        } catch (IOException e) {
+            e.printStackTrace();   // faz a parte dele (log)...
+            throw e;               // ...e relança para quem chamou decidir
+        }
+    }
+}</code></pre>
+      <ul>
+        <li><strong>Três caminhos para uma checked:</strong>
+          <ol>
+            <li><strong>Tratar</strong> com <code>try/catch</code>: o código não explode, mas quem chamou não fica sabendo.</li>
+            <li><strong>Repassar</strong> com <code>throws IOException</code>, sem try/catch: a "batata quente" vai para quem chamou, que é obrigado a tratar ou repassar também.</li>
+            <li><strong>Híbrido:</strong> <code>catch</code> + log + <code>throw e;</code>. Como relança uma checked, precisa do <code>throws</code> na assinatura.</li>
+          </ol>
+        </li>
+        <li><strong>Por que repassar?</strong> Se o <code>createNewFile</code> do Java tratasse a exceção por dentro, você não teria como decidir nada (mandar e-mail, tentar de novo...). Quem chama pode ter uma visão diferente de como tratar.</li>
+        <li><strong>Regra prática do William:</strong> método <code>private</code> (só a sua classe chama): tende a tratar ali mesmo. Método <code>public</code> (qualquer um chama): tende a declarar <code>throws</code> e deixar quem chama decidir. "Depende de projeto para projeto". O mais importante é <strong>manter o mesmo padrão no sistema todo</strong>.</li>
+        <li><strong>Exemplo real do híbrido:</strong> o pagamento falhou. Você registra no log e relança para quem chamou oferecer uma nova tentativa ao cliente. A nova tentativa não fica dentro do <code>catch</code> (loop infinito): a falha é guardada para outro processo tentar depois.</li>
+        <li><strong>Também dá para lançar outra exceção</strong> no catch: <code>throw new RuntimeException("Problema na hora de criar o arquivo");</code>. Aí quem chama não é mais obrigado a tratar, mas ainda pode.</li>
+        <li><strong>Programação defensiva:</strong> num back-end, devolva uma mensagem clara ("dado ilegal") em vez de um valor especial.</li>
+      </ul>
+
+      <h3>Atenção</h3>
+      <ul>
+        <li><strong>Checked × unchecked é decidido pela hierarquia</strong>, não pela gravidade: filha de <code>RuntimeException</code> = unchecked; outra filha de <code>Exception</code> = checked. <code>Error</code> também é unchecked.</li>
+        <li><strong><code>throw</code> ≠ <code>throws</code>.</strong> <code>throw new X()</code> no corpo lança; <code>throws X</code> na assinatura avisa.</li>
+        <li><strong><code>throw e;</code> de uma checked dentro do catch</strong> exige <code>throws</code> na assinatura. Relançar como <code>RuntimeException</code> não exige.</li>
+        <li><strong>Extra: <code>1.0 / 0</code> não lança exceção</strong>: com <code>double</code> dá <code>Infinity</code>. Só a divisão <strong>inteira</strong> por zero lança <code>ArithmeticException</code>.</li>
+        <li><strong>Extra: ao embrulhar, guarde a causa:</strong> <code>throw new RuntimeException("Problema ao criar o arquivo", e);</code>. Sem o <code>e</code>, o stack trace original se perde.</li>
+        <li><strong>Extra: <code>e.getMessage()</code></strong> devolve só a mensagem ("Argumento ilegal, não pode ser 0"), sem o trace.</li>
+        <li><strong>Extra: em código real,</strong> em vez de <code>printStackTrace()</code> usa-se um logger (SLF4J/Logback), que vem mais à frente no ecossistema.</li>
+      </ul>
+
+      <h3>Paralelo com PHP</h3>
+      <ul>
+        <li><strong>A hierarquia é parecida:</strong> <code>Throwable</code> → <code>Error</code> (<code>TypeError</code>, <code>DivisionByZeroError</code>...) e <code>Exception</code> (<code>RuntimeException</code>, <code>InvalidArgumentException</code>...). <code>try/catch</code>, <code>throw new</code> e <code>getMessage()</code> funcionam igual.</li>
+        <li><strong>O PHP não tem exceções checked.</strong> Nada obriga você a tratar ou declarar. O <code>@throws</code> do PHPDoc é só documentação, que o PHPStan pode verificar. No Java, o compilador cobra as checked.</li>
+        <li><code>IllegalArgumentException</code> ≈ <code>InvalidArgumentException</code>. <code>ArithmeticException</code> ≈ <code>DivisionByZeroError</code> (no PHP 8, <code>1 / 0</code> já lança).</li>
+        <li><strong>Repassar é o padrão no Laravel:</strong> exceções sobem até o <code>Handler</code> (<code>bootstrap/app.php</code> → <code>withExceptions</code>), que decide log e resposta. É o "main que não trata", só que com um tratador global. <code>report($e)</code> é o "loga e segue" do híbrido.</li>
+        <li><strong>Stack trace:</strong> é a mesma habilidade da tela do Ignition/Whoops. Leia de cima para baixo e procure a primeira linha que é <strong>do seu código</strong>.</li>
+        <li>Catch vazio é tão ruim quanto no PHP. O <code>@</code> (supressão de erro) é o primo dele.</li>
+      </ul>
+    </section>
+
+    <section id="flashcards">
+      <h2>Flashcards</h2>
+      <p style="color:var(--muted);margin-top:-6px">Toque no cartão para virar.</p>
+      <div id="flashcards-app"></div>
+    </section>
+
+    <section id="quiz">
+      <h2>Quiz</h2>
+      <div id="quiz-app"></div>
+    </section>
+
+    <section id="estudo">
+      <h2>Material de estudo</h2>
+
+      <h3>Mapa mental</h3>
+<pre><code>Exceções (fluxo anormal)
+├── Throwable (tudo que pode ser lançado)
+├── Error (95)
+│   ├── irrecuperável: StackOverflowError, OutOfMemoryError
+│   └── recursão sem parada → estoura a pilha
+├── RuntimeException = unchecked (96, 98)
+│   ├── tratamento opcional · compila sem
+│   ├── geralmente é bug seu: NPE, ArrayIndexOutOfBounds, ClassCast, Arithmetic
+│   ├── throw new IllegalArgumentException("...")  ← validar argumento
+│   └── throws opcional → documente com Javadoc @throws
+└── Exception (não runtime) = checked (97, 99)
+    ├── não tratar → não compila (IOException do createNewFile)
+    ├── try { ... } catch (IOException e) { e.printStackTrace(); }
+    ├── catch vazio: NUNCA · sem regra de negócio no catch
+    ├── ou throws IOException na assinatura (batata quente)
+    ├── ou híbrido: catch + log + throw e (exige throws)
+    └── private → trate · public → deixe quem chama decidir</code></pre>
+
+      <h3>Prática no seu WSL (25 minutos)</h3>
+<pre><code>cd ~/java-lab
+O=src/academy/devdojo/maratonajava/javacore/Oexception
+mkdir -p $O/error/test $O/runtime/test $O/exception/test
+
+cat > $O/error/test/StackOverflowTest01.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Oexception.error.test;
+
+public class StackOverflowTest01 {
+    public static void main(String[] args) {
+        recursividade();
+    }
+
+    public static void recursividade() {
+        recursividade();
+    }
+}
+EOF
+
+cat > $O/runtime/test/RuntimeExceptionTest02.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Oexception.runtime.test;
+
+public class RuntimeExceptionTest02 {
+    public static void main(String[] args) {
+        divisao(1, 0);
+        System.out.println("Código finalizado");
+    }
+
+    /**
+     * @param b não pode ser zero
+     * @throws IllegalArgumentException caso b seja zero
+     */
+    private static int divisao(int a, int b) {
+        if (b == 0) {
+            throw new IllegalArgumentException("Argumento ilegal, não pode ser 0");
+        }
+        return a / b;
+    }
+}
+EOF
+
+cat > $O/exception/test/ExceptionTest02.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Oexception.exception.test;
+
+import java.io.File;
+import java.io.IOException;
+
+public class ExceptionTest02 {
+    public static void main(String[] args) throws IOException {
+        criarNovoArquivo();
+    }
+
+    public static void criarNovoArquivo() throws IOException {
+        File file = new File("arquivo/teste.txt");   // no Linux/WSL a barra é /
+        try {
+            boolean isCriado = file.createNewFile();
+            System.out.println("Arquivo criado " + isCriado);
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw e;
+        }
+    }
+}
+EOF
+
+javac -d out $(find src -name '*.java')
+java -cp out academy.devdojo.maratonajava.javacore.Oexception.error.test.StackOverflowTest01 2>&amp;1 | head -3
+java -cp out academy.devdojo.maratonajava.javacore.Oexception.runtime.test.RuntimeExceptionTest02
+java -cp out academy.devdojo.maratonajava.javacore.Oexception.exception.test.ExceptionTest02   # 1) sem a pasta
+mkdir -p arquivo
+java -cp out academy.devdojo.maratonajava.javacore.Oexception.exception.test.ExceptionTest02   # 2) com a pasta
+java -cp out academy.devdojo.maratonajava.javacore.Oexception.exception.test.ExceptionTest02   # 3) de novo</code></pre>
+      <details>
+        <summary>Ver a saída esperada</summary>
+<pre><code>Exception in thread "main" java.lang.StackOverflowError
+	at ...StackOverflowTest01.recursividade(StackOverflowTest01.java:9)
+	at ...StackOverflowTest01.recursividade(StackOverflowTest01.java:9)
+
+Exception in thread "main" java.lang.IllegalArgumentException: Argumento ilegal, não pode ser 0
+	at ...RuntimeExceptionTest02.divisao(RuntimeExceptionTest02.java:15)
+	at ...RuntimeExceptionTest02.main(RuntimeExceptionTest02.java:5)
+   ("Código finalizado" NÃO aparece)
+
+1) java.io.IOException: No such file or directory   ← printStackTrace do catch
+   Exception in thread "main" java.io.IOException: No such file or directory   ← o throw e chegou ao main
+2) Arquivo criado true
+3) Arquivo criado false   (já existia: createNewFile não sobrescreve)</code></pre>
+      </details>
+      <p><strong>Exercícios:</strong></p>
+      <ol>
+        <li>Coloque uma condição de parada no <code>recursividade(int n)</code> (pare em 0) e confirme que o erro some.</li>
+        <li>No <code>RuntimeExceptionTest02</code>, envolva a chamada em <code>try/catch (IllegalArgumentException e)</code> e imprima <code>e.getMessage()</code>. Agora "Código finalizado" aparece?</li>
+        <li>Tire o <code>throws IOException</code> de <code>criarNovoArquivo</code> (mantendo o <code>throw e;</code>) e leia o erro de compilação. Depois troque por <code>throw new RuntimeException("Problema na hora de criar o arquivo", e);</code> e tire o <code>throws</code> do <code>main</code>.</li>
+        <li>Tire a permissão de escrita (<code>chmod -w arquivo</code>, apague o <code>teste.txt</code> antes) e rode de novo, como o William fez no Windows. Leia o stack trace de cima para baixo e ache a linha do seu código. Depois, <code>chmod +w arquivo</code>.</li>
+        <li>Imprima <code>1.0 / 0</code> e <code>Integer.parseInt("abc")</code>. Qual lança exceção, e de qual tipo?</li>
+      </ol>
+
+      <h3>Glossário</h3>
+      <ul>
+        <li><strong>Exceção</strong>: condição anormal na execução; em Java, um objeto lançado.</li>
+        <li><strong><code>Throwable</code></strong>: superclasse de tudo que pode ser lançado (<code>Error</code> e <code>Exception</code>).</li>
+        <li><strong><code>Error</code></strong>: problema grave da JVM, geralmente irrecuperável.</li>
+        <li><strong>Checked</strong>: exceção que o compilador obriga a tratar ou declarar (filha de <code>Exception</code>, fora de <code>RuntimeException</code>).</li>
+        <li><strong>Unchecked</strong>: <code>RuntimeException</code> e filhas (e os <code>Error</code>s); o tratamento é opcional.</li>
+        <li><strong>Stack (pilha de chamadas)</strong>: memória onde ficam as chamadas de método em andamento.</li>
+        <li><strong>Stack trace</strong>: a lista de chamadas impressa quando uma exceção ocorre, da mais recente à mais antiga.</li>
+        <li><strong><code>throw</code> / <code>throws</code></strong>: lançar uma exceção / declarar na assinatura que o método pode lançá-la.</li>
+        <li><strong>Relançar</strong>: capturar no catch e lançar de novo (a mesma ou outra exceção).</li>
+        <li><strong>Programação defensiva</strong>: validar entradas e falhar de forma clara, em vez de devolver valores "mágicos".</li>
+      </ul>
+
+      <h3>Revisão espaçada</h3>
+      <ul class="revisao">
+        <li><span class="dia">Dia 1</span><span>Todos os flashcards + desenhar a hierarquia Throwable de memória + a prática.</span></li>
+        <li><span class="dia">Dia 3</span><span>Quiz + exercícios 1 a 3.</span></li>
+        <li><span class="dia">Dia 7</span><span>Exercícios 4 e 5 + classificar 10 exceções como checked/unchecked.</span></li>
+        <li><span class="dia">Dia 14</span><span>Flashcards que errou + questões discursivas.</span></li>
+      </ul>
+
+      <h3>Para aprofundar</h3>
+      <ul>
+        <li>Por que linguagens mais novas (Kotlin, C#) não têm exceções checked? Quais as críticas ao modelo do Java?</li>
+        <li>Qual o custo de desempenho de criar uma exceção (preencher o stack trace)?</li>
+        <li>Como o Spring transforma exceções em respostas HTTP (<code>@ControllerAdvice</code>, <code>@ExceptionHandler</code>)? Compare com o Handler do Laravel.</li>
+        <li>O que é exceção encadeada (<code>getCause()</code>) e como aparece no stack trace ("Caused by:")?</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    window.AULA = {
+      flashcards: [
+        ["O que é uma exceção?", "Uma condição anormal na execução do programa, fora do fluxo feliz"],
+        ["Qual a superclasse de tudo que pode ser lançado?", "Throwable"],
+        ["Quais os dois filhos diretos de Throwable?", "Error e Exception"],
+        ["O que caracteriza um Error?", "Problema grave da JVM, geralmente impossível de recuperar em execução (ex.: OutOfMemoryError)"],
+        ["O que causa um StackOverflowError?", "Estourar a pilha de chamadas, tipicamente com recursão sem condição de parada"],
+        ["Diferença técnica entre 'erro' e 'exceção'?", "Erro: o lançado é subclasse de Error. Exceção: é subclasse de Exception"],
+        ["O que é uma exceção checked?", "Filha de Exception (fora de RuntimeException); se não tratada ou declarada, não compila"],
+        ["O que é uma exceção unchecked?", "RuntimeException e suas filhas; o tratamento é opcional"],
+        ["Cite 4 RuntimeExceptions.", "NullPointerException, ArrayIndexOutOfBoundsException, ClassCastException, ArithmeticException (e IllegalArgumentException)"],
+        ["Quando o Java lança uma RuntimeException, de quem costuma ser a culpa?", "Do seu código: o desenvolvedor deveria ter prevenido"],
+        ["Por que file.createNewFile() exige tratamento?", "Declara throws IOException, que é checked"],
+        ["O que acontece no try quando uma linha lança exceção?", "O resto do try é pulado e a execução vai para o catch correspondente"],
+        ["Por que não usar sempre catch (Exception e)?", "É genérico demais: você não sabe o que falhou e trata pior; prefira a mais específica"],
+        ["Qual a regra de ouro do catch?", "Nunca deixar em branco (no mínimo e.printStackTrace())"],
+        ["Pode colocar regra de negócio no catch?", "Não; o catch é para lidar com a exceção"],
+        ["O que é o stack trace?", "A sequência de chamadas até o ponto da exceção; aprender a lê-lo é essencial"],
+        ["Diferença entre throw e throws?", "throw lança um objeto de exceção; throws declara na assinatura que o método pode lançar"],
+        ["Qual exceção lançar para um argumento inválido (b == 0)?", "IllegalArgumentException, com uma mensagem clara"],
+        ["Por que não retornar 0 quando a divisão é inválida?", "0 é um resultado inválido fingindo ser válido; lance uma exceção"],
+        ["throws é obrigatório para exceções unchecked?", "Não; o comum é documentar com @throws no Javadoc"],
+        ["O que acontece se o main declarar throws e a exceção chegar nele?", "Ninguém captura: a JVM imprime o stack trace e o programa para"],
+        ["Quais os 3 jeitos de lidar com uma checked?", "Tratar (try/catch), repassar (throws) ou híbrido (catch + log + throw)"],
+        ["Relançar throw e; (IOException) no catch exige o quê?", "throws IOException na assinatura"],
+        ["Regra prática: método private × public e exceções checked?", "private: tende a tratar ali; public: declara throws e deixa quem chama decidir"],
+        ["1.0 / 0 lança exceção?", "Não: dá Infinity; só a divisão inteira por zero lança ArithmeticException (extra)"]
+      ],
+      quiz: [
+        { tipo: 'multipla', pergunta: 'Qual destes é um Error, e não uma Exception?', opcoes: ['NullPointerException', 'IOException', 'StackOverflowError', 'IllegalArgumentException'], correta: 2,
+          explicacao: 'StackOverflowError estende VirtualMachineError, que estende Error. As outras são exceções.' },
+        { tipo: 'vf', pergunta: 'Exceções unchecked são RuntimeException e suas subclasses, e o código compila mesmo sem tratá-las.', correta: 0,
+          explicacao: 'Verdadeiro. O tratamento de RuntimeException é opcional. Já as checked (outras filhas de Exception) precisam ser tratadas ou declaradas.' },
+        { tipo: 'multipla', pergunta: 'O que acontece ao compilar um método que chama file.createNewFile() sem try/catch e sem throws?', opcoes: ['Compila e lança IOException se falhar', 'Não compila: IOException é checked e não foi tratada', 'Compila, mas com um aviso', 'Não compila: File precisa de import estático'], correta: 1,
+          explicacao: 'createNewFile declara throws IOException, uma checked. O compilador exige try/catch ou throws.' },
+        { tipo: 'multipla', pergunta: 'int[] nums = {1, 2}; System.out.println(nums[2]); O que acontece?', opcoes: ['Imprime 0', 'Imprime 2', 'Erro de compilação', 'ArrayIndexOutOfBoundsException em tempo de execução'], correta: 3,
+          explicacao: 'Os índices válidos são 0 e 1. O compilador não verifica isso: é uma RuntimeException na execução.' },
+        { tipo: 'vf', pergunta: 'Um bloco catch vazio é aceitável quando você tem certeza de que a exceção nunca vai acontecer.', correta: 1,
+          explicacao: 'Falso. Catch vazio engole o problema sem avisar ninguém. O William diz para nunca deixar em branco; no mínimo, e.printStackTrace().' },
+        { tipo: 'multipla', pergunta: 'Dentro de um try, a linha 2 de 4 lança a exceção capturada pelo catch. O que acontece com as linhas 3 e 4 do try?', opcoes: ['Executam normalmente depois do catch', 'São puladas; a execução vai para o catch e segue depois dele', 'Executam antes do catch', 'O programa sempre para'], correta: 1,
+          explicacao: 'Ao lançar, o resto do try é abandonado. O catch roda e a execução continua após o bloco try/catch.' },
+        { tipo: 'multipla', pergunta: 'Qual a melhor forma de impedir divisao(a, 0)?', opcoes: ['if (b == 0) return 0;', 'if (b == 0) throw new IllegalArgumentException("Argumento ilegal, não pode ser 0");', 'try { return a / b; } catch (ArithmeticException e) { }', 'if (b == 0) System.out.println("erro");'], correta: 1,
+          explicacao: 'Validar e lançar a exceção mais específica. Retornar 0 finge um resultado válido, o catch vazio engole o erro e o println deixa o método seguir.' },
+        { tipo: 'multipla', pergunta: 'No catch (IOException e), o método faz e.printStackTrace(); throw e;. O que é obrigatório?', opcoes: ['Nada: o throw dentro do catch dispensa declaração', 'Declarar throws IOException na assinatura do método', 'Trocar para throw new IOException()', 'Colocar o throw antes do printStackTrace'], correta: 1,
+          explicacao: 'Relançar uma checked exige avisar quem chama com throws IOException. Se relançasse como RuntimeException, não precisaria.' },
+        { tipo: 'discursiva', pergunta: 'Explique as três formas de lidar com uma exceção checked (aula 99) e quando o William sugere cada uma.',
+          explicacao: '1) Tratar com try/catch: o programa não explode, mas quem chamou não fica sabendo. Tende a ser usado em métodos private, que só a própria classe chama. 2) Repassar com throws na assinatura: a "batata quente" vai para quem chamou, que decide o tratamento (mandar e-mail, tentar de novo...). Faz sentido em métodos public, porque você não sabe quem vai chamar nem como quer tratar. Se chegar ao main sem tratamento, a JVM para. 3) Híbrido: capturar, fazer a sua parte (log/printStackTrace) e relançar (throw e, exigindo throws; ou outra exceção, como RuntimeException). Exemplo: pagamento que falhou é logado e relançado para oferecer nova tentativa. O mais importante é manter o mesmo padrão no sistema todo.' },
+        { tipo: 'discursiva', pergunta: 'Compare o tratamento de exceções do Java com o do PHP/Laravel. O que o Java exige que o PHP não exige?',
+          explicacao: 'Os dois têm Throwable, Error e Exception, try/catch, throw new, getMessage e stack trace. A diferença central são as exceções checked: em Java, uma IOException precisa ser tratada ou declarada com throws, senão não compila. No PHP nenhuma exceção é obrigatória, e @throws é só documentação (verificável pelo PHPStan). IllegalArgumentException equivale a InvalidArgumentException. No Laravel, o comum é deixar as exceções subirem até o Handler global, que loga e monta a resposta. Algo parecido com repassar até o topo, mas com um tratador central em vez da JVM parar. report($e) equivale ao "loga e segue".' }
+      ]
+    };
+  </script>
+  <script src="../js/app.js"></script>
+</body>
+</html>
