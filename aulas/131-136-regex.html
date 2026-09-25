@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>131–136 · Regex</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="topo">
+      <a class="voltar" href="../index.html">← Todas as aulas</a>
+      <h1>131–136 · Expressões regulares: Pattern e Matcher</h1>
+      <p>Pattern e Matcher, metacaracteres, range, quantificadores, grupos, ponto, âncoras e negação · <a href="https://www.youtube.com/playlist?list=PL62G310vn6nFIsOCC0H-C2infYgwm8SWW" target="_blank" rel="noopener">playlist</a></p>
+    </header>
+
+    <nav class="abas">
+      <a href="#resumo">Resumo</a>
+      <a href="#flashcards">Flashcards</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#estudo">Material de estudo</a>
+    </nav>
+
+    <p class="aviso">Junta as aulas 131 a 136 (Regex pt 01 a pt 06). Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. O código das aulas 131–135 (pacote <code>javacore.Uregex</code>, <code>PatternMatcherTest01</code> a <code>05</code>) foi conferido no <a href="https://github.com/devdojobr/maratona-java-virado-no-jiraya" target="_blank" rel="noopener">repositório do professor</a>, e as saídas foram conferidas rodando os mesmos padrões. A aula 136 é feita num site de testes de regex e não tem código no repositório. O exemplo dela abaixo foi montado a partir da explicação. Os itens marcados como "extra" não estão nos vídeos.</p>
+
+    <section id="resumo">
+      <h2>Resumo</h2>
+      <p><strong>Expressão regular</strong> (regex) é uma pequena linguagem de <strong>metacaracteres</strong> para encontrar <strong>padrões</strong> num texto: extrair todos os e-mails de um arquivo, achar links, validar se um e-mail está <em>sintaticamente</em> correto (se o domínio existe é outra história). O William avisa: "você vai voltar nessa aula mais vezes na vida". Ninguém decora tudo e todo mundo consulta. Em Java o trabalho é feito por duas classes de <code>java.util.regex</code>: <strong><code>Pattern</code></strong> (o padrão compilado) e <strong><code>Matcher</code></strong> (quem procura o padrão no texto).</p>
+
+      <h3>131 · Pattern e Matcher</h3>
+<pre><code>String regex = "aba";
+String texto2 = "abababa";
+Pattern pattern = Pattern.compile(regex);   // compila (valida) a expressão
+Matcher matcher = pattern.matcher(texto2);  // aplica ao texto
+System.out.println("texto:  " + texto2);
+System.out.println("indice: 0123456789");
+System.out.println("regex " + regex);
+System.out.println("Posicoes encontradas");
+while (matcher.find()) {                    // enquanto encontrar a próxima ocorrência
+    System.out.print(matcher.start() + " ");   // índice onde começa
+}
+// "abaaba"  → 0 3
+// "abababa" → 0 4   (e não 0 2 4!)</code></pre>
+      <ul>
+        <li><strong><code>Pattern.compile(regex)</code></strong> cria o padrão. Uma regex inválida (por exemplo, um <code>[</code> sem fechar) lança exceção. <strong><code>pattern.matcher(texto)</code></strong> devolve o <code>Matcher</code>.</li>
+        <li><strong><code>find()</code></strong> procura a próxima ocorrência e devolve <code>true</code>/<code>false</code>, por isso o <code>while</code>. <strong><code>start()</code></strong> é o índice onde a ocorrência começa.</li>
+        <li>Sem metacaracteres, a regex procura <strong>o texto literal</strong>.</li>
+        <li><strong>Ocorrências não se sobrepõem:</strong> em <code>"abababa"</code>, depois de achar <code>aba</code> em 0–2, a busca continua do índice 3. O <code>a</code> do índice 2 já foi "consumido". Por isso a saída é <code>0 4</code>, e não <code>0 2 4</code>.</li>
+        <li>A linha <code>indice: 0123456789</code> embaixo do texto é só um truque visual para conferir as posições.</li>
+      </ul>
+
+      <h3>132 · Metacaracteres</h3>
+<pre><code>// \d = todos os dígitos
+// \D = tudo o que não for dígito
+// \s = espaços em branco: espaço, \t \n \f \r
+// \S = todos os caracteres, excluindo os brancos
+// \w = a-z, A-Z, dígitos e _
+// \W = tudo o que não estiver incluso no \w
+String regex = "\\w";                    // no código Java a barra precisa de escape: \\
+String texto2 = "@#hh_j2 12gvh21";
+while (matcher.find()) {
+    System.out.print(matcher.start() + " " + matcher.group() + "\n");   // group() = o trecho encontrado
+}
+// \\d → 6 2 · 8 1 · 9 2 · 13 2 · 14 1
+// \\s → 7 (o espaço)
+// \\W → 0 @ · 1 # · 7 (espaço)
+// \\w → todas as letras, dígitos e o _ (índices 2 a 6 e 8 a 14)</code></pre>
+      <ul>
+        <li>Metacaracteres são <strong>atalhos</strong> para grupos de caracteres. O maiúsculo é sempre o <strong>contrário</strong> do minúsculo.</li>
+        <li><strong>Dupla barra:</strong> a regex é <code>\d</code>, mas numa String Java a <code>\</code> é caractere de escape (aula 92), então se escreve <code>"\\d"</code>.</li>
+        <li><strong><code>matcher.group()</code></strong> devolve o texto que casou. Com <code>start()</code> você sabe onde, com <code>group()</code> sabe o quê.</li>
+        <li>Há muitos outros metacaracteres, mas esses seis resolvem a maioria dos casos.</li>
+      </ul>
+
+      <h3>133 · Range: [ ]</h3>
+<pre><code>"[abc]"      // UM caractere: a OU b OU c        ("abc" sem colchetes = a sequência abc)
+"[abcABC]"   // também maiúsculas
+"[a-cA-C]"   // intervalo: de a até c, de A até C  → em "cafeBABE": c a B A B
+
+int numeroHex = 0x59F86A;     // 0x ou 0X = literal hexadecimal no Java
+System.out.println(numeroHex); // 5896298
+
+String regex = "0[xX][0-9a-fA-F]";
+String texto2 = "12 0x 0X 0xFFABC 0x109 0x1";
+// → 9 0xF · 17 0x1 · 23 0x1   (só o 1º caractere depois do x: faltam os quantificadores)</code></pre>
+      <ul>
+        <li><strong>Colchetes = um caractere dentre os listados.</strong> <code>[abc]</code> casa com <code>a</code>, <code>b</code> ou <code>c</code>, um de cada vez. É <strong>case sensitive</strong>.</li>
+        <li><strong>Hífen = intervalo:</strong> <code>[a-z]</code>, <code>[A-Z]</code>, <code>[0-9]</code>, <code>[a-fA-F]</code>. Dá para juntar vários no mesmo colchete.</li>
+        <li><strong>Exercício dos hexadecimais:</strong> um número hexa em Java começa com <code>0x</code>/<code>0X</code> e só usa dígitos de 0 a 9 e letras de A a F (<code>0x10G</code> não compila). A regex <code>0[xX][0-9a-fA-F]</code> acha o começo certo, mas pega <strong>um caractere só</strong> depois do x. A aula 134 resolve.</li>
+      </ul>
+
+      <h3>134 · Quantificadores, grupos, | e $</h3>
+<pre><code>// ?  zero ou uma          *  zero ou mais          +  uma ou mais
+// {n,m} de n até m        ( ) agrupamento           |  ou             $  fim da linha
+String regex = "0[xX]([0-9a-fA-F])+(\\s|$)";
+String texto = "12 0x 0X 0xFFABC 0x10G 0x1";
+// → 9 "0xFFABC " · 23 "0x1"</code></pre>
+      <ul>
+        <li>O quantificador vale para o que vem <strong>logo antes</strong>. Por isso o range foi <strong>agrupado</strong> com parênteses: <code>([0-9a-fA-F])+</code>.</li>
+        <li><strong><code>*</code> não serve:</strong> "zero ou mais" aceita <code>0x</code> sem nada depois. Precisa de <strong><code>+</code></strong> (pelo menos um).</li>
+        <li>Mesmo com <code>+</code>, <code>0x10G</code> ainda casava como <code>0x10</code>. Faltava um <strong>delimitador</strong>: depois dos dígitos tem que vir um espaço (<code>\\s</code>)...</li>
+        <li>...<strong>ou o fim da linha</strong> (<code>$</code>), senão o último <code>0x1</code> some, porque não há espaço depois dele. Daí <code>(\\s|$)</code>: grupo com <strong>OU</strong>. Exemplo de <code>|</code>: <code>(ovo|coco)</code>.</li>
+        <li>Resultado: só os hexadecimais válidos, <code>0xFFABC</code> e <code>0x1</code>. "Olha o tamanho da expressão para algo simples."</li>
+      </ul>
+
+      <h3>135 · O ponto e o exercício do e-mail</h3>
+<pre><code>// .  qualquer caractere (curinga): "1.3" casa com 123, 133, 1@3, 1A3
+String regex = "([a-zA-Z0-9\\._-])+@([a-zA-Z])+(\\.([a-zA-Z])+)+";
+String texto = "luffy@hotmail.com, 123jotaro@gmail.com, #@!zoro@mail.br, teste@gmail.com.br, sakura@mail";
+// find():  0 luffy@hotmail.com · 19 123jotaro@gmail.com · 43 zoro@mail.br · 57 teste@gmail.com.br
+
+System.out.println("#@!zoro@mail.br".matches(regex));      // false: matches exige a String INTEIRA
+System.out.println(texto.split(",")[1].trim());            // 123jotaro@gmail.com
+System.out.println(Arrays.toString(texto.split(",")));     // o array legível</code></pre>
+      <ul>
+        <li><strong>O ponto é curinga</strong>: casa com qualquer caractere. Para um <strong>ponto de verdade</strong>, escape-o: <code>\.</code> na regex, <code>"\\."</code> na String Java.</li>
+        <li><strong>A regex do e-mail, por partes:</strong>
+          <ul>
+            <li><code>([a-zA-Z0-9\\._-])+</code>: o usuário, com letras, dígitos, ponto, <code>_</code> e <code>-</code>, uma ou mais vezes.</li>
+            <li><code>@</code>, literal.</li>
+            <li><code>([a-zA-Z])+</code>: o provedor, só letras.</li>
+            <li><code>(\\.([a-zA-Z])+)+</code>: <code>.com</code>, <code>.br</code>... <strong>uma ou mais vezes</strong>, para aceitar <code>.com.br</code>. Sem esse <code>+</code> externo, <code>teste@gmail.com.br</code> virava só <code>teste@gmail.com</code>.</li>
+          </ul>
+        </li>
+        <li><code>sakura@mail</code> não casa (falta o <code>.algo</code>). De <code>#@!zoro@mail.br</code> o <code>find</code> pega só o pedaço válido <code>zoro@mail.br</code>: <strong>encontrar um padrão dentro do texto não é validar o texto</strong>.</li>
+        <li><strong>Para validar</strong> uma String inteira: <strong><code>String.matches(regex)</code></strong>, que só dá <code>true</code> se a String <strong>toda</strong> casar.</li>
+        <li><strong><code>split(regex)</code></strong> quebra a String num array (o separador também é uma regex). Depois, <code>trim()</code> em cada parte. <code>Arrays.toString(array)</code> imprime o array legível.</li>
+      </ul>
+
+      <h3>136 · Âncora ^ e negação [^ ]</h3>
+<pre><code>// No site de testes (ex.: regexr.com): passe o mouse na regex e ele explica cada parte.
+"^\\w+"      // ^ fora do colchete = COMEÇO da linha: a primeira palavra
+             // com a flag multiline, a primeira palavra de CADA linha
+"[^abc]"     // ^ DENTRO do colchete = NEGAÇÃO: qualquer caractere que não seja a, b ou c
+
+// Em Java (exemplo desta página, não está no repositório):
+Pattern.compile("^\\w+", Pattern.MULTILINE).matcher("Levi soldado\nEren titan\nMikasa")
+// → Levi · Eren · Mikasa</code></pre>
+      <ul>
+        <li>O William recomenda <strong>treinar num site de regex</strong>: você digita a expressão e o texto, vê o que casa na hora, e passar o mouse sobre cada parte mostra a explicação. É bem mais rápido que testar no Java.</li>
+        <li><strong><code>^</code> fora dos colchetes é âncora de começo</strong>, par do <code>$</code> (fim). Por padrão vale para o começo do texto. Com a flag <strong>multiline</strong> (<code>Pattern.MULTILINE</code> em Java), vale para o começo de cada linha.</li>
+        <li><strong><code>^</code> logo depois de <code>[</code> é negação</strong>: <code>[^abc]</code> = "tudo menos a, b e c". Case sensitive: <code>A</code> maiúsculo casa com <code>[^abc]</code>.</li>
+      </ul>
+
+      <h3>Atenção</h3>
+      <ul>
+        <li><strong>Barras em dobro no Java:</strong> a regex <code>\d</code> vira <code>"\\d"</code>, e o ponto literal <code>\.</code> vira <code>"\\."</code>. Esquecer dá erro de compilação (<code>"\d"</code> é escape inválido) ou uma regex diferente da pretendida.</li>
+        <li><strong><code>find()</code> × <code>matches()</code>:</strong> <code>find</code> procura pedaços <strong>dentro</strong> do texto. <code>matcher.matches()</code> e <code>String.matches</code> exigem que o texto <strong>inteiro</strong> case.</li>
+        <li><strong>O mesmo símbolo muda de sentido com o lugar:</strong> <code>^</code> (começo × negação dentro de <code>[ ]</code>), <code>.</code> (qualquer caractere × ponto literal dentro de <code>[ ]</code>, onde não precisa de escape), <code>-</code> (intervalo × literal quando é o último do colchete, como em <code>[._-]</code>).</li>
+        <li><strong>Extra: <code>split</code> usa regex.</strong> <code>"a.b.c".split(".")</code> devolve um array <strong>vazio</strong> (o ponto casa com tudo). Use <code>split("\\.")</code>. O mesmo vale para <code>|</code>: <code>split("\\|")</code>.</li>
+        <li><strong>Extra: <code>Pattern</code> é imutável e thread-safe</strong>. Compile uma vez numa constante <code>private static final Pattern EMAIL = Pattern.compile(...)</code>. <code>String.matches</code> recompila a cada chamada.</li>
+        <li><strong>Extra: <code>replaceAll(regex, troca)</code></strong>: <code>"(11) 98765-4321".replaceAll("\\D", "")</code> dá <code>"11987654321"</code> (só os dígitos).</li>
+        <li><strong>Extra: <code>Pattern.CASE_INSENSITIVE</code></strong> (ou <code>(?i)</code> no começo da regex) ignora maiúsculas e minúsculas.</li>
+      </ul>
+
+      <h3>Paralelo com PHP</h3>
+      <ul>
+        <li><strong>A mesma sintaxe (PCRE):</strong> o PHP usa <code>preg_*</code>, com a regex entre delimitadores: <code>'/0[xX][0-9a-fA-F]+/'</code>. A mesma regex funciona nos dois, mudando só as aspas e barras.</li>
+        <li><strong>Barras:</strong> em PHP, com aspas simples, <code>'/\d+/'</code> já funciona. Em Java é <code>"\\d+"</code>. A partir do Java 15, <em>text blocks</em> não ajudam aqui: a barra continua precisando de escape.</li>
+        <li><strong>Equivalências:</strong>
+          <ul>
+            <li><code>while (matcher.find())</code> ≈ <code>preg_match_all($re, $txt, $m, PREG_OFFSET_CAPTURE)</code> (o offset é o <code>start()</code>).</li>
+            <li><code>String.matches(re)</code> ≈ <code>preg_match('/^...$/', $s)</code> (no PHP você coloca as âncoras).</li>
+            <li><code>split(re)</code> ≈ <code>preg_split</code>. Para separador fixo, <code>explode(',', $s)</code>.</li>
+            <li><code>replaceAll</code> ≈ <code>preg_replace</code>.</li>
+          </ul>
+        </li>
+        <li><strong>Flags:</strong> <code>/m</code> (multiline) ≈ <code>Pattern.MULTILINE</code>, <code>/i</code> ≈ <code>Pattern.CASE_INSENSITIVE</code>.</li>
+        <li><strong>Validar e-mail:</strong> em PHP o recomendado é <code>filter_var($email, FILTER_VALIDATE_EMAIL)</code>, e no Laravel a regra <code>'email' =&gt; 'email:rfc,dns'</code> (que até consulta o DNS). A regex da aula é didática e não cobre todos os e-mails válidos. Em Java real, costuma-se usar a anotação <code>@Email</code> do Bean Validation.</li>
+      </ul>
+    </section>
+
+    <section id="flashcards">
+      <h2>Flashcards</h2>
+      <p style="color:var(--muted);margin-top:-6px">Toque no cartão para virar.</p>
+      <div id="flashcards-app"></div>
+    </section>
+
+    <section id="quiz">
+      <h2>Quiz</h2>
+      <div id="quiz-app"></div>
+    </section>
+
+    <section id="estudo">
+      <h2>Material de estudo</h2>
+
+      <h3>Mapa mental</h3>
+<pre><code>Regex (java.util.regex)
+├── Classes (131)
+│   ├── Pattern.compile(regex) → pattern.matcher(texto)
+│   ├── while (matcher.find()) · start() · group()
+│   └── ocorrências não se sobrepõem ("abababa" → 0 4)
+├── Metacaracteres (132): \d \D \s \S \w \W  (no Java: "\\d")
+├── Range (133)
+│   ├── [abc] = um entre a, b, c · [a-zA-Z0-9]
+│   └── [^abc] = qualquer um, menos a, b, c (136)
+├── Quantificadores (134)
+│   ├── ? 0 ou 1 · * 0 ou mais · + 1 ou mais · {n,m}
+│   ├── ( ) agrupa · | ou · $ fim da linha · ^ começo (136)
+│   └── hexa: 0[xX]([0-9a-fA-F])+(\\s|$)
+├── Ponto e e-mail (135)
+│   ├── . qualquer caractere · \\. ponto literal
+│   ├── ([a-zA-Z0-9\\._-])+@([a-zA-Z])+(\\.([a-zA-Z])+)+
+│   ├── find = achar dentro · String.matches = validar tudo
+│   └── split(regex) + trim · Arrays.toString
+└── Dica (136): testar num site de regex; flag multiline</code></pre>
+
+      <h3>Prática no seu WSL (20 minutos)</h3>
+<pre><code>cd ~/java-lab
+U=src/academy/devdojo/maratonajava/javacore/Uregex
+mkdir -p $U/test
+
+cat > $U/test/RegexTest01.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Uregex.test;
+
+import java.util.Arrays;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+public class RegexTest01 {
+    static void procurar(String regex, String texto) {
+        Matcher matcher = Pattern.compile(regex).matcher(texto);
+        StringBuilder sb = new StringBuilder(regex + " →");
+        while (matcher.find()) {
+            sb.append(" ").append(matcher.start()).append("[").append(matcher.group()).append("]");
+        }
+        System.out.println(sb);
+    }
+
+    public static void main(String[] args) {
+        procurar("aba", "abababa");                                  // ?
+        procurar("\\d", "@#hh_j2 12gvh21");                          // ?
+        procurar("\\W", "@#hh_j2 12gvh21");                          // ?
+        procurar("[a-cA-C]", "cafeBABE");                            // ?
+        procurar("0[xX][0-9a-fA-F]", "12 0x 0X 0xFFABC 0x109 0x1"); // ?
+        procurar("0[xX]([0-9a-fA-F])+(\\s|$)", "12 0x 0X 0xFFABC 0x10G 0x1"); // ?
+
+        String email = "([a-zA-Z0-9\\._-])+@([a-zA-Z])+(\\.([a-zA-Z])+)+";
+        String texto = "luffy@hotmail.com, 123jotaro@gmail.com, #@!zoro@mail.br, teste@gmail.com.br, sakura@mail";
+        procurar(email, texto);                                      // ?
+        System.out.println("#@!zoro@mail.br".matches(email));       // ?
+        System.out.println("teste@gmail.com.br".matches(email));    // ?
+        System.out.println(texto.split(",")[1].trim());             // ?
+
+        Matcher m = Pattern.compile("^\\w+", Pattern.MULTILINE).matcher("Levi soldado\nEren titan\nMikasa");
+        while (m.find()) System.out.print(m.group() + " ");         // ?
+        System.out.println();
+        System.out.println("(11) 98765-4321".replaceAll("\\D", ""));  // ? (extra)
+        System.out.println(Arrays.toString("a.b.c".split(".")));      // ? (extra)
+        System.out.println(Arrays.toString("a.b.c".split("\\.")));    // ? (extra)
+    }
+}
+EOF
+
+javac -d out $(find src -name '*.java')
+java -cp out academy.devdojo.maratonajava.javacore.Uregex.test.RegexTest01</code></pre>
+      <details>
+        <summary>Ver a saída esperada</summary>
+<pre><code>aba → 0[aba] 4[aba]
+\d → 6[2] 8[1] 9[2] 13[2] 14[1]
+\W → 0[@] 1[#] 7[ ]
+[a-cA-C] → 0[c] 1[a] 4[B] 5[A] 6[B]
+0[xX][0-9a-fA-F] → 9[0xF] 17[0x1] 23[0x1]
+0[xX]([0-9a-fA-F])+(\s|$) → 9[0xFFABC ] 23[0x1]
+([a-zA-Z0-9\._-])+@([a-zA-Z])+(\.([a-zA-Z])+)+ → 0[luffy@hotmail.com] 19[123jotaro@gmail.com] 43[zoro@mail.br] 57[teste@gmail.com.br]
+false
+true
+123jotaro@gmail.com
+Levi Eren Mikasa
+11987654321
+[]
+[a, b, c]</code></pre>
+      </details>
+      <p><strong>Exercícios:</strong></p>
+      <ol>
+        <li>Escreva uma regex que valide CEP no formato <code>12345-678</code> (use <code>\\d{5}-\\d{3}</code> com <code>matches</code>) e teste um CEP válido e dois inválidos.</li>
+        <li>Adapte a regex dos hexadecimais para números <strong>binários</strong> (<code>0b1010</code>) e teste com <code>"0b101 0b12 0B1 0b"</code>.</li>
+        <li>Extraia todos os números de telefone <code>(dd) ddddd-dddd</code> de um texto com vários telefones misturados.</li>
+        <li>Com <code>[^aeiou]</code>, conte quantos caracteres de <code>"maratona java"</code> não são vogais minúsculas (inclua o espaço na conta).</li>
+        <li>Coloque a regex do e-mail numa constante <code>private static final Pattern</code> e crie <code>boolean emailValido(String s)</code> com <code>EMAIL.matcher(s).matches()</code>.</li>
+      </ol>
+
+      <h3>Glossário</h3>
+      <ul>
+        <li><strong>Expressão regular (regex)</strong>: padrão escrito com metacaracteres para achar ou validar trechos de texto.</li>
+        <li><strong>Metacaractere</strong>: símbolo com significado especial na regex (<code>\d</code>, <code>.</code>, <code>+</code>, <code>^</code>...).</li>
+        <li><strong><code>Pattern</code></strong>: a regex compilada; imutável e reutilizável.</li>
+        <li><strong><code>Matcher</code></strong>: aplica o Pattern a um texto (<code>find</code>, <code>start</code>, <code>group</code>, <code>matches</code>).</li>
+        <li><strong>Range / classe de caracteres</strong>: <code>[ ]</code>, um caractere dentre os listados ou intervalos.</li>
+        <li><strong>Quantificador</strong>: quantas vezes o item anterior pode aparecer (<code>? * + {n,m}</code>).</li>
+        <li><strong>Grupo</strong>: <code>( )</code>, que junta partes para quantificar ou usar <code>|</code>.</li>
+        <li><strong>Âncora</strong>: posição, e não caractere: <code>^</code> começo e <code>$</code> fim da linha.</li>
+        <li><strong>Escape</strong>: <code>\</code> para usar um metacaractere como literal; em Java, <code>\\</code>.</li>
+        <li><strong>Multiline</strong>: flag que faz <code>^</code> e <code>$</code> valerem para cada linha.</li>
+      </ul>
+
+      <h3>Revisão espaçada</h3>
+      <ul class="revisao">
+        <li><span class="dia">Dia 1</span><span>Todos os flashcards + a prática com previsões.</span></li>
+        <li><span class="dia">Dia 3</span><span>Quiz + exercícios 1 a 3 (teste primeiro num site de regex).</span></li>
+        <li><span class="dia">Dia 7</span><span>Exercícios 4 e 5 + escrever de memória a regex dos hexadecimais, explicando cada parte.</span></li>
+        <li><span class="dia">Dia 14</span><span>Flashcards que errou + questões discursivas.</span></li>
+      </ul>
+
+      <h3>Para aprofundar</h3>
+      <ul>
+        <li>O que são grupos de captura numerados e nomeados (<code>matcher.group(1)</code>, <code>(?&lt;ddd&gt;\\d{2})</code>)?</li>
+        <li>Quantificador guloso × preguiçoso: qual a diferença entre <code>.*</code> e <code>.*?</code>?</li>
+        <li>O que é <em>catastrophic backtracking</em> (ReDoS) e por que uma regex mal escrita pode travar um servidor?</li>
+        <li>Lookahead e lookbehind: como exigir "pelo menos um dígito" numa senha com <code>(?=.*\\d)</code>?</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    window.AULA = {
+      flashcards: [
+        ["O que é uma expressão regular?", "Uma linguagem de metacaracteres para encontrar ou validar padrões em texto"],
+        ["Quais as duas classes de regex em Java?", "Pattern (regex compilada) e Matcher (aplica ao texto), em java.util.regex"],
+        ["Como montar a busca?", "Matcher m = Pattern.compile(regex).matcher(texto); while (m.find()) { ... }"],
+        ["O que start() e group() devolvem?", "O índice onde a ocorrência começa e o texto que casou"],
+        ["Por que \"aba\" em \"abababa\" dá 0 e 4, e não 0, 2 e 4?", "As ocorrências não se sobrepõem: a busca continua depois do trecho consumido"],
+        ["\\d e \\D?", "Dígito / tudo que não é dígito"],
+        ["\\s e \\S?", "Espaço em branco (espaço, \\t, \\n, \\f, \\r) / tudo que não é branco"],
+        ["\\w e \\W?", "Letras, dígitos e _ / tudo que não é isso"],
+        ["Como escrever \\d numa String Java?", "\"\\\\d\": a barra precisa de escape"],
+        ["O que [abc] significa?", "UM caractere: a, b ou c"],
+        ["Como escrever o intervalo de letras e dígitos?", "[a-zA-Z0-9]"],
+        ["Quantificadores ?, * e +?", "0 ou 1 / 0 ou mais / 1 ou mais"],
+        ["O que {n,m} significa?", "De n até m ocorrências"],
+        ["Para que servem ( ) e |?", "Agrupar partes da regex / OU entre alternativas"],
+        ["O que $ representa?", "O fim da linha"],
+        ["Por que (\\s|$) na regex dos hexadecimais?", "O número precisa terminar num espaço ou no fim da linha (senão 0x10G casava como 0x10)"],
+        ["O que o ponto significa na regex?", "Qualquer caractere (curinga)"],
+        ["Como casar um ponto literal no Java?", "\"\\\\.\""],
+        ["Por que (\\.([a-zA-Z])+)+ no e-mail?", "Para aceitar um ou mais sufixos: .com, .com.br"],
+        ["find() × String.matches()?", "find acha pedaços dentro do texto; matches exige que a String inteira case"],
+        ["Para que split(\",\")?", "Quebrar a String num array usando uma regex como separador"],
+        ["Como imprimir um array legível?", "Arrays.toString(array)"],
+        ["^ fora dos colchetes?", "Âncora de começo de linha (com MULTILINE, de cada linha)"],
+        ["^ logo depois de [?", "Negação: [^abc] = qualquer caractere menos a, b, c"],
+        ["\"a.b.c\".split(\".\") devolve o quê?", "Um array vazio: o ponto casa com tudo; use split(\"\\\\.\") — extra"]
+      ],
+      quiz: [
+        { tipo: 'multipla', pergunta: 'Com regex "aba" e texto "abababa", quais posições o while(matcher.find()) imprime com start()?', opcoes: ['0 2 4', '0 4', '0 3', '0'], correta: 1,
+          explicacao: 'Depois de achar aba em 0–2, a busca continua do índice 3 (b), então a próxima começa em 4. As ocorrências não se sobrepõem.' },
+        { tipo: 'multipla', pergunta: 'Como escrever na String Java a regex que encontra dígitos?', opcoes: ['"\\d"', '"\\\\d"', '"/d/"', '"[d]"'], correta: 1,
+          explicacao: 'A regex é \\d, mas numa String Java a barra é caractere de escape, então se escreve "\\\\d". "\\d" nem compila.' },
+        { tipo: 'vf', pergunta: 'A regex [abc] casa com a sequência "abc" inteira.', correta: 1,
+          explicacao: 'Falso. Colchetes representam UM caractere dentre a, b ou c. A sequência seria a regex abc, sem colchetes.' },
+        { tipo: 'multipla', pergunta: 'Qual quantificador exige pelo menos uma ocorrência?', opcoes: ['?', '*', '+', '{0,1}'], correta: 2,
+          explicacao: '+ = uma ou mais. * aceita zero (por isso 0[xX]([0-9a-fA-F])* aceitaria "0x" sozinho). ? e {0,1} = zero ou uma.' },
+        { tipo: 'multipla', pergunta: 'No texto "12 0x 0X 0xFFABC 0x10G 0x1", o que a regex 0[xX]([0-9a-fA-F])+(\\s|$) encontra?', opcoes: ['0xFFABC e 0x10', '0xFFABC , 0x10 e 0x1', '0xFFABC (com o espaço) e 0x1', 'Só 0xFFABC'], correta: 2,
+          explicacao: 'Depois dos dígitos tem que vir espaço ou fim da linha: 0x10G falha no G, e 0x1 casa graças ao $. O espaço entra no group() do primeiro.' },
+        { tipo: 'multipla', pergunta: 'O que o ponto (.) significa numa regex, sem escape?', opcoes: ['Um ponto literal', 'Qualquer caractere', 'Fim da linha', 'Um dígito'], correta: 1,
+          explicacao: 'É o curinga: 1.3 casa com 123, 1@3, 1A3... Para um ponto literal: \\. (na String Java, "\\\\.").' },
+        { tipo: 'vf', pergunta: '"#@!zoro@mail.br".matches(regexDoEmail) devolve true, porque o find() encontra zoro@mail.br dentro dele.', correta: 1,
+          explicacao: 'Falso. matches exige que a String inteira case, e o "#@!" do começo não casa. O find acha só o pedaço válido: encontrar ≠ validar.' },
+        { tipo: 'multipla', pergunta: 'O que [^abc] significa?', opcoes: ['Começo de linha seguido de abc', 'Qualquer caractere exceto a, b ou c', 'a, b ou c no começo da linha', 'Um ^ literal, a, b ou c'], correta: 1,
+          explicacao: 'O ^ logo depois do [ nega o conjunto. Fora dos colchetes, ^ é âncora de começo de linha.' },
+        { tipo: 'discursiva', pergunta: 'Explique parte por parte a regex do e-mail da aula 135 e por que ela não é uma validação completa de e-mail.',
+          explicacao: '([a-zA-Z0-9\\._-])+ é o usuário: letras, dígitos, ponto (escapado), _ e -, uma ou mais vezes. @ é literal. ([a-zA-Z])+ é o provedor: só letras, uma ou mais. (\\.([a-zA-Z])+)+ é um ponto literal seguido de letras, repetido uma ou mais vezes (.com, .com.br). É didática: aceita coisas estranhas (usuário começando com ponto, dois pontos seguidos), recusa e-mails válidos (provedor com dígitos ou hífen, como meu-site.com, ou com +) e não verifica se o domínio existe. Na prática usa-se validação pronta: @Email (Bean Validation) em Java, filter_var/email:rfc,dns no PHP/Laravel.' },
+        { tipo: 'discursiva', pergunta: 'Traduza para PHP o laço while(matcher.find()) com start() e group() e a validação com String.matches. O que muda na escrita da regex?',
+          explicacao: 'A sintaxe é a mesma (PCRE), mas em PHP a regex vai entre delimitadores e, com aspas simples, as barras não dobram: preg_match_all(\'/0[xX]([0-9a-fA-F])+(\\s|$)/\', $texto, $m, PREG_OFFSET_CAPTURE), e cada $m[0][$i] traz [texto, offset] (group e start). Para validar a String inteira: preg_match(\'/^...$/\', $s) === 1, pondo as âncoras à mão, já que String.matches do Java exige o casamento completo sozinho. Em Java a regex é uma String comum, então cada \\ vira \\\\ ("\\\\d", "\\\\."). Flags: /m e /i no PHP, Pattern.MULTILINE e Pattern.CASE_INSENSITIVE em Java.' }
+      ]
+    };
+  </script>
+  <script src="../js/app.js"></script>
+</body>
+</html>
