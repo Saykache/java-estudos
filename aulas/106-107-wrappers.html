@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>106–107 · Wrappers</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="topo">
+      <a class="voltar" href="../index.html">← Todas as aulas</a>
+      <h1>106–107 · Classes utilitárias: Wrappers</h1>
+      <p>Classes que embrulham os tipos primitivos, autoboxing e unboxing, parse e os métodos de Character · <a href="https://www.youtube.com/playlist?list=PL62G310vn6nFIsOCC0H-C2infYgwm8SWW" target="_blank" rel="noopener">playlist</a></p>
+    </header>
+
+    <nav class="abas">
+      <a href="#resumo">Resumo</a>
+      <a href="#flashcards">Flashcards</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#estudo">Material de estudo</a>
+    </nav>
+
+    <p class="aviso">Junta as aulas 106 e 107 (Wrappers pt 01 e pt 02). Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. O código (pacote <code>javacore.Pwrapper</code>, <code>WrapperTest01</code>) foi conferido no <a href="https://github.com/devdojobr/maratona-java-virado-no-jiraya" target="_blank" rel="noopener">repositório do professor</a>. Ele não tem a branch <code>video106</code>, então o código das duas aulas saiu de <code>video105..video107</code>. Os itens marcados como "extra" não estão nos vídeos.</p>
+
+    <section id="resumo">
+      <h2>Resumo</h2>
+      <p>Aqui o curso sai da introdução à OO e entra no <strong>Java intermediário</strong>, começando pelas <strong>classes utilitárias</strong>: classes prontas do Java que melhoram a qualidade do código. As primeiras são as <strong>wrappers</strong> ("embrulhos"): <strong>classes que encapsulam os tipos primitivos e os transformam em objetos</strong>, com métodos.</p>
+
+      <h3>106 · Os 8 wrappers</h3>
+<pre><code>byte byteP = 1;           Byte byteW = 127;
+short shortP = 1;         Short shortW = 1;
+int intP = 1;             Integer intW = 1;       // autoboxing
+long longP = 10;          Long longW = 10L;       // Long longW = 10; NÃO compila
+float floatP = 10F;       Float floatW = 10F;
+double doubleP = 10D;     Double doubleW = 10D;
+char charP = 'W';         Character charW = 'W';
+boolean booleanP = false; Boolean booleanW = false;
+
+// List&lt;int&gt; lista;      // NÃO compila: coleções só guardam objetos
+List&lt;Integer&gt; lista;      // OK</code></pre>
+      <ul>
+        <li><strong>A regra do nome:</strong> é o nome do primitivo com a <strong>primeira letra maiúscula</strong>, com <strong>duas exceções</strong>: <code>int</code> → <code>Integer</code> e <code>char</code> → <code>Character</code>.</li>
+        <li>Os seis numéricos (<code>Byte</code>, <code>Short</code>, <code>Integer</code>, <code>Long</code>, <code>Float</code>, <code>Double</code>) estendem <strong><code>Number</code></strong>. Todos são filhos de <code>Object</code>.</li>
+        <li><strong>Cuidado, agora vale o polimorfismo, não o tamanho:</strong> <code>long x = 10;</code> compila (o int cabe no long). <code>Long x = 10;</code> <strong>não compila</strong>: o literal <code>10</code> é <code>int</code>, viraria <code>Integer</code>, e <code>Integer</code> não é um <code>Long</code> na herança. Precisa de <code>10L</code>. O mesmo vale para <code>Float</code> e <code>Double</code> (<code>Double d = 10;</code> não compila).</li>
+        <li><strong>Por que os wrappers existem:</strong>
+          <ul>
+            <li><strong>Coleções</strong> (<code>ArrayList</code>...) guardam <strong>referências</strong>, não primitivos: <code>List&lt;Integer&gt;</code>, nunca <code>List&lt;int&gt;</code>.</li>
+            <li>Ter um <strong>objeto</strong> com <strong>métodos</strong> (de <code>Boolean</code>, <code>Comparable</code>, <code>Object</code>...).</li>
+            <li><strong>Concorrência</strong>: a sincronização trabalha com objetos.</li>
+            <li>O William também cita a passagem "por referência" de números para alterar dentro do método. Veja o <strong>Atenção</strong>: na prática isso não funciona, porque wrappers são imutáveis.</li>
+          </ul>
+        </li>
+        <li><strong>Boa prática:</strong> quando der, <strong>prefira o primitivo</strong>, como nas classes de domínio feitas até aqui. Use o wrapper quando for necessário.</li>
+        <li>Dica do IntelliJ: Ctrl+R (substituir) com "em seleção" renomeia as variáveis de <code>...P</code> para <code>...W</code> de uma vez.</li>
+      </ul>
+
+      <h3>107 · Autoboxing, unboxing, parse e Character</h3>
+<pre><code>Integer intW = 1;                     // autoboxing: primitivo → wrapper (o Java "encaixota")
+int i = intW;                         // unboxing:   wrapper → primitivo
+intW.byteValue(); intW.longValue();   // xxxValue(): o primitivo no tipo pedido
+
+Integer intW2 = Integer.parseInt("1");        // String → número
+// new Integer("1")                           // deprecated (Java 9): "muito feio, não use"
+boolean verdadeiro = Boolean.parseBoolean(null);
+System.out.println(verdadeiro);               // false
+
+System.out.println(Character.isDigit('A'));          // false
+System.out.println(Character.isDigit('9'));          // true
+System.out.println(Character.isLetterOrDigit('!'));  // false
+System.out.println(Character.isUpperCase('A'));      // true
+System.out.println(Character.isLowerCase('a'));      // true
+System.out.println(Character.toUpperCase('a'));      // A
+System.out.println(Character.toLowerCase('A'));      // a</code></pre>
+      <ul>
+        <li><strong>Autoboxing</strong> ("colocar na caixa"): você atribui um primitivo e o Java cria o wrapper. <strong>Unboxing</strong>: o contrário, automático.</li>
+        <li>Por serem objetos, os wrappers têm métodos: <code>byteValue()</code>, <code>intValue()</code>, <code>longValue()</code>, <code>floatValue()</code>... O William diz que já não são tão usados, por causa do unboxing.</li>
+        <li><strong><code>parseXxx(String)</code></strong> converte texto: <code>Integer.parseInt</code>, <code>Byte.parseByte</code>, <code>Float.parseFloat</code>, <code>Boolean.parseBoolean</code>... <strong>Todos têm, menos <code>Character</code></strong>.</li>
+        <li><code>new Integer("1")</code> funciona, mas está <strong>deprecated</strong> desde o Java 9. Use o <code>parseInt</code>.</li>
+        <li><strong><code>Boolean.parseBoolean</code></strong> ignora maiúsculas e minúsculas: <code>"true"</code>, <code>"TRUE"</code> e <code>"tRuE"</code> dão <code>true</code>. <strong>Qualquer outra coisa</strong> dá <code>false</code>, inclusive <code>"sim"</code>, <code>""</code> e <code>null</code>, sem exceção.</li>
+        <li><strong><code>Character</code></strong> é "a mais legal": <code>isDigit</code>, <code>isLetter</code>, <code>isLetterOrDigit</code>, <code>isUpperCase</code>, <code>isLowerCase</code>, <code>toUpperCase</code>, <code>toLowerCase</code>, todos <code>static</code> (chamados pela classe).</li>
+        <li><code>toUpperCase</code>/<code>toLowerCase</code> num caractere que não é letra (<code>'!'</code>, <code>'9'</code>) devolvem o <strong>próprio caractere</strong>. <code>isUpperCase('9')</code> dá <code>false</code>.</li>
+        <li>Conselho do William: explore essas classes sozinho (Ctrl+clique para ver o código, Ctrl+Q para a documentação). Os nomes dos métodos já dizem o que fazem, e ler o código do JDK ensina muito.</li>
+      </ul>
+
+      <h3>Atenção</h3>
+      <ul>
+        <li><strong>Wrappers são imutáveis</strong> (correção à aula 106). Passar um <code>Integer</code> para um método e fazer <code>numero = numero + 1</code> lá dentro <strong>não altera</strong> a variável de quem chamou: é criado outro objeto, como com <code>String</code>. Para alterar um valor dentro do método, devolva o resultado ou use um objeto mutável (um atributo de classe, <code>AtomicInteger</code>...).</li>
+        <li><strong>Extra: unboxing de <code>null</code> dá <code>NullPointerException</code>.</strong> <code>Integer x = null; int y = x;</code> compila e explode. Wrapper aceita <code>null</code>, primitivo não. Atributo wrapper começa como <code>null</code>, primitivo começa como <code>0</code>/<code>false</code>.</li>
+        <li><strong>Extra: não compare wrappers com <code>==</code>.</strong> <code>Integer a = 127, b = 127;</code> dá <code>a == b</code> <code>true</code> (há cache de -128 a 127), mas com 128 dá <code>false</code>: são objetos diferentes. Use <code>a.equals(b)</code>.</li>
+        <li><strong>Extra: <code>parseInt</code> × <code>valueOf</code>.</strong> <code>Integer.parseInt("1")</code> devolve <code>int</code> (no código da aula, o autoboxing o transforma em <code>Integer</code>). <code>Integer.valueOf("1")</code> já devolve <code>Integer</code>, e usa o cache.</li>
+        <li><strong>Extra: <code>Integer.parseInt("abc")</code></strong> lança <code>NumberFormatException</code> (uma <code>RuntimeException</code>, aulas 95–99). <code>parseBoolean</code> nunca lança.</li>
+        <li><strong>Extra:</strong> cada wrapper tem constantes úteis: <code>Integer.MAX_VALUE</code>, <code>Integer.MIN_VALUE</code>, <code>Long.MAX_VALUE</code>...</li>
+      </ul>
+
+      <h3>Paralelo com PHP</h3>
+      <ul>
+        <li><strong>O PHP não tem essa divisão.</strong> <code>int</code>, <code>float</code>, <code>bool</code> e <code>string</code> são escalares, e um <code>array</code> guarda qualquer coisa. Não existe <code>List&lt;int&gt;</code> proibido nem autoboxing.</li>
+        <li><strong>Aceitar <code>null</code>:</strong> o <code>?int</code> do PHP ≈ usar <code>Integer</code> em vez de <code>int</code> em Java. Uma coluna nullable no banco costuma virar wrapper na entidade.</li>
+        <li><strong>parse:</strong> <code>(int) "1"</code> ou <code>intval("1")</code>. Mas <code>(int) "abc"</code> vira <code>0</code> em silêncio, enquanto o <code>parseInt</code> do Java lança exceção. Para validar de verdade no PHP: <code>filter_var($v, FILTER_VALIDATE_INT)</code>.</li>
+        <li><strong>Boolean:</strong> <code>filter_var($v, FILTER_VALIDATE_BOOLEAN)</code> aceita "1", "yes", "on"... O <code>parseBoolean</code> do Java só aceita "true".</li>
+        <li><strong>Character:</strong> <code>ctype_digit</code>, <code>ctype_alpha</code>, <code>ctype_alnum</code>, <code>ctype_upper</code>, <code>ctype_lower</code>, <code>strtoupper</code>/<code>strtolower</code> (ou <code>mb_*</code> para acentos).</li>
+        <li>No Laravel, <code>$casts = ['ativo' =&gt; 'boolean', 'idade' =&gt; 'integer']</code> faz o papel do parse na fronteira com o banco.</li>
+      </ul>
+    </section>
+
+    <section id="flashcards">
+      <h2>Flashcards</h2>
+      <p style="color:var(--muted);margin-top:-6px">Toque no cartão para virar.</p>
+      <div id="flashcards-app"></div>
+    </section>
+
+    <section id="quiz">
+      <h2>Quiz</h2>
+      <div id="quiz-app"></div>
+    </section>
+
+    <section id="estudo">
+      <h2>Material de estudo</h2>
+
+      <h3>Mapa mental</h3>
+<pre><code>Wrappers (classes utilitárias)
+├── O que são (106)
+│   ├── objetos que encapsulam os 8 primitivos
+│   ├── Byte Short Integer Long Float Double Character Boolean
+│   ├── exceções do nome: int → Integer, char → Character
+│   ├── numéricos estendem Number
+│   └── Long x = 10 ✗ (Integer não é Long) → 10L
+├── Por quê (106)
+│   ├── coleções só guardam objetos: List&lt;Integer&gt;
+│   ├── métodos · concorrência
+│   └── prefira primitivos quando der
+└── Uso (107)
+    ├── autoboxing: Integer i = 1 · unboxing: int x = i
+    ├── xxxValue(): intValue, longValue...
+    ├── parseXxx(String): todos menos Character
+    ├── new Integer("1") deprecated
+    ├── Boolean.parseBoolean: só "true" (ignora caixa) → resto false
+    └── Character: isDigit, isLetter, isLetterOrDigit, isUpper/LowerCase, toUpper/LowerCase</code></pre>
+
+      <h3>Prática no seu WSL (15 minutos)</h3>
+<pre><code>cd ~/java-lab
+W=src/academy/devdojo/maratonajava/javacore/Pwrapper
+mkdir -p $W/test
+
+cat > $W/test/WrapperTest01.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Pwrapper.test;
+
+public class WrapperTest01 {
+    public static void main(String[] args) {
+        Integer intW = 1;                                    // autoboxing
+        int i = intW;                                        // unboxing
+        Integer intW2 = Integer.parseInt("1");
+        System.out.println(i + intW2);                       // ?
+        System.out.println(intW.longValue());                // ?
+
+        System.out.println(Boolean.parseBoolean(null));      // ?
+        System.out.println(Boolean.parseBoolean("TRUE"));    // ?
+        System.out.println(Boolean.parseBoolean("sim"));     // ?
+
+        System.out.println(Character.isDigit('A'));          // ?
+        System.out.println(Character.isDigit('9'));          // ?
+        System.out.println(Character.isLetterOrDigit('!'));  // ?
+        System.out.println(Character.isUpperCase('A'));      // ?
+        System.out.println(Character.isLowerCase('a'));      // ?
+        System.out.println(Character.toUpperCase('a'));      // ?
+        System.out.println(Character.toLowerCase('A'));      // ?
+        System.out.println(Character.toUpperCase('!'));      // ?
+
+        Integer a = 127, b = 127, c = 128, d = 128;
+        System.out.println(a == b);                          // ? (extra)
+        System.out.println(c == d);                          // ? (extra)
+        System.out.println(c.equals(d));                     // ? (extra)
+    }
+}
+EOF
+
+javac -d out $(find src -name '*.java')
+java -cp out academy.devdojo.maratonajava.javacore.Pwrapper.test.WrapperTest01</code></pre>
+      <details>
+        <summary>Ver a saída esperada</summary>
+<pre><code>2
+1
+false
+true
+false
+false
+true
+false
+true
+true
+A
+a
+!
+true
+false
+true</code></pre>
+      </details>
+      <p><strong>Exercícios:</strong></p>
+      <ol>
+        <li>Escreva <code>Long l = 10;</code>, <code>Double d = 10;</code> e <code>Byte b = 128;</code> e leia os três erros. Corrija cada um.</li>
+        <li>Faça <code>Integer x = null; int y = x;</code> e leia a exceção. Em qual linha ela acontece?</li>
+        <li>Crie <code>static void incrementa(Integer n) { n = n + 1; }</code>, chame com uma variável que vale 5 e imprima a variável depois. Explique o resultado.</li>
+        <li>Escreva <code>contarDigitos(String s)</code>, que percorre <code>s.toCharArray()</code> com foreach e conta quantos caracteres são dígitos usando <code>Character.isDigit</code>. Teste com "Goku9000!".</li>
+        <li>Chame <code>Integer.parseInt("12a")</code> dentro de um <code>try/catch</code> e imprima <code>e.getMessage()</code>.</li>
+      </ol>
+
+      <h3>Glossário</h3>
+      <ul>
+        <li><strong>Wrapper</strong>: classe que embrulha um tipo primitivo num objeto (<code>Integer</code>, <code>Double</code>...).</li>
+        <li><strong>Autoboxing</strong>: conversão automática de primitivo para wrapper.</li>
+        <li><strong>Unboxing</strong>: conversão automática de wrapper para primitivo.</li>
+        <li><strong><code>Number</code></strong>: superclasse abstrata dos wrappers numéricos.</li>
+        <li><strong>Parse</strong>: converter texto (String) para outro tipo.</li>
+        <li><strong>Deprecated</strong>: ainda existe, mas não deve mais ser usado (pode sumir em versões futuras).</li>
+        <li><strong>Imutável</strong>: objeto cujo valor não muda depois de criado; "alterar" cria outro objeto.</li>
+        <li><strong>Classe utilitária</strong>: classe pronta com métodos de apoio, geralmente estáticos.</li>
+      </ul>
+
+      <h3>Revisão espaçada</h3>
+      <ul class="revisao">
+        <li><span class="dia">Dia 1</span><span>Todos os flashcards + a prática com previsões.</span></li>
+        <li><span class="dia">Dia 3</span><span>Quiz + exercícios 1 a 3.</span></li>
+        <li><span class="dia">Dia 7</span><span>Exercícios 4 e 5 + escrever os 8 pares primitivo/wrapper de memória.</span></li>
+        <li><span class="dia">Dia 14</span><span>Flashcards que errou + questões discursivas.</span></li>
+      </ul>
+
+      <h3>Para aprofundar</h3>
+      <ul>
+        <li>Como funciona o cache de <code>Integer.valueOf</code> e dá para aumentá-lo (<code>-XX:AutoBoxCacheMax</code>)?</li>
+        <li>Qual o custo de desempenho do autoboxing num laço com <code>Long soma</code> em vez de <code>long soma</code>?</li>
+        <li>Por que existem <code>IntStream</code> e <code>OptionalInt</code>, se já temos <code>Stream&lt;Integer&gt;</code> e <code>Optional&lt;Integer&gt;</code>?</li>
+        <li>O que é <code>BigDecimal</code> e por que se usa ele, e não <code>Double</code>, para dinheiro?</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    window.AULA = {
+      flashcards: [
+        ["O que é uma classe wrapper?", "Uma classe que encapsula um tipo primitivo num objeto"],
+        ["Quais são os 8 wrappers?", "Byte, Short, Integer, Long, Float, Double, Character, Boolean"],
+        ["Quais wrappers fogem da regra 'primitivo com maiúscula'?", "Integer (int) e Character (char)"],
+        ["De qual classe estendem os wrappers numéricos?", "Number"],
+        ["Por que Long l = 10; não compila?", "10 é int, viraria Integer, e Integer não é um Long (polimorfismo); use 10L"],
+        ["long l = 10; compila?", "Sim: com primitivos vale a regra do tamanho, e int cabe em long"],
+        ["Por que List<int> não compila?", "Coleções guardam referências (objetos); use List<Integer>"],
+        ["Cite motivos para os wrappers existirem.", "Coleções, métodos em objetos, concorrência/sincronização"],
+        ["Primitivo ou wrapper por padrão?", "Primitivo, quando der; wrapper quando necessário"],
+        ["O que é autoboxing?", "O Java converte primitivo em wrapper sozinho: Integer i = 1"],
+        ["O que é unboxing?", "O Java converte wrapper em primitivo sozinho: int x = intW"],
+        ["Para que servem intValue(), longValue() etc.?", "Devolver o valor primitivo no tipo pedido"],
+        ["Como converter a String \"1\" em número?", "Integer.parseInt(\"1\")"],
+        ["Qual wrapper não tem parse?", "Character"],
+        ["new Integer(\"1\") é recomendado?", "Não: é deprecated desde o Java 9; use parseInt/valueOf"],
+        ["Boolean.parseBoolean(\"TRUE\") dá o quê?", "true: ignora maiúsculas e minúsculas"],
+        ["Boolean.parseBoolean(null) e (\"sim\") dão o quê?", "false nos dois; só \"true\" dá true, e nunca lança exceção"],
+        ["Character.isDigit('9') e ('A')?", "true e false"],
+        ["Character.isLetterOrDigit('!')?", "false"],
+        ["Character.toUpperCase('!')?", "'!': caractere que não é letra volta igual"],
+        ["Wrappers são mutáveis?", "Não: são imutáveis; n = n + 1 cria outro objeto"],
+        ["Integer x = null; int y = x; o que acontece?", "NullPointerException no unboxing (extra)"],
+        ["Por que não comparar Integer com ==?", "Compara referências; funciona por acaso de -128 a 127 (cache); use equals (extra)"],
+        ["Diferença entre parseInt e valueOf?", "parseInt devolve int; valueOf devolve Integer (extra)"],
+        ["Integer.parseInt(\"abc\") dá o quê?", "NumberFormatException (extra)"]
+      ],
+      quiz: [
+        { tipo: 'multipla', pergunta: 'Qual é o wrapper de char?', opcoes: ['Char', 'Character', 'Charset', 'String'], correta: 1,
+          explicacao: 'char → Character e int → Integer são as duas exceções à regra de só colocar a primeira letra maiúscula.' },
+        { tipo: 'vf', pergunta: 'Integer intW = 1; é um exemplo de autoboxing.', correta: 0,
+          explicacao: 'Verdadeiro. O primitivo 1 é "encaixotado" num Integer automaticamente. O contrário (int i = intW) é unboxing.' },
+        { tipo: 'multipla', pergunta: 'Qual linha NÃO compila?', opcoes: ['long a = 10;', 'Long b = 10L;', 'Long c = 10;', 'Integer d = 10;'], correta: 2,
+          explicacao: 'O literal 10 é int e viraria Integer, que não é um Long na herança. Com wrappers vale o polimorfismo, não o tamanho.' },
+        { tipo: 'multipla', pergunta: 'Por que List<int> não compila?', opcoes: ['int é grande demais', 'Coleções só guardam referências a objetos', 'List só aceita String', 'Falta importar java.lang.Integer'], correta: 1,
+          explicacao: 'As coleções trabalham com objetos. Por isso se usa List<Integer>, e é um dos motivos dos wrappers.' },
+        { tipo: 'multipla', pergunta: 'O que imprime System.out.println(Boolean.parseBoolean("tRuE"))?', opcoes: ['true', 'false', 'Lança exceção', 'Não compila'], correta: 0,
+          explicacao: 'parseBoolean ignora maiúsculas e minúsculas: qualquer variação de "true" é true.' },
+        { tipo: 'vf', pergunta: 'Boolean.parseBoolean(null) lança NullPointerException.', correta: 1,
+          explicacao: 'Falso. Retorna false: tudo que não é "true" (ignorando a caixa) vira false, sem exceção.' },
+        { tipo: 'multipla', pergunta: 'Qual wrapper NÃO tem um método parse que recebe String?', opcoes: ['Byte', 'Boolean', 'Float', 'Character'], correta: 3,
+          explicacao: 'Todos os wrappers têm parseXxx(String), menos Character.' },
+        { tipo: 'multipla', pergunta: 'O que imprimem Character.isLetterOrDigit(\'!\') e Character.toUpperCase(\'a\')?', opcoes: ['true e A', 'false e A', 'false e a', 'Lança exceção no primeiro'], correta: 1,
+          explicacao: '! não é letra nem dígito (false). toUpperCase(\'a\') devolve \'A\'.' },
+        { tipo: 'discursiva', pergunta: 'Um colega diz: "Uso Integer como parâmetro para poder alterar o número dentro do método, já que é passado por referência". Ele está certo? Explique.',
+          explicacao: 'Não. O que se passa é uma cópia da referência, e o Integer é imutável. Dentro do método, n = n + 1 faz unboxing, soma e cria outro Integer, apontando só a variável local para ele. A variável de quem chamou continua com o objeto antigo, como acontece com String. Para "alterar" um número, o método deve retornar o novo valor, ou usar um objeto mutável (um atributo de uma classe sua, AtomicInteger...). Os motivos reais dos wrappers são coleções (List<Integer>), métodos, aceitar null e concorrência.' },
+        { tipo: 'discursiva', pergunta: 'Compare Integer.parseInt e Boolean.parseBoolean do Java com (int) / intval e filter_var do PHP em relação a entradas inválidas.',
+          explicacao: 'Integer.parseInt("abc") lança NumberFormatException: o erro aparece na hora. No PHP, (int) "abc" e intval("abc") viram 0 em silêncio, e para validar é preciso filter_var($v, FILTER_VALIDATE_INT), que devolve false. Boolean.parseBoolean nunca lança: só "true" (em qualquer caixa) vira true, e todo o resto vira false, inclusive null e "sim". filter_var com FILTER_VALIDATE_BOOLEAN é mais permissivo ("1", "yes", "on" são true). Em Java é preciso escolher: exceção para números, false silencioso para boolean.' }
+      ]
+    };
+  </script>
+  <script src="../js/app.js"></script>
+</body>
+</html>
