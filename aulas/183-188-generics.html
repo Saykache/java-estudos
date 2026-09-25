@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>183–188 · Generics</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="topo">
+      <a class="voltar" href="../index.html">← Todas as aulas</a>
+      <h1>183–188 · Generics</h1>
+      <p>Type erasure, wildcards (? extends e ? super), classes genéricas e métodos genéricos · <a href="https://www.youtube.com/playlist?list=PL62G310vn6nFIsOCC0H-C2infYgwm8SWW" target="_blank" rel="noopener">playlist</a></p>
+    </header>
+
+    <nav class="abas">
+      <a href="#resumo">Resumo</a>
+      <a href="#flashcards">Flashcards</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#estudo">Material de estudo</a>
+    </nav>
+
+    <p class="aviso">Junta as aulas 183 (introdução), 184 e 185 (wildcard), 186 e 187 (classes genéricas) e 188 (métodos genéricos). Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. O código (pacote <code>javacore.Zgenerics</code>, <code>Animal</code>/<code>Cachorro</code>/<code>Gato</code>, <code>Carro</code>/<code>Barco</code> e <code>RentalService&lt;T&gt;</code>) foi conferido no <a href="https://github.com/devdojobr/maratona-java-virado-no-jiraya" target="_blank" rel="noopener">repositório do professor</a>. Os itens marcados como "extra" não estão nos vídeos.</p>
+
+    <section id="resumo">
+      <h2>Resumo</h2>
+      <p>Você já usa generics desde as coleções (<code>List&lt;String&gt;</code>). Agora vem o porquê e o como. <strong>Generics</strong> deixam uma classe ou um método trabalhar com um <strong>tipo que só é definido na hora do uso</strong>, com checagem <strong>em tempo de compilação</strong>. Por causa da compatibilidade com código antigo, o tipo é <strong>apagado</strong> depois de compilar (<em>type erasure</em>). Isso explica as regras dos <strong>wildcards</strong> (<code>? extends</code>, <code>? super</code>). No fim, você cria as suas <strong>classes genéricas</strong> (<code>RentalService&lt;T&gt;</code>) e os seus <strong>métodos genéricos</strong> (<code>&lt;T&gt; List&lt;T&gt; metodo(T t)</code>).</p>
+
+      <h3>183 · Por que generics e o type erasure</h3>
+<pre><code>// Até o Java 1.4: lista de Object, qualquer coisa entra
+List lista = new ArrayList();
+lista.add("Midoriya");
+lista.add(1L);
+for (Object o : lista) {
+    if (o instanceof String) { ... } else if (o instanceof Long) { ... }   // instanceof para tudo
+}
+
+// Java 5+: o COMPILADOR garante o tipo
+List&lt;String&gt; lista = new ArrayList&lt;&gt;();
+lista.add("Midoriya");
+lista.add("Midoriya");
+
+// Mas depois de compilado o tipo SOME (type erasure). Um método com List "crua" burla:
+private static void add(List lista, Consumidor consumidor) {   // sem &lt;&gt;
+    lista.add(consumidor);                                     // compila (só um aviso)
+}
+add(lista, new Consumidor("Midoriya"));                        // roda sem erro...
+for (String o : lista) { System.out.println(o); }             // ...ClassCastException AQUI, bem depois
+for (Object o : lista) { System.out.println(o); }             // com Object imprime tudo (inclusive o Consumidor)</code></pre>
+      <ul>
+        <li>Sem generics, a lista aceitava <strong>qualquer <code>Object</code></strong>. Para usar, era um <code>instanceof</code> para cada tipo possível (imagine 60 ou 70 classes). "Se você der liberdade, alguém vai fazer besteira."</li>
+        <li><strong>Generics são uma checagem do compilador.</strong> O Java precisava manter <strong>compatibilidade</strong> com bilhões de linhas antigas. Por isso o tipo só existe <strong>em tempo de compilação</strong> e é apagado no bytecode: a JVM enxerga só uma <code>List</code>. Isso se chama <strong>type erasure</strong>.</li>
+        <li>A consequência: usando tipos "crus" (sem <code>&lt;&gt;</code>), dá para enfiar um <code>Consumidor</code> numa <code>List&lt;String&gt;</code>. Não há erro na hora. A <code>ClassCastException</code> só aparece <strong>quando alguém lê</strong> o elemento como <code>String</code>. Por isso: <strong>sempre declare o tipo</strong>.</li>
+      </ul>
+
+      <h3>184 · Arrays × List: por que List&lt;Cachorro&gt; não é List&lt;Animal&gt;</h3>
+<pre><code>abstract class Animal { public abstract void consulta(); }
+class Cachorro extends Animal { public void consulta() { System.out.println("Consultando doguinho"); } }
+class Gato extends Animal { public void consulta() { System.out.println("Consultando Gato"); } }
+
+// ARRAYS: aceitam o subtipo (polimorfismo)...
+private static void printConsulta(Animal[] animals) {
+    for (Animal animal : animals) animal.consulta();
+    // animals[1] = new Gato();      ← compila, mas num Cachorro[] dá ArrayStoreException (em execução)
+}
+printConsulta(new Cachorro[]{new Cachorro(), new Cachorro()});   // OK
+printConsulta(new Gato[]{new Gato(), new Gato()});               // OK
+
+// LISTAS: NÃO aceitam
+private static void printConsulta(List&lt;Animal&gt; animals) { ... animals.add(new Cachorro()); }
+List&lt;Cachorro&gt; cachorros = List.of(new Cachorro(), new Cachorro());
+// printConsulta(cachorros);         ← NÃO compila</code></pre>
+      <ul>
+        <li>Um <strong>array sabe seu tipo em tempo de execução</strong>. Se você tentar pôr um <code>Gato</code> num <code>Cachorro[]</code> recebido como <code>Animal[]</code>, a JVM percebe e lança <strong><code>ArrayStoreException</code></strong>. Por isso o Java deixa passar <code>Cachorro[]</code> onde se espera <code>Animal[]</code>.</li>
+        <li>Uma <strong>lista não sabe</strong> (type erasure): em execução é só uma <code>List</code>. Se <code>List&lt;Cachorro&gt;</code> fosse aceita como <code>List&lt;Animal&gt;</code>, o método poderia fazer <code>animals.add(new Gato())</code> e ninguém perceberia. Então o <strong>compilador proíbe</strong>: numa lista, o parâmetro tem que ser <strong>exatamente</strong> o tipo declarado.</li>
+        <li>Dentro de uma <code>List&lt;Animal&gt;</code> de verdade você pode adicionar <code>Cachorro</code> e <code>Gato</code>, como <code>Animal a = new Gato()</code>. O problema é só aceitar a lista de um <strong>subtipo</strong> como parâmetro.</li>
+      </ul>
+
+      <h3>185 · Wildcards: ? extends e ? super</h3>
+<pre><code>// Aceita List&lt;Animal&gt;, List&lt;Cachorro&gt;, List&lt;Gato&gt;... → só LEITURA
+private static void printConsulta(List&lt;? extends Animal&gt; animals) {
+    for (Animal animal : animals) animal.consulta();   // ler como Animal: seguro
+    // animals.add(new Cachorro());                   ← NÃO compila
+}
+
+// Aceita List&lt;Animal&gt; e List&lt;Object&gt; → pode ESCREVER Animal e subtipos
+private static void printConsultaAnimal(List&lt;? super Animal&gt; animals) {
+    animals.add(new Cachorro());                      // OK
+    animals.add(new Gato());                          // OK
+    // Animal a = animals.get(0);                     ← NÃO compila: só dá para ler como Object
+}
+
+printConsulta(cachorros);                     // OK
+printConsulta(gatos);                         // OK
+printConsultaAnimal(new ArrayList&lt;Animal&gt;());  // OK
+// printConsultaAnimal(cachorros);            ← NÃO compila (Cachorro é subclasse, não super)</code></pre>
+      <ul>
+        <li><strong><code>?</code> é o coringa</strong> (<em>wildcard</em>).</li>
+        <li><strong><code>List&lt;? extends Animal&gt;</code></strong>: "uma lista de <strong>algum</strong> tipo que é <code>Animal</code> ou filho". Você <strong>lê</strong> tudo como <code>Animal</code>, mas <strong>não pode adicionar</strong>. Se a lista for de <code>Cachorro</code>, um <code>Gato</code> estragaria tudo, e o compilador não sabe qual é. É um contrato de <strong>somente leitura</strong>.</li>
+        <li>A palavra é <strong>sempre <code>extends</code></strong>, mesmo para interface: <code>List&lt;? extends Comparable&gt;</code>. Nunca <code>implements</code>.</li>
+        <li><strong><code>List&lt;? super Animal&gt;</code></strong>: "uma lista de <code>Animal</code> <strong>ou de um pai</strong> dele" (<code>Animal</code>, <code>Object</code>). Aqui <strong>pode adicionar</strong> <code>Animal</code> e qualquer filho, porque qualquer que seja a lista, ela aceita um <code>Animal</code>. Em troca, ao ler você só tem garantia de <code>Object</code> (e precisaria de <code>instanceof</code>).</li>
+        <li><strong>Resumo extra (PECS, "Producer Extends, Consumer Super"):</strong> se a lista <strong>fornece</strong> dados para você (leitura), use <code>extends</code>. Se ela <strong>recebe</strong> dados (escrita), use <code>super</code>.</li>
+      </ul>
+
+      <h3>186 · O problema: duas classes quase iguais</h3>
+<pre><code>public class CarroRentavelService {
+    private List&lt;Carro&gt; carrosDisponiveis = new ArrayList&lt;&gt;(List.of(new Carro("BMW"), new Carro("Fusca")));
+
+    public Carro buscarCarroDisponivel() {
+        System.out.println("Buscando carro disponivel....");
+        Carro carro = carrosDisponiveis.remove(0);
+        System.out.println("Alugando carro: " + carro);
+        System.out.println("Carros disponíveis para alugar:");
+        System.out.println(carrosDisponiveis);
+        return carro;
+    }
+
+    public void retornarCarroAlugado(Carro carro) {
+        System.out.println("Devolvendo carro " + carro);
+        carrosDisponiveis.add(carro);
+        System.out.println("Carros disponíveis para alugar: ");
+        System.out.println(carrosDisponiveis);
+    }
+}
+// BarcoRentavelService: a MESMA classe trocando Carro por Barco (Lancha, Canoa)</code></pre>
+      <ul>
+        <li>Um sistema de aluguel: o <code>ArrayList</code> faz o papel do "banco de dados" dos carros disponíveis. Ele é criado a partir de <code>List.of</code>, que é imutável, porque o <code>remove</code>/<code>add</code> precisam alterar a lista.</li>
+        <li>Para alugar barcos, o William copiou a classe e usou o <em>find/replace</em> da IDE (Ctrl+R, com "diferenciar maiúsculas") para trocar <code>Carro</code> por <code>Barco</code>. <strong>Linha por linha é a mesma classe</strong>: só muda o <strong>tipo</strong>. É justamente o que os generics resolvem.</li>
+      </ul>
+
+      <h3>187 · Classe genérica: RentalService&lt;T&gt;</h3>
+<pre><code>public class RentalService&lt;T&gt; {                   // T = um tipo definido por quem usar a classe
+    private List&lt;T&gt; objetosDisponiveis;
+
+    public RentalService(List&lt;T&gt; objetosDisponiveis) {   // a lista vem de fora (banco, arquivo...)
+        this.objetosDisponiveis = objetosDisponiveis;
+    }
+
+    public T buscarObjetoDisponivel() {
+        System.out.println("Buscando objeto disponivel....");
+        T t = objetosDisponiveis.remove(0);
+        System.out.println("Alugando objeto: " + t);
+        System.out.println("Objetos disponíveis para alugar:");
+        System.out.println(objetosDisponiveis);
+        return t;
+    }
+
+    public void retornarObjetoAlugado(T t) {
+        System.out.println("Devolvendo objeto " + t);
+        objetosDisponiveis.add(t);
+        System.out.println("Objetos disponíveis para alugar: ");
+        System.out.println(objetosDisponiveis);
+    }
+}
+
+RentalService&lt;Carro&gt; rentalServiceCarro = new RentalService&lt;&gt;(carrosDisponiveis);
+Carro carro = rentalServiceCarro.buscarObjetoDisponivel();     // devolve Carro, sem cast
+rentalServiceCarro.retornarObjetoAlugado(carro);
+
+RentalService&lt;Barco&gt; rentalServiceBarco = new RentalService&lt;&gt;(barcosDisponiveis);
+Barco barco = rentalServiceBarco.buscarObjetoDisponivel();     // a MESMA classe, agora para Barco</code></pre>
+      <ul>
+        <li><strong><code>class RentalService&lt;T&gt;</code></strong> declara um <strong>parâmetro de tipo</strong>. Dentro da classe, <code>T</code> é usado onde antes estava <code>Carro</code>. Quem cria o objeto decide o que é <code>T</code>, e o compilador troca <code>T</code> por <code>Carro</code> (ou <code>Barco</code>) em todo lugar. O Ctrl+P no construtor já mostra "pede uma <code>List&lt;Carro&gt;</code>".</li>
+        <li>A <strong>letra é convenção</strong>: <code>T</code> (<em>type</em>), <code>E</code> (<em>element</em>, nas coleções), <code>K</code>/<code>V</code> (<em>key</em>/<em>value</em>, no <code>Map</code>). Dá para usar vários: <code>class Par&lt;K, V&gt;</code>.</li>
+        <li>A lista deixou de ser criada dentro da classe: agora vem pelo <strong>construtor</strong>. Criar objeto de um tipo genérico (<code>new T()</code>) não é possível, justamente por causa do erasure.</li>
+        <li>Uma classe substitui duas, três, quatro. Os frameworks (Spring, Hibernate) usam isso o tempo todo, como o <code>JpaRepository&lt;Entidade, Id&gt;</code>. O William avisa: no começo de um sistema você quase não precisa, mas quando o mesmo código começa a se repetir para tipos diferentes, é hora de generalizar. E com cuidado, porque generics demais deixam o código difícil de ler.</li>
+      </ul>
+
+      <h3>188 · Método genérico</h3>
+<pre><code>private static &lt;T&gt; List&lt;T&gt; criarArrayComUmObjeto(T t) {   // &lt;T&gt; entre o modificador e o retorno
+    return List.of(t);
+}
+List&lt;Barco&gt; barcoList = criarArrayComUmObjeto(new Barco("Canoa Marota"));   // T inferido: Barco
+System.out.println(barcoList);                                               // [Barco{nome='Canoa Marota'}]
+
+// Com restrição (bounded type): só aceita tipos Comparable
+private static &lt;T extends Comparable&lt;T&gt;&gt; List&lt;T&gt; criarArrayComUmObjeto(T t) { return List.of(t); }
+// criarArrayComUmObjeto(new Barco("x"));   ← NÃO compila: Barco não é Comparable
+
+// Também dá para ter vários tipos e usá-los em atributos e construtores:
+// class Exemplo&lt;T, X, Y&gt; { private T t; private X x; ... }</code></pre>
+      <ul>
+        <li>Quando só <strong>um método</strong> precisa ser genérico, não é preciso tornar a classe genérica: declare <strong><code>&lt;T&gt;</code> antes do tipo de retorno</strong> (depois de <code>public</code>/<code>private</code>/<code>static</code>).</li>
+        <li>Na chamada nada muda: o compilador <strong>infere</strong> o <code>T</code> pelo argumento (aqui, <code>Barco</code>).</li>
+        <li><strong><code>&lt;T extends Comparable&lt;T&gt;&gt;</code></strong> restringe <code>T</code> a tipos comparáveis. Assim o compilador deixa você chamar <code>t.compareTo(...)</code> e barra quem não é.</li>
+        <li>Você já viu isso sem perceber: <code>List.of(E... e)</code> e <code>Collections.sort(List&lt;T&gt;)</code> com <code>&lt;T extends Comparable&lt;? super T&gt;&gt;</code> são métodos genéricos com wildcard. "Começa a ficar bem complicado", mas agora você consegue ler.</li>
+      </ul>
+
+      <h3>Atenção</h3>
+      <ul>
+        <li><strong>Generics = checagem em compilação.</strong> Em execução o tipo não existe (type erasure). Nunca use tipos crus (<code>List</code> sem <code>&lt;&gt;</code>).</li>
+        <li><strong><code>List&lt;Cachorro&gt;</code> não é uma <code>List&lt;Animal&gt;</code></strong> (generics são "invariantes"). Arrays aceitam, mas pagam com <code>ArrayStoreException</code> em execução.</li>
+        <li><strong><code>? extends</code>: lê, não escreve. <code>? super</code>: escreve, lê só como <code>Object</code>.</strong></li>
+        <li><strong>Extra:</strong> por causa do erasure, não dá para fazer <code>new T()</code>, <code>new T[10]</code> nem <code>obj instanceof List&lt;String&gt;</code>. Generics também não aceitam primitivos: <code>RentalService&lt;int&gt;</code> não existe, use <code>Integer</code>.</li>
+        <li><strong>Extra: <code>List&lt;?&gt;</code></strong> (coringa sem limite) aceita lista de qualquer coisa, e é só leitura como <code>Object</code>. <code>List&lt;Object&gt;</code> é diferente: só aceita exatamente <code>List&lt;Object&gt;</code>.</li>
+      </ul>
+
+      <h3>Paralelo com PHP</h3>
+      <ul>
+        <li><strong>O PHP não tem generics na linguagem.</strong> <code>array</code> e <code>Collection</code> aceitam qualquer coisa, como a <code>List</code> crua do Java 1.4. Um erro de tipo só aparece em execução, quando alguém usa o elemento, igual à <code>ClassCastException</code> tardia da aula 183.</li>
+        <li><strong>O equivalente vem da análise estática:</strong> PHPStan/Psalm leem <em>docblocks</em> como <code>@template T</code>, <code>@param list&lt;T&gt; $itens</code> e <code>@return T</code>. É a mesma ideia do Java (checagem antes de rodar), só que feita por uma ferramenta, não pelo compilador. O Laravel já anota assim: <code>Collection&lt;TKey, TValue&gt;</code>, <code>@extends Factory&lt;User&gt;</code>.</li>
+        <li><strong>O <code>RentalService&lt;T&gt;</code> no PHP</strong> seria uma classe com <code>@template T</code> e os métodos anotados com <code>T</code>. Ou, mais comum no Laravel, uma classe base de repositório recebendo o nome do Model (<code>protected string $model = Carro::class</code>). Funciona, mas sem garantia de tipo em lugar nenhum.</li>
+        <li><strong>Variância:</strong> no PHP 7.4+ a sobrescrita aceita retornos covariantes e parâmetros contravariantes (a mesma lógica de "ler é extends, escrever é super"), mas só em assinaturas de métodos, não em coleções.</li>
+      </ul>
+    </section>
+
+    <section id="flashcards">
+      <h2>Flashcards</h2>
+      <p style="color:var(--muted);margin-top:-6px">Toque no cartão para virar.</p>
+      <div id="flashcards-app"></div>
+    </section>
+
+    <section id="quiz">
+      <h2>Quiz</h2>
+      <div id="quiz-app"></div>
+    </section>
+
+    <section id="estudo">
+      <h2>Material de estudo</h2>
+
+      <h3>Mapa mental</h3>
+<pre><code>Generics
+├── Por quê (183)
+│   ├── antes: List de Object + instanceof para tudo
+│   ├── agora: o compilador checa o tipo (List&lt;String&gt;)
+│   └── type erasure: o tipo some no bytecode (compatibilidade)
+│       └── tipo cru (List) burla → ClassCastException tardia
+├── Arrays × listas (184)
+│   ├── Cachorro[] vale como Animal[] (erro só em execução: ArrayStoreException)
+│   └── List&lt;Cachorro&gt; NÃO vale como List&lt;Animal&gt; (erro de compilação)
+├── Wildcards (185)
+│   ├── List&lt;? extends Animal&gt;: Animal e filhos · só LEITURA
+│   ├── List&lt;? super Animal&gt;: Animal e pais · pode ADICIONAR · lê como Object
+│   └── sempre "extends" (também para interface) · PECS
+├── Classe genérica (186–187)
+│   ├── class RentalService&lt;T&gt; { List&lt;T&gt; ...; T buscar(); void retornar(T t) }
+│   ├── new RentalService&lt;Carro&gt;(lista) → T vira Carro
+│   └── convenções: T, E, K, V · vários parâmetros &lt;K, V&gt;
+└── Método genérico (188)
+    ├── static &lt;T&gt; List&lt;T&gt; metodo(T t) · tipo inferido na chamada
+    └── &lt;T extends Comparable&lt;T&gt;&gt; restringe o tipo</code></pre>
+
+      <h3>Prática no seu WSL (20 minutos)</h3>
+<pre><code>cd ~/java-lab
+Z=src/academy/devdojo/maratonajava/javacore/Zgenerics
+mkdir -p $Z/dominio $Z/service $Z/test
+
+cat > $Z/dominio/Carro.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Zgenerics.dominio;
+
+public class Carro {
+    private String nome;
+    public Carro(String nome) { this.nome = nome; }
+    @Override
+    public String toString() { return "Carro{nome='" + nome + "'}"; }
+}
+EOF
+sed 's/Carro/Barco/g' $Z/dominio/Carro.java &gt; $Z/dominio/Barco.java
+
+cat > $Z/service/RentalService.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Zgenerics.service;
+
+import java.util.List;
+
+public class RentalService&lt;T&gt; {
+    private List&lt;T&gt; objetosDisponiveis;
+
+    public RentalService(List&lt;T&gt; objetosDisponiveis) {
+        this.objetosDisponiveis = objetosDisponiveis;
+    }
+
+    public T buscarObjetoDisponivel() {
+        T t = objetosDisponiveis.remove(0);
+        System.out.println("Alugando objeto: " + t + " | disponíveis: " + objetosDisponiveis);
+        return t;
+    }
+
+    public void retornarObjetoAlugado(T t) {
+        objetosDisponiveis.add(t);
+        System.out.println("Devolvendo objeto " + t + " | disponíveis: " + objetosDisponiveis);
+    }
+}
+EOF
+
+cat > $Z/test/GenericsTest01.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Zgenerics.test;
+
+import academy.devdojo.maratonajava.javacore.Zgenerics.dominio.Barco;
+import academy.devdojo.maratonajava.javacore.Zgenerics.dominio.Carro;
+import academy.devdojo.maratonajava.javacore.Zgenerics.service.RentalService;
+
+import java.util.ArrayList;
+import java.util.List;
+
+abstract class Animal { public abstract void consulta(); }
+class Cachorro extends Animal { public void consulta() { System.out.println("Consultando doguinho"); } }
+class Gato extends Animal { public void consulta() { System.out.println("Consultando Gato"); } }
+
+public class GenericsTest01 {
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private static void add(List lista, Object o) { lista.add(o); }       // tipo cru: burla o compilador
+
+    private static void printConsulta(List&lt;? extends Animal&gt; animals) {
+        for (Animal a : animals) a.consulta();
+    }
+
+    private static void adicionaAnimais(List&lt;? super Animal&gt; animals) {
+        animals.add(new Cachorro());
+        animals.add(new Gato());
+    }
+
+    private static &lt;T&gt; List&lt;T&gt; criarArrayComUmObjeto(T t) { return List.of(t); }
+
+    private static &lt;T extends Comparable&lt;T&gt;&gt; T maior(T a, T b) { return a.compareTo(b) &gt;= 0 ? a : b; }   // extra
+
+    public static void main(String[] args) {
+        List&lt;String&gt; nomes = new ArrayList&lt;&gt;(List.of("Midoriya"));
+        add(nomes, 123);                                    // entra sem erro...
+        System.out.println(nomes.size());                   // ?
+        try {
+            for (String n : nomes) System.out.println(n.toUpperCase());   // ?
+        } catch (ClassCastException e) {
+            System.out.println("ClassCastException ao LER");
+        }
+
+        printConsulta(List.of(new Cachorro(), new Cachorro()));   // ?
+        printConsulta(List.of(new Gato()));                       // ?
+        List&lt;Object&gt; objetos = new ArrayList&lt;&gt;();
+        adicionaAnimais(objetos);                                 // List&lt;Object&gt; é "super" de Animal
+        System.out.println(objetos.size());                       // ?
+
+        RentalService&lt;Carro&gt; carros = new RentalService&lt;&gt;(new ArrayList&lt;&gt;(List.of(new Carro("BMW"), new Carro("Fusca"))));
+        Carro carro = carros.buscarObjetoDisponivel();            // ?
+        carros.retornarObjetoAlugado(carro);                      // ?
+        RentalService&lt;Barco&gt; barcos = new RentalService&lt;&gt;(new ArrayList&lt;&gt;(List.of(new Barco("Lancha"), new Barco("Canoa"))));
+        barcos.retornarObjetoAlugado(barcos.buscarObjetoDisponivel());   // ?
+
+        List&lt;Barco&gt; barcoList = criarArrayComUmObjeto(new Barco("Canoa Marota"));
+        System.out.println(barcoList);                            // ?
+        System.out.println(maior("Goku", "Vegeta") + " " + maior(3, 7));   // ?
+    }
+}
+EOF
+
+javac -d out $(find src -name '*.java')
+java -cp out academy.devdojo.maratonajava.javacore.Zgenerics.test.GenericsTest01</code></pre>
+      <details>
+        <summary>Ver a saída esperada</summary>
+<pre><code>2
+MIDORIYA
+ClassCastException ao LER
+Consultando doguinho
+Consultando doguinho
+Consultando Gato
+2
+Alugando objeto: Carro{nome='BMW'} | disponíveis: [Carro{nome='Fusca'}]
+Devolvendo objeto Carro{nome='BMW'} | disponíveis: [Carro{nome='Fusca'}, Carro{nome='BMW'}]
+Alugando objeto: Barco{nome='Lancha'} | disponíveis: [Barco{nome='Canoa'}]
+Devolvendo objeto Barco{nome='Lancha'} | disponíveis: [Barco{nome='Canoa'}, Barco{nome='Lancha'}]
+[Barco{nome='Canoa Marota'}]
+Vegeta 7</code></pre>
+      </details>
+      <p><strong>Exercícios:</strong></p>
+      <ol>
+        <li>Mude <code>printConsulta</code> para receber <code>List&lt;Animal&gt;</code> e leia o erro ao passar a lista de <code>Cachorro</code>. Depois tente <code>animals.add(new Gato())</code> com <code>? extends</code>.</li>
+        <li>Passe <code>new ArrayList&lt;Cachorro&gt;()</code> para <code>adicionaAnimais</code>. Por que não compila?</li>
+        <li>Refaça a aula 184 com arrays e force a <code>ArrayStoreException</code> colocando um <code>Gato</code> num <code>Cachorro[]</code> recebido como <code>Animal[]</code>.</li>
+        <li>Crie <code>class Par&lt;K, V&gt;</code> com <code>getChave()</code>/<code>getValor()</code> e use com <code>Par&lt;String, Integer&gt;</code>.</li>
+        <li>Adicione ao <code>RentalService</code> um método <code>int quantidadeDisponivel()</code> e crie um <code>RentalService&lt;String&gt;</code> para alugar "salas".</li>
+      </ol>
+
+      <h3>Glossário</h3>
+      <ul>
+        <li><strong>Generics</strong>: parâmetros de tipo em classes e métodos, checados em compilação.</li>
+        <li><strong>Type erasure</strong>: o apagamento do tipo genérico no bytecode, por compatibilidade.</li>
+        <li><strong>Tipo cru (<em>raw type</em>)</strong>: usar a classe genérica sem <code>&lt;&gt;</code> (<code>List</code>); desliga a checagem.</li>
+        <li><strong>Parâmetro de tipo</strong>: o <code>T</code> declarado em <code>class X&lt;T&gt;</code> ou <code>&lt;T&gt; void m()</code>.</li>
+        <li><strong>Wildcard (<code>?</code>)</strong>: coringa que representa "algum tipo".</li>
+        <li><strong><code>? extends X</code> (limite superior)</strong>: X ou subtipos; só leitura.</li>
+        <li><strong><code>? super X</code> (limite inferior)</strong>: X ou supertipos; permite adicionar X.</li>
+        <li><strong>Bounded type</strong>: <code>&lt;T extends Comparable&lt;T&gt;&gt;</code>, um tipo genérico com restrição.</li>
+        <li><strong>Inferência de tipo</strong>: o compilador deduz o <code>T</code> pelos argumentos ou pela atribuição.</li>
+        <li><strong><code>ArrayStoreException</code></strong>: erro ao guardar num array um objeto incompatível com o tipo real dele.</li>
+      </ul>
+
+      <h3>Revisão espaçada</h3>
+      <ul class="revisao">
+        <li><span class="dia">Dia 1</span><span>Todos os flashcards + a prática com previsões.</span></li>
+        <li><span class="dia">Dia 3</span><span>Quiz + exercícios 1 a 3.</span></li>
+        <li><span class="dia">Dia 7</span><span>Exercícios 4 e 5 + explicar em voz alta por que List&lt;Cachorro&gt; não é List&lt;Animal&gt;.</span></li>
+        <li><span class="dia">Dia 14</span><span>Flashcards que errou + questões discursivas + ler a assinatura de Collections.sort e explicar cada parte.</span></li>
+      </ul>
+
+      <h3>Para aprofundar</h3>
+      <ul>
+        <li>O que é <em>heap pollution</em> e o aviso "unchecked" do compilador?</li>
+        <li>Por que <code>Collections.sort</code> usa <code>&lt;T extends Comparable&lt;? super T&gt;&gt;</code> em vez de <code>&lt;T extends Comparable&lt;T&gt;&gt;</code>?</li>
+        <li>Como o Spring Data usa generics em <code>JpaRepository&lt;T, ID&gt;</code> para criar repositórios sem implementação?</li>
+        <li>O que são <em>reified generics</em> (Kotlin, C#) e por que o Java não tem?</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    window.AULA = {
+      flashcards: [
+        ["Que problema os generics resolveram?", "Listas de Object aceitando qualquer coisa, com cast e instanceof para tudo"],
+        ["Quando o tipo genérico é verificado?", "Em tempo de compilação"],
+        ["O que é type erasure?", "O apagamento do tipo genérico no bytecode, para manter compatibilidade com código antigo"],
+        ["O que um tipo cru (List sem <>) permite?", "Burlar a checagem: um objeto errado entra e só explode ao ser lido (ClassCastException)"],
+        ["Um método que recebe Animal[] aceita Cachorro[]?", "Sim: arrays aceitam subtipos (o erro vira ArrayStoreException em execução)"],
+        ["Um método que recebe List<Animal> aceita List<Cachorro>?", "Não: erro de compilação"],
+        ["Por que arrays podem e listas não?", "O array sabe seu tipo em execução; a lista não (type erasure), então o compilador proíbe"],
+        ["O que significa List<? extends Animal>?", "Lista de Animal ou de qualquer filho; só leitura"],
+        ["Pode adicionar em List<? extends Animal>?", "Não: o compilador não sabe se é lista de Cachorro, Gato..."],
+        ["O que significa List<? super Animal>?", "Lista de Animal ou de um pai (Object); pode adicionar Animal e filhos"],
+        ["Ao ler de List<? super Animal>, que tipo você tem garantido?", "Só Object"],
+        ["Para interface no wildcard usa extends ou implements?", "Sempre extends: List<? extends Comparable>"],
+        ["O que é PECS?", "Producer Extends, Consumer Super: leitura → extends; escrita → super"],
+        ["Qual o problema de CarroRentavelService e BarcoRentavelService?", "São a mesma classe; só muda o tipo"],
+        ["Como declarar uma classe genérica?", "class RentalService<T> { List<T> itens; T buscar(); void retornar(T t) }"],
+        ["O que acontece em new RentalService<Carro>(lista)?", "T vira Carro: o construtor pede List<Carro> e buscar devolve Carro"],
+        ["Convenções de letras em generics?", "T (type), E (element), K (key), V (value)"],
+        ["Pode ter mais de um parâmetro de tipo?", "Sim: class Par<K, V> ou class X<T, X, Y>"],
+        ["Por que a lista do RentalService vem pelo construtor?", "Não dá para criar objetos do tipo T (new T()) por causa do erasure"],
+        ["Como declarar um método genérico?", "<T> antes do retorno: static <T> List<T> criar(T t)"],
+        ["Na chamada do método genérico, precisa informar o T?", "Não: o compilador infere pelo argumento"],
+        ["O que <T extends Comparable<T>> faz?", "Restringe T a tipos comparáveis (e permite chamar compareTo)"],
+        ["Generics aceitam primitivos (List<int>)?", "Não: use os wrappers (List<Integer>)"],
+        ["List<?> × List<Object>?", "List<?> aceita lista de qualquer tipo (só leitura); List<Object> só aceita List<Object> — extra"],
+        ["O PHP tem generics?", "Não na linguagem; usa docblocks (@template T) checados por PHPStan/Psalm"]
+      ],
+      quiz: [
+        { tipo: 'multipla', pergunta: 'Por que o Java implementou generics com type erasure?', opcoes: ['Para deixar o código mais rápido', 'Para manter a compatibilidade com o código compilado nas versões anteriores', 'Para permitir tipos primitivos', 'Por segurança contra ataques'], correta: 1,
+          explicacao: 'O tipo genérico só existe na compilação e é apagado no bytecode. Assim o código novo roda junto com bilhões de linhas antigas sem generics.' },
+        { tipo: 'vf', pergunta: 'Com um método add(List lista, Object o) (tipo cru), é possível colocar um Integer numa List<String> sem erro no momento da inserção.', correta: 0,
+          explicacao: 'Verdadeiro. O tipo cru desliga a checagem, e em execução a lista não sabe seu tipo. A ClassCastException só aparece quando alguém lê o elemento como String.' },
+        { tipo: 'multipla', pergunta: 'O método recebe Animal[]. Você passa um Cachorro[] e dentro dele faz animals[0] = new Gato(). O que acontece?', opcoes: ['Erro de compilação', 'Funciona normalmente', 'ArrayStoreException em execução', 'O gato vira cachorro'], correta: 2,
+          explicacao: 'Arrays aceitam subtipos como parâmetro, e o array sabe em execução que é de Cachorro: guardar um Gato lança ArrayStoreException.' },
+        { tipo: 'multipla', pergunta: 'Qual assinatura aceita List<Cachorro> e List<Gato> para apenas percorrer e chamar consulta()?', opcoes: ['void print(List<Animal> a)', 'void print(List<? extends Animal> a)', 'void print(List<? super Animal> a)', 'void print(List<? implements Animal> a)'], correta: 1,
+          explicacao: '? extends Animal aceita listas de Animal e de qualquer filho, para leitura. List<Animal> só aceita exatamente List<Animal>, e "implements" não existe no wildcard.' },
+        { tipo: 'vf', pergunta: 'Num parâmetro List<? extends Animal>, você pode chamar animals.add(new Cachorro()).', correta: 1,
+          explicacao: 'Falso. A lista pode ser de Gato, então o compilador proíbe qualquer add (exceto null). É um contrato de leitura.' },
+        { tipo: 'multipla', pergunta: 'Qual lista pode ser passada para void adiciona(List<? super Animal> a)?', opcoes: ['List<Cachorro>', 'List<Gato>', 'List<Object>', 'List<String>'], correta: 2,
+          explicacao: '? super Animal aceita Animal ou supertipos (Object). Cachorro e Gato são subtipos, e String não tem relação.' },
+        { tipo: 'multipla', pergunta: 'Em class RentalService<T>, o que é T?', opcoes: ['Uma classe chamada T que precisa existir', 'Um parâmetro de tipo, definido por quem instancia a classe', 'Sempre Object', 'Um tipo primitivo'], correta: 1,
+          explicacao: 'T é um parâmetro de tipo: new RentalService<Carro>(...) faz T valer Carro em toda a classe.' },
+        { tipo: 'multipla', pergunta: 'Qual declaração de método genérico está correta?', opcoes: ['private static List<T> criar(T t)', 'private static <T> List<T> criar(T t)', 'private <T> static List<T> criar(T t)', 'private static List<T> <T> criar(T t)'], correta: 1,
+          explicacao: 'O <T> vem depois dos modificadores e antes do tipo de retorno. Sem declarar <T>, o compilador procura uma classe chamada T.' },
+        { tipo: 'discursiva', pergunta: 'Explique, com Animal/Cachorro/Gato, a diferença entre List<? extends Animal> e List<? super Animal> e quando usar cada uma.',
+          explicacao: 'List<? extends Animal> aceita uma List<Animal>, List<Cachorro> ou List<Gato>. Ler é seguro (tudo é pelo menos Animal, e dá para chamar consulta()), mas adicionar é proibido: se a lista for de Cachorro, um Gato a corromperia, e o compilador não sabe qual é. Use quando a lista FORNECE dados (leitura). List<? super Animal> aceita List<Animal> ou List<Object>. Adicionar Animal, Cachorro e Gato é seguro (qualquer dessas listas aceita um Animal), mas ao ler só há garantia de Object. Use quando a lista RECEBE dados (escrita). É a regra PECS: Producer Extends, Consumer Super.' },
+        { tipo: 'discursiva', pergunta: 'No Laravel você talvez tenha um BaseRepository com protected string $model. Compare com RentalService<T> do Java: o que cada abordagem garante?',
+          explicacao: 'No PHP, o BaseRepository recebe o nome do Model como string (ex.: Carro::class) e os métodos devolvem mixed/Model. Reaproveita o código, mas nada garante que find() devolve um Carro nem impede passar um Barco para save(): erros só em execução, a não ser que você anote @template TModel e use PHPStan. Em Java, RentalService<T> é checado pelo compilador: new RentalService<Carro>(lista) exige uma List<Carro>, buscarObjetoDisponivel() devolve Carro sem cast, e retornarObjetoAlugado(barco) nem compila. A mesma classe serve para qualquer tipo, com segurança de tipo. O limite, por causa do erasure, é que o Java não sabe T em execução (não dá para fazer new T()), e por isso a lista vem pelo construtor.' }
+      ]
+    };
+  </script>
+  <script src="../js/app.js"></script>
+</body>
+</html>
