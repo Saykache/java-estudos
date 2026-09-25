@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>100–105 · Exceções (parte 2)</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="topo">
+      <a class="voltar" href="../index.html">← Todas as aulas</a>
+      <h1>100–105 · Exceções: finally, multi-catch, try-with-resources, customizada e sobrescrita</h1>
+      <p>Bloco finally, vários catch e a ordem deles, catch com |, try com recursos, exceção própria e as regras de throws na sobrescrita · <a href="https://www.youtube.com/playlist?list=PL62G310vn6nFIsOCC0H-C2infYgwm8SWW" target="_blank" rel="noopener">playlist</a></p>
+    </header>
+
+    <nav class="abas">
+      <a href="#resumo">Resumo</a>
+      <a href="#flashcards">Flashcards</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#estudo">Material de estudo</a>
+    </nav>
+
+    <p class="aviso">Junta as aulas 100 (finally), 101 (capturando múltiplas exceções), 102 (multi-catch em linha), 103 (try with resources), 104 (exceção customizada) e 105 (exceção e regras de sobrescrita). Continua as <a href="95-99-excecoes.html">aulas 95–99</a>. Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. O código (pacote <code>javacore.Oexception</code>, <code>Leitor1</code>/<code>Leitor2</code>, <code>LoginInvalidoException</code> com Goku/ssj, <code>Pessoa</code>/<code>Funcionario</code>) foi conferido no <a href="https://github.com/devdojobr/maratona-java-virado-no-jiraya" target="_blank" rel="noopener">repositório do professor</a>. Os itens marcados como "extra" não estão nos vídeos.</p>
+
+    <section id="resumo">
+      <h2>Resumo</h2>
+      <p>O bloco fecha o assunto de exceções com as ferramentas do dia a dia: <strong><code>finally</code></strong> para código que precisa rodar sempre (liberar recursos), <strong>vários <code>catch</code></strong> e a regra de ordem, o <strong>multi-catch</strong> com <code>|</code>, o <strong>try-with-resources</strong>, que fecha os recursos sozinho, <strong>exceções customizadas</strong> para regras do seu negócio e, para prova e entrevista, as <strong>regras de <code>throws</code> na sobrescrita</strong>.</p>
+
+      <h3>100 · finally: roda sempre</h3>
+<pre><code>private static String abreConexao() {
+    try {
+        System.out.println("Abrindo arquivo");
+        System.out.println("Escrevendo dados no arquivo");
+        return "conexão aberta";
+    } catch (Exception e) {
+        e.printStackTrace();
+    } finally {
+        System.out.println("Fechando recurso liberado pelo SO");   // roda ANTES do return chegar a quem chamou
+    }
+    return null;
+}
+
+private static void abreConexao2() {       // try + finally, sem catch
+    try {
+        System.out.println("Abrindo arquivo");
+        System.out.println("Escrevendo dados no arquivo");
+        throw new RuntimeException();
+    } finally {
+        System.out.println("Fechando recurso liberado pelo SO");   // fecha, mas a exceção segue para o main
+    }
+}</code></pre>
+      <ul>
+        <li><strong>Recursos externos</strong> (arquivo, conexão com banco) são pedidos ao sistema operacional ou ao SGBD e <strong>precisam ser fechados</strong>. Imagine o sistema do Enem com milhões de acessos deixando conexões abertas: em algum momento a memória acaba e a aplicação para.</li>
+        <li>Se o "fechar" estiver no fim do <code>try</code> e uma exceção acontecer antes, ele <strong>nunca roda</strong>.</li>
+        <li>O bloco <strong><code>finally</code> sempre é executado</strong>: com sucesso, com exceção, e até quando o <code>try</code> tem <code>return</code>. Nesse caso ele roda antes de o valor voltar para quem chamou.</li>
+        <li>O <code>return null</code> no fim é necessário porque o <code>return</code> do <code>try</code> pode não ser alcançado.</li>
+        <li><strong><code>try</code> sozinho não compila.</strong> Ele precisa de <code>catch</code>, de <code>finally</code> ou dos dois. <code>try/finally</code> sem <code>catch</code> existe, mas o William diz que nunca viu em produção: serve quando você não trata a exceção mas precisa fechar o recurso, e a exceção continua subindo.</li>
+      </ul>
+
+      <h3>101 · Vários catch: do mais específico ao mais genérico</h3>
+<pre><code>try {
+    throw new RuntimeException();
+} catch (ArrayIndexOutOfBoundsException e) {
+    System.out.println("Dentro do ArrayIndexOutOfBoundsException");
+} catch (IndexOutOfBoundsException e) {          // mãe da de cima: tem que vir DEPOIS
+    System.out.println("Dentro do IndexOutOfBoundsException");
+} catch (IllegalArgumentException e) {
+    System.out.println("Dentro do IllegalArgumentException");
+} catch (ArithmeticException e) {
+    System.out.println("Dentro do ArithmeticException");
+} catch (RuntimeException e) {                   // a mais genérica no fim
+    System.out.println("Dentro do RuntimeException");
+}
+// Dentro do RuntimeException
+
+private static void talvezLanceException() throws SQLException, FileNotFoundException { }
+
+try {
+    talvezLanceException();
+} catch (SQLException e) {                       // as duas são checked: as duas precisam de catch
+    e.printStackTrace();
+} catch (FileNotFoundException e) {              // linhas de herança diferentes: ordem livre
+    e.printStackTrace();
+}</code></pre>
+      <ul>
+        <li><strong>Por que ter vários:</strong> exceções diferentes merecem tratamentos diferentes. No HTTP, por exemplo, um erro 4xx é do cliente e um 5xx é do servidor.</li>
+        <li>O Java testa os <code>catch</code> <strong>de cima para baixo</strong> e entra no <strong>primeiro compatível</strong>, pela regra do polimorfismo. Um <code>ArrayIndexOutOfBoundsException</code> também "é um" <code>IndexOutOfBoundsException</code>, mas cai no primeiro que aparecer.</li>
+        <li>Se nenhum <code>catch</code> servir, a exceção sobe. Um <code>catch (RuntimeException e)</code> no fim pega "o que der e vier".</li>
+        <li><strong>A mais genérica sempre por último.</strong> Com <code>RuntimeException</code> no topo, os <code>catch</code> abaixo nunca seriam alcançados, e o compilador acusa erro.</li>
+        <li><code>throws</code> aceita <strong>várias exceções separadas por vírgula</strong>. Se forem de linhas de herança diferentes (<code>SQLException</code>, <code>FileNotFoundException</code>), a ordem dos <code>catch</code> não importa, mas cada checked precisa ser tratada. Também dá para pegar as duas com uma mãe comum (<code>catch (Exception e)</code>).</li>
+      </ul>
+
+      <h3>102 · Multi-catch em linha: |</h3>
+<pre><code>try {
+    throw new RuntimeException();
+} catch (ArrayIndexOutOfBoundsException | IllegalArgumentException | ArithmeticException e) {
+    System.out.println("Dentro do ArrayIndexOutOfBoundsException | IllegalArgumentException | ArithmeticException");
+} catch (RuntimeException e) {
+    System.out.println("Dentro do RuntimeException");
+}
+
+private static void talvezLanceException() throws SQLException, IOException { }
+
+try {
+    talvezLanceException();
+} catch (IOException | SQLException e) {
+    e.printStackTrace();
+}
+// catch (FileNotFoundException | IOException e)   ← NÃO compila: mesma linha de herança</code></pre>
+      <ul>
+        <li>Quando várias exceções recebem o <strong>mesmo tratamento</strong>, junte-as num <code>catch</code> só com <code>|</code>. É só uma sintaxe mais legível para o mesmo resultado.</li>
+        <li><strong>Regra:</strong> as exceções do multi-catch <strong>não podem ser da mesma linha de herança</strong> (<code>ArrayIndexOutOfBoundsException</code> e <code>IndexOutOfBoundsException</code>, ou <code>FileNotFoundException</code> e <code>IOException</code>), em qualquer ordem. Seria redundante: a mãe já pega a filha.</li>
+        <li><strong>Vantagem sobre <code>catch (Exception e)</code>:</strong> você trata do mesmo jeito só as que espera, e ainda pode ter um <code>catch</code> genérico no fim para o imprevisto.</li>
+        <li><strong>No multi-catch a variável <code>e</code> é implicitamente <code>final</code>:</strong> <code>e = new ArithmeticException();</code> não compila. Com uma exceção só, compila (ninguém faz isso, mas cai em prova).</li>
+        <li>O Java adiciona sintaxes assim sem quebrar o código antigo (<strong>retrocompatibilidade</strong>). Por isso muitas vezes existem dois jeitos de fazer a mesma coisa.</li>
+      </ul>
+
+      <h3>103 · try-with-resources: o Java fecha para você</h3>
+<pre><code>// Jeito antigo: "feio" (e a galera do Java sabe disso)
+public static void lerArquivo2() {
+    Reader reader = null;                                   // declarado fora para o finally enxergar
+    try {
+        reader = new BufferedReader(new FileReader("teste.txt"));
+    } catch (FileNotFoundException e) {
+        e.printStackTrace();
+    } finally {
+        try {
+            if (reader != null) {                           // pode ser null se o new falhou
+                reader.close();                             // close() também lança IOException
+            }
+        } catch (IOException exception) {
+            exception.printStackTrace();
+        }
+    }
+}
+
+// Java 7+: try-with-resources
+public class Leitor1 implements Closeable {
+    @Override
+    public void close() throws IOException {
+        System.out.println("Fechando leitor 1");
+    }
+}
+// Leitor2: igual, "Fechando leitor 2"
+
+public static void lerArquivo() {
+    try (Leitor1 leitor1 = new Leitor1();
+         Leitor2 leitor2 = new Leitor2()) {                 // vários, separados por ;
+        // usa os leitores
+    } catch (IOException e) {
+        // (trate de verdade: nunca deixe vazio)
+    }
+}
+// Fechando leitor 2
+// Fechando leitor 1</code></pre>
+      <ul>
+        <li>No jeito antigo, a variável precisa ser declarada <strong>fora</strong> do <code>try</code> (senão o <code>finally</code> não a enxerga), pode estar <code>null</code>, e o <code>close()</code> também lança uma checked. O resultado é um <code>try</code> dentro do <code>finally</code>.</li>
+        <li><strong>Sintaxe:</strong> <code>try (Tipo var = new Tipo()) { ... }</code>. O objeto é declarado e instanciado <strong>nos parênteses</strong>, e o Java chama <code>close()</code> automaticamente no fim.</li>
+        <li><strong>Regra:</strong> só entram objetos que implementam <strong><code>AutoCloseable</code></strong> ou <strong><code>Closeable</code></strong> (que estende <code>AutoCloseable</code>). É polimorfismo: o Java tem garantia de que existe um <code>close()</code> para chamar. <code>Reader</code> implementa <code>Closeable</code>.</li>
+        <li>Os recursos são <strong>fechados na ordem inversa</strong> da declaração: abriu 1, 2, 3, fecha 3, 2, 1. Isso importa quando um depende do outro (cadeia de conexões).</li>
+        <li><strong>É o único <code>try</code> que pode ficar sem <code>catch</code> e sem <code>finally</code>.</strong> Mas se o <code>close()</code> lança uma checked (como aqui), você trata com <code>catch</code> ou declara <code>throws</code>. Um <code>catch</code> ou <code>finally</code> extra também é permitido.</li>
+        <li>Muito usado com <strong>banco de dados</strong>, onde se abre e fecha conexão o tempo todo, e tira do desenvolvedor a responsabilidade de lembrar de fechar.</li>
+      </ul>
+
+      <h3>104 · Exceção customizada</h3>
+<pre><code>public class LoginInvalidoException extends Exception {   // extends Exception = checked
+    public LoginInvalidoException() {
+        super("Login inválido");                             // mensagem padrão
+    }
+
+    public LoginInvalidoException(String message) {
+        super(message);
+    }
+}
+
+private static void logar() throws LoginInvalidoException {
+    Scanner teclado = new Scanner(System.in);
+    String usernameDB = "Goku";
+    String senhaDB = "ssj";
+    System.out.println("Usuário");
+    String usernameDigitado = teclado.nextLine();
+    System.out.println("Senha");
+    String senhaDigitada = teclado.nextLine();
+    if (!usernameDB.equals(usernameDigitado) || !senhaDB.equals(senhaDigitada)) {
+        throw new LoginInvalidoException("Usuário ou senha inválidos");
+    }
+    System.out.println("Usuário logado com sucesso");
+}
+
+public static void main(String[] args) {
+    try {
+        logar();
+    } catch (LoginInvalidoException e) {                     // tratado: o programa não "trava"
+        e.printStackTrace();
+    }
+}</code></pre>
+      <ul>
+        <li>Quando nenhuma exceção do Java expressa a <strong>regra do seu negócio</strong> (login inválido, saldo insuficiente), crie uma classe que estende uma exceção. Por convenção, o nome <strong>termina com <code>Exception</code></strong>.</li>
+        <li><strong>A escolha da mãe define o comportamento:</strong> <code>extends Exception</code> = <strong>checked</strong> (força quem chama a tratar); <code>extends RuntimeException</code> = <strong>unchecked</strong> (não força). O William quis forçar, então usou <code>Exception</code>.</li>
+        <li>Só o <code>extends</code> já basta. Os construtores são opcionais: um sem parâmetro com mensagem padrão (<code>super("Login inválido")</code>) e um que recebe a mensagem.</li>
+        <li>Na aula, "Goku" + "12" e "Goku" + "Ssj" dão exceção (<code>equals</code> diferencia maiúsculas). Só "Goku" + "ssj" loga.</li>
+        <li>Sistemas reais costumam ter <strong>várias</strong> exceções customizadas.</li>
+      </ul>
+
+      <h3>105 · throws na sobrescrita</h3>
+<pre><code>public class Pessoa {
+    public void salvar() throws LoginInvalidoException, IOException {
+        System.out.println("Salvando pessoa");
+    }
+}
+
+public class Funcionario extends Pessoa {
+    @Override
+    public void salvar() throws LoginInvalidoException, FileNotFoundException {   // mais específica: OK
+        System.out.println("salvando funcionário");
+    }
+}
+
+try {
+    funcionario.salvar();
+} catch (LoginInvalidoException | FileNotFoundException e) {   // pela variável Funcionario, só essas
+    e.printStackTrace();
+}</code></pre>
+      <p>Ao sobrescrever, o método da subclasse <strong>pode</strong>:</p>
+      <ul>
+        <li><strong>não declarar nenhuma</strong> exceção (a implementação pode nem lançar);</li>
+        <li>declarar <strong>algumas ou todas</strong> as checked do original;</li>
+        <li>declarar <strong>versões mais específicas</strong> (filhas): <code>FileNotFoundException</code> no lugar de <code>IOException</code>;</li>
+        <li>declarar <strong>qualquer unchecked</strong> (<code>ArithmeticException</code>...), porque elas não obrigam tratamento.</li>
+      </ul>
+      <p>E <strong>não pode</strong>:</p>
+      <ul>
+        <li>declarar uma checked <strong>mais genérica</strong> (mãe): se o original lança <code>FileNotFoundException</code>, a sobrescrita não pode lançar <code>IOException</code>;</li>
+        <li>declarar uma checked <strong>nova</strong>, que o original não declara (ex.: <code>Exception</code>).</li>
+      </ul>
+      <p>O motivo é o polimorfismo: quem usa uma variável <code>Pessoa</code> só se preparou para as exceções de <code>Pessoa.salvar()</code>. A subclasse não pode surpreendê-lo com uma checked que ele não trata. O William avisa que isso cai em prova de certificação e entrevista.</p>
+
+      <h3>Atenção</h3>
+      <ul>
+        <li><strong>Ordem dos catch:</strong> filha antes da mãe. Mãe antes da filha não compila (código inalcançável).</li>
+        <li><strong>Multi-catch:</strong> nada da mesma linha de herança, e a variável é implicitamente <code>final</code>.</li>
+        <li><strong>try-with-resources:</strong> só <code>AutoCloseable</code>/<code>Closeable</code>, fecha na ordem inversa, e o <code>close()</code> roda <strong>antes</strong> do <code>catch</code>/<code>finally</code>.</li>
+        <li><strong>Extra: nunca dê <code>return</code> dentro do <code>finally</code>.</strong> Ele sobrescreve o <code>return</code> do <code>try</code> e engole a exceção lançada.</li>
+        <li><strong>Extra: o <code>finally</code> não roda com <code>System.exit()</code></strong> (a JVM termina na hora).</li>
+        <li><strong>Extra: se o corpo e o <code>close()</code> lançarem exceção</strong> no try-with-resources, a do corpo vence e a do <code>close()</code> fica em <code>e.getSuppressed()</code>.</li>
+        <li><strong>Extra: Java 9+</strong> aceita uma variável já existente (efetivamente final) nos parênteses: <code>try (leitor1) { ... }</code>.</li>
+        <li><strong>Extra: dê à exceção customizada um construtor com causa:</strong> <code>public LoginInvalidoException(String msg, Throwable cause) { super(msg, cause); }</code>.</li>
+      </ul>
+
+      <h3>Paralelo com PHP</h3>
+      <ul>
+        <li><strong><code>finally</code></strong> existe igual (PHP 5.5+), inclusive a pegadinha do <code>return</code> no <code>finally</code>.</li>
+        <li><strong>Multi-catch:</strong> <code>catch (InvalidArgumentException | DomainException $e)</code>, desde o PHP 7.1.</li>
+        <li><strong>Não existe try-with-resources no PHP.</strong> Recursos (<code>fopen</code>, PDO) são liberados quando a última referência some ou no fim da requisição. Quando importa, faz-se <code>fclose()</code> no <code>finally</code>. O parente mais próximo no Laravel é <code>DB::transaction(function () { ... })</code>, que faz commit ou rollback sozinho mesmo com exceção.</li>
+        <li><strong>Exceção customizada:</strong> <code>class LoginInvalidoException extends Exception</code>. No Laravel, ela pode ter os métodos <code>report()</code> e <code>render($request)</code>, e o Handler os usa para logar e devolver a resposta (por exemplo, um 401).</li>
+        <li><strong>Regras de sobrescrita com throws:</strong> não existem no PHP, porque não há checked exceptions. O equivalente é a regra de assinatura compatível (tipos de parâmetro e retorno), que o PHP 8 verifica.</li>
+      </ul>
+    </section>
+
+    <section id="flashcards">
+      <h2>Flashcards</h2>
+      <p style="color:var(--muted);margin-top:-6px">Toque no cartão para virar.</p>
+      <div id="flashcards-app"></div>
+    </section>
+
+    <section id="quiz">
+      <h2>Quiz</h2>
+      <div id="quiz-app"></div>
+    </section>
+
+    <section id="estudo">
+      <h2>Material de estudo</h2>
+
+      <h3>Mapa mental</h3>
+<pre><code>Exceções, parte 2
+├── finally (100)
+│   ├── roda sempre: sucesso, exceção, até com return no try
+│   ├── lugar de liberar recurso (arquivo, conexão)
+│   └── try sozinho não compila: try/catch, try/finally, try/catch/finally
+├── Vários catch (101)
+│   ├── primeiro compatível vence (polimorfismo)
+│   ├── específica → genérica (mãe antes = não compila)
+│   └── throws A, B (várias por vírgula)
+├── Multi-catch (102)
+│   ├── catch (A | B | C e) → mesmo tratamento
+│   ├── nada da mesma linha de herança
+│   └── e é implicitamente final
+├── try-with-resources (103)
+│   ├── try (Leitor1 l1 = new Leitor1(); Leitor2 l2 = ...)
+│   ├── só AutoCloseable / Closeable
+│   ├── fecha sozinho, em ordem inversa
+│   └── pode ficar sem catch e sem finally
+├── Customizada (104)
+│   ├── class LoginInvalidoException extends Exception (checked)
+│   ├── extends RuntimeException → unchecked
+│   └── construtores: padrão + com mensagem
+└── Sobrescrita (105)
+    ├── pode: nenhuma, menos, mais específica, qualquer unchecked
+    └── não pode: checked mais genérica ou nova</code></pre>
+
+      <h3>Prática no seu WSL (25 minutos)</h3>
+<pre><code>cd ~/java-lab
+O=src/academy/devdojo/maratonajava/javacore/Oexception
+mkdir -p $O/runtime/test $O/exception/dominio $O/exception/test
+
+cat > $O/runtime/test/RuntimeExceptionTest03.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Oexception.runtime.test;
+
+public class RuntimeExceptionTest03 {
+    public static void main(String[] args) {
+        System.out.println(abreConexao());      // ?
+        abreConexao2();                         // ?
+    }
+
+    private static String abreConexao() {
+        try {
+            System.out.println("Abrindo arquivo");
+            System.out.println("Escrevendo dados no arquivo");
+            return "conexão aberta";
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            System.out.println("Fechando recurso liberado pelo SO");
+        }
+        return null;
+    }
+
+    private static void abreConexao2() {
+        try {
+            System.out.println("Abrindo arquivo");
+            System.out.println("Escrevendo dados no arquivo");
+            throw new RuntimeException();
+        } finally {
+            System.out.println("Fechando recurso liberado pelo SO");
+        }
+    }
+}
+EOF
+
+for n in 1 2; do cat > $O/exception/dominio/Leitor$n.java &lt;&lt;EOF
+package academy.devdojo.maratonajava.javacore.Oexception.exception.dominio;
+
+import java.io.Closeable;
+import java.io.IOException;
+
+public class Leitor$n implements Closeable {
+    @Override
+    public void close() throws IOException {
+        System.out.println("Fechando leitor $n");
+    }
+}
+EOF
+done
+
+cat > $O/exception/test/TryWithResourcesTest01.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Oexception.exception.test;
+
+import academy.devdojo.maratonajava.javacore.Oexception.exception.dominio.Leitor1;
+import academy.devdojo.maratonajava.javacore.Oexception.exception.dominio.Leitor2;
+
+import java.io.IOException;
+
+public class TryWithResourcesTest01 {
+    public static void main(String[] args) {
+        try (Leitor1 leitor1 = new Leitor1();
+             Leitor2 leitor2 = new Leitor2()) {
+            System.out.println("Usando os leitores");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+EOF
+
+cat > $O/exception/dominio/LoginInvalidoException.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Oexception.exception.dominio;
+
+public class LoginInvalidoException extends Exception {
+    public LoginInvalidoException() {
+        super("Login inválido");
+    }
+
+    public LoginInvalidoException(String message) {
+        super(message);
+    }
+}
+EOF
+
+cat > $O/exception/test/LoginInvalidoExceptionTest01.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Oexception.exception.test;
+
+import academy.devdojo.maratonajava.javacore.Oexception.exception.dominio.LoginInvalidoException;
+
+import java.util.Scanner;
+
+public class LoginInvalidoExceptionTest01 {
+    public static void main(String[] args) {
+        try {
+            logar();
+        } catch (LoginInvalidoException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static void logar() throws LoginInvalidoException {
+        Scanner teclado = new Scanner(System.in);
+        String usernameDB = "Goku";
+        String senhaDB = "ssj";
+        System.out.println("Usuário");
+        String usernameDigitado = teclado.nextLine();
+        System.out.println("Senha");
+        String senhaDigitada = teclado.nextLine();
+        if (!usernameDB.equals(usernameDigitado) || !senhaDB.equals(senhaDigitada)) {
+            throw new LoginInvalidoException("Usuário ou senha inválidos");
+        }
+        System.out.println("Usuário logado com sucesso");
+    }
+}
+EOF
+
+javac -d out $(find src -name '*.java')
+P=academy.devdojo.maratonajava.javacore.Oexception
+java -cp out $P.runtime.test.RuntimeExceptionTest03
+java -cp out $P.exception.test.TryWithResourcesTest01
+printf 'Goku\nSsj\n' | java -cp out $P.exception.test.LoginInvalidoExceptionTest01
+printf 'Goku\nssj\n' | java -cp out $P.exception.test.LoginInvalidoExceptionTest01</code></pre>
+      <details>
+        <summary>Ver a saída esperada</summary>
+<pre><code>Abrindo arquivo
+Escrevendo dados no arquivo
+Fechando recurso liberado pelo SO
+conexão aberta
+Abrindo arquivo
+Escrevendo dados no arquivo
+Fechando recurso liberado pelo SO
+Exception in thread "main" java.lang.RuntimeException
+	at ...RuntimeExceptionTest03.abreConexao2(RuntimeExceptionTest03.java:26)
+	...
+
+Usando os leitores
+Fechando leitor 2
+Fechando leitor 1
+
+Usuário
+Senha
+...LoginInvalidoException: Usuário ou senha inválidos
+	at ...
+
+Usuário
+Senha
+Usuário logado com sucesso</code></pre>
+      </details>
+      <p><strong>Exercícios:</strong></p>
+      <ol>
+        <li>Num <code>try</code> que lança <code>ArrayIndexOutOfBoundsException</code>, coloque <code>catch (RuntimeException e)</code> <strong>antes</strong> de <code>catch (ArrayIndexOutOfBoundsException e)</code> e leia o erro do <code>javac</code>.</li>
+        <li>Escreva <code>catch (FileNotFoundException | IOException e)</code> e leia o erro. Depois, no multi-catch válido, tente <code>e = new ArithmeticException();</code>.</li>
+        <li>Inverta a ordem dos leitores no try-with-resources e confirme a nova ordem de fechamento. Depois faça <code>Leitor1.close()</code> lançar <code>new IOException("falha ao fechar")</code> e veja em qual <code>catch</code> ela cai.</li>
+        <li>Mude <code>LoginInvalidoException</code> para <code>extends RuntimeException</code>, tire o <code>try/catch</code> e o <code>throws</code> e confirme que compila. Qual das duas versões você prefere para login, e por quê?</li>
+        <li>Monte <code>Pessoa</code>/<code>Funcionario</code> da aula 105 e teste as regras: em <code>Funcionario.salvar()</code>, tente <code>throws Exception</code>, <code>throws IOException</code> (com <code>Pessoa</code> declarando <code>FileNotFoundException</code>), sem <code>throws</code> e com <code>throws ArithmeticException</code>. Quais compilam?</li>
+      </ol>
+
+      <h3>Glossário</h3>
+      <ul>
+        <li><strong><code>finally</code></strong>: bloco que sempre roda ao sair do <code>try</code>, com ou sem exceção.</li>
+        <li><strong>Recurso</strong>: algo externo pedido ao SO ou a outro sistema (arquivo, conexão) que precisa ser fechado.</li>
+        <li><strong>Multi-catch</strong>: um <code>catch</code> para várias exceções, separadas por <code>|</code>.</li>
+        <li><strong>try-with-resources</strong>: <code>try (recurso)</code>, que chama <code>close()</code> automaticamente.</li>
+        <li><strong><code>AutoCloseable</code> / <code>Closeable</code></strong>: interfaces com o método <code>close()</code>, exigidas pelo try-with-resources.</li>
+        <li><strong>Exceção customizada</strong>: classe sua que estende <code>Exception</code> (checked) ou <code>RuntimeException</code> (unchecked).</li>
+        <li><strong>Código inalcançável</strong>: código que o compilador prova que nunca roda (ex.: <code>catch</code> de filha depois da mãe); é erro de compilação.</li>
+        <li><strong>Exceção suprimida</strong> (extra): exceção do <code>close()</code> guardada em <code>getSuppressed()</code> quando o corpo já tinha falhado.</li>
+      </ul>
+
+      <h3>Revisão espaçada</h3>
+      <ul class="revisao">
+        <li><span class="dia">Dia 1</span><span>Todos os flashcards + a prática com previsões.</span></li>
+        <li><span class="dia">Dia 3</span><span>Quiz + exercícios 1 a 3.</span></li>
+        <li><span class="dia">Dia 7</span><span>Exercícios 4 e 5 + escrever de memória as regras de throws na sobrescrita.</span></li>
+        <li><span class="dia">Dia 14</span><span>Flashcards que errou + questões discursivas + revisar as aulas 95–99.</span></li>
+      </ul>
+
+      <h3>Para aprofundar</h3>
+      <ul>
+        <li>Como o try-with-resources é "traduzido" pelo compilador (o que ele gera por baixo)?</li>
+        <li>Exceção customizada checked ou unchecked? O que frameworks como o Spring preferem e por quê?</li>
+        <li>O que é <code>Throwable.addSuppressed()</code> e quando você chamaria à mão?</li>
+        <li>Como usar try-with-resources com <code>Connection</code>, <code>PreparedStatement</code> e <code>ResultSet</code> no JDBC?</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    window.AULA = {
+      flashcards: [
+        ["Quando o bloco finally é executado?", "Sempre: com sucesso, com exceção e até quando o try tem return"],
+        ["Para que serve o finally?", "Liberar recursos externos (arquivo, conexão) que precisam ser fechados"],
+        ["Com return no try, o finally roda?", "Sim, antes de o valor voltar para quem chamou"],
+        ["try sozinho compila?", "Não: precisa de catch, finally ou dos dois (exceto try-with-resources)"],
+        ["O que acontece com try/finally sem catch quando há exceção?", "O finally roda e a exceção continua subindo para quem chamou"],
+        ["Com vários catch, qual é executado?", "O primeiro compatível, de cima para baixo (polimorfismo)"],
+        ["Em que ordem colocar os catch?", "Do mais específico (filha) ao mais genérico (mãe)"],
+        ["O que acontece com catch da mãe antes do da filha?", "Erro de compilação: o catch da filha fica inalcançável"],
+        ["Como declarar que um método lança várias exceções?", "throws SQLException, FileNotFoundException (separadas por vírgula)"],
+        ["O que é o multi-catch?", "catch (A | B | C e): um só bloco para exceções com o mesmo tratamento"],
+        ["Qual a restrição do multi-catch?", "As exceções não podem estar na mesma linha de herança"],
+        ["Pode reatribuir e num multi-catch?", "Não: a variável é implicitamente final"],
+        ["Por que o jeito antigo de fechar recurso é 'feio'?", "Variável fora do try, checagem de null e try/catch dentro do finally porque close() lança IOException"],
+        ["Sintaxe do try-with-resources?", "try (Leitor1 l1 = new Leitor1(); Leitor2 l2 = new Leitor2()) { ... }"],
+        ["Que objetos podem entrar no try-with-resources?", "Os que implementam AutoCloseable ou Closeable"],
+        ["Em que ordem os recursos são fechados?", "Na ordem inversa da declaração (Leitor2, depois Leitor1)"],
+        ["try-with-resources pode ficar sem catch e finally?", "Sim, mas checked lançadas por close() precisam ser tratadas ou declaradas"],
+        ["Como criar uma exceção checked própria?", "class LoginInvalidoException extends Exception"],
+        ["E uma unchecked própria?", "Estendendo RuntimeException"],
+        ["Convenção de nome para exceções?", "Terminar com Exception"],
+        ["Para que o construtor sem parâmetro da LoginInvalidoException?", "Para dar uma mensagem padrão: super(\"Login inválido\")"],
+        ["Ao sobrescrever, o que a subclasse pode declarar em throws?", "Nenhuma, algumas/todas as do original, versões mais específicas ou qualquer unchecked"],
+        ["Ao sobrescrever, o que a subclasse NÃO pode declarar?", "Checked mais genérica ou checked nova que o original não declara"],
+        ["Por que a sobrescrita não pode lançar checked nova?", "Quem usa a variável do tipo mãe só se preparou para as exceções do método original"],
+        ["return dentro do finally é boa ideia?", "Não (extra): sobrescreve o return do try e engole exceções"]
+      ],
+      quiz: [
+        { tipo: 'vf', pergunta: 'O bloco finally roda mesmo quando o try executa um return.', correta: 0,
+          explicacao: 'Verdadeiro. Em abreConexao, "Fechando recurso liberado pelo SO" é impresso antes de "conexão aberta" chegar ao main.' },
+        { tipo: 'multipla', pergunta: 'Qual combinação NÃO compila?', opcoes: ['try { } catch (Exception e) { }', 'try { } finally { }', 'try { }', 'try { } catch (Exception e) { } finally { }'], correta: 2,
+          explicacao: 'Um try comum precisa de pelo menos um catch ou um finally. Só o try-with-resources pode ficar sozinho.' },
+        { tipo: 'multipla', pergunta: 'try { throw new RuntimeException(); } tem catch de ArrayIndexOutOfBounds, IndexOutOfBounds, IllegalArgument, Arithmetic e RuntimeException, nessa ordem. O que imprime?', opcoes: ['Dentro do ArrayIndexOutOfBoundsException', 'Dentro do IndexOutOfBoundsException', 'Dentro do RuntimeException', 'Nada: a exceção sobe para a JVM'], correta: 2,
+          explicacao: 'Uma RuntimeException "pura" não é nenhuma das filhas, então só o último catch é compatível.' },
+        { tipo: 'vf', pergunta: 'catch (RuntimeException e) pode vir antes de catch (ArithmeticException e) no mesmo try.', correta: 1,
+          explicacao: 'Falso. A mãe pegaria tudo e o catch da filha ficaria inalcançável, o que é erro de compilação. Específica antes, genérica depois.' },
+        { tipo: 'multipla', pergunta: 'Qual multi-catch compila?', opcoes: ['catch (FileNotFoundException | IOException e)', 'catch (IOException | SQLException e)', 'catch (ArrayIndexOutOfBoundsException | IndexOutOfBoundsException e)', 'catch (RuntimeException | ArithmeticException e)'], correta: 1,
+          explicacao: 'IOException e SQLException são de linhas de herança diferentes. As outras misturam mãe e filha, o que não é permitido.' },
+        { tipo: 'multipla', pergunta: 'try (Leitor1 leitor1 = new Leitor1(); Leitor2 leitor2 = new Leitor2()) { } O que imprime (cada close() imprime "Fechando leitor N")?', opcoes: ['Fechando leitor 1, depois Fechando leitor 2', 'Fechando leitor 2, depois Fechando leitor 1', 'Nada: é preciso chamar close()', 'Só Fechando leitor 2'], correta: 1,
+          explicacao: 'O try-with-resources chama close() automaticamente, na ordem inversa da declaração.' },
+        { tipo: 'multipla', pergunta: 'O que uma classe precisa para ser usada no try-with-resources?', opcoes: ['Estender Exception', 'Ter um construtor sem parâmetros', 'Implementar AutoCloseable (ou Closeable)', 'Ser final'], correta: 2,
+          explicacao: 'Por polimorfismo, o Java precisa ter certeza de que existe um close() para chamar. Closeable estende AutoCloseable.' },
+        { tipo: 'multipla', pergunta: 'Pessoa.salvar() declara throws LoginInvalidoException, IOException. Qual sobrescrita em Funcionario NÃO compila?', opcoes: ['public void salvar()', 'public void salvar() throws FileNotFoundException', 'public void salvar() throws LoginInvalidoException, ArithmeticException', 'public void salvar() throws Exception'], correta: 3,
+          explicacao: 'Exception é mais genérica que as declaradas no original. As outras: nenhuma, uma mais específica, ou parte do original mais uma unchecked. Todas válidas.' },
+        { tipo: 'discursiva', pergunta: 'Reescreva, em palavras, o lerArquivo2 (jeito antigo com finally) usando try-with-resources, e explique cada problema que desaparece.',
+          explicacao: 'Fica try (Reader reader = new BufferedReader(new FileReader("teste.txt"))) { ...ler... } catch (IOException e) { e.printStackTrace(); }. Desaparecem: 1) a variável declarada fora do try como null só para o finally enxergar; 2) o if (reader != null), necessário porque o new podia falhar antes da atribuição; 3) o try/catch dentro do finally para a IOException do close(); 4) o risco de esquecer de fechar. O Java chama close() sozinho (Reader implementa Closeable), mesmo com exceção, e em ordem inversa se houver vários recursos.' },
+        { tipo: 'discursiva', pergunta: 'Você vai criar a LoginInvalidoException no seu sistema. Explique a escolha entre extends Exception e extends RuntimeException e compare com o que faria no Laravel.',
+          explicacao: 'extends Exception torna a exceção checked: todo método que chama logar() precisa tratar (try/catch) ou declarar throws. O compilador garante que ninguém esquece o caso de login inválido, e foi a escolha do William. extends RuntimeException torna unchecked: o código fica mais limpo e a exceção sobe até um tratador global, mas nada obriga a tratar. No Laravel não existe essa escolha (PHP não tem checked): class LoginInvalidoException extends Exception, e o comum é deixá-la subir até o Handler, podendo definir render() para devolver 401 e report() para controlar o log.' }
+      ]
+    };
+  </script>
+  <script src="../js/app.js"></script>
+</body>
+</html>
