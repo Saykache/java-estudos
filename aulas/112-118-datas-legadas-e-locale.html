@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>112–118 · Datas legadas e Locale</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="topo">
+      <a class="voltar" href="../index.html">← Todas as aulas</a>
+      <h1>112–118 · Datas legadas e internacionalização</h1>
+      <p>Date, Calendar, DateFormat, Locale (datas, números e moedas), NumberFormat e SimpleDateFormat · <a href="https://www.youtube.com/playlist?list=PL62G310vn6nFIsOCC0H-C2infYgwm8SWW" target="_blank" rel="noopener">playlist</a></p>
+    </header>
+
+    <nav class="abas">
+      <a href="#resumo">Resumo</a>
+      <a href="#flashcards">Flashcards</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#estudo">Material de estudo</a>
+    </nav>
+
+    <p class="aviso">Junta as aulas 112 (Date), 113 (Calendar), 114 (DateFormat), 115 (datas com Locale), 116 (números com Locale), 117 (moeda com Locale) e 118 (SimpleDateFormat). Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. O código (pacotes <code>javacore.Rdatas</code> e <code>javacore.Sformatacao</code>) foi conferido no <a href="https://github.com/devdojobr/maratona-java-virado-no-jiraya" target="_blank" rel="noopener">repositório do professor</a>. O William grava na Holanda, com o Windows em inglês, por isso as saídas dele aparecem em inglês e no fuso da Europa. As saídas desta página usam o fuso de São Paulo e o <code>pt-BR</code>. Os itens marcados como "extra" não estão nos vídeos.</p>
+
+    <section id="resumo">
+      <h2>Resumo</h2>
+      <p>Datas em Java têm história: primeiro veio a <strong><code>Date</code></strong>, que não bastou. Depois veio a <strong><code>Calendar</code></strong>, "tentando consertar", que também não bastou. No Java 8 chegou um pacote inteiro, o <strong><code>java.time</code></strong> (aulas 119+). As classes <strong>legadas</strong> continuam importantes porque você vai encontrá-las em <strong>sistemas antigos</strong>. O bloco também mostra a <strong>internacionalização</strong> (i18n) com <strong><code>Locale</code></strong>: o mesmo dado formatado como cada país espera.</p>
+<pre><code>java.util:  Date (1.0) · Calendar (abstrata) · Locale
+java.text:  DateFormat (abstrata) · SimpleDateFormat · NumberFormat (abstrata)
+java.time:  LocalDate, LocalDateTime... (Java 8, aulas 119+) ← use em sistemas novos</code></pre>
+
+      <h3>112 · Date</h3>
+<pre><code>import java.util.Date;              // NÃO confundir com java.sql.Date (banco de dados)
+
+Date date = new Date(1613061109953L);          // milissegundos desde 01/01/1970
+date.setTime(date.getTime() + 3_600_000);      // + 1 hora (3.600.000 ms)
+System.out.println(date);                      // Thu Feb 11 14:31:49 BRT 2021 (fuso de São Paulo)</code></pre>
+      <ul>
+        <li>Existe desde o Java 1.0. Tome cuidado com o import: é <code>java.util.Date</code>. A <code>java.sql.Date</code> é para o banco.</li>
+        <li>Por dentro é só um <strong><code>long</code> com os milissegundos desde 1º de janeiro de 1970</strong> (a <em>epoch</em>). <code>new Date()</code> é "agora", e <code>getTime()</code> devolve esse <code>long</code>.</li>
+        <li>Quase todos os métodos são <strong>deprecated</strong> (riscados na IDE). Deprecated quer dizer que pode sumir numa versão futura e que existe coisa melhor.</li>
+        <li>Somar uma hora exige conta de milissegundos à mão (<code>3_600_000</code>), e ela <strong>não tem suporte a internacionalização</strong>, uma das bandeiras do Java. Por isso ficou obsoleta.</li>
+        <li><code>println(date)</code> chama o <code>toString()</code>, que sai sempre no mesmo formato em inglês, no fuso da JVM.</li>
+      </ul>
+
+      <h3>113 · Calendar</h3>
+<pre><code>Calendar c = Calendar.getInstance();     // abstrata: new Calendar() não compila
+if (c.getFirstDayOfWeek() == Calendar.SUNDAY) {
+    System.out.println("Domingão é o primeiro dia da semana");
+}
+System.out.println(c.get(Calendar.DAY_OF_WEEK));          // 5 = quinta
+System.out.println(c.get(Calendar.DAY_OF_MONTH));         // 11
+System.out.println(c.get(Calendar.DAY_OF_YEAR));          // 42
+System.out.println(c.get(Calendar.DAY_OF_WEEK_IN_MONTH)); // 2 (2ª quinta do mês)
+
+c.add(Calendar.DAY_OF_MONTH, 2);   // soma e "vira" o que precisar (mês, ano)
+c.roll(Calendar.HOUR, 12);         // soma sem virar o campo de cima
+Date date = c.getTime();           // Calendar → Date (para imprimir legível)</code></pre>
+      <ul>
+        <li>É <strong>abstrata</strong>. <code>Calendar.getInstance()</code> devolve a implementação certa para o <code>Locale</code> (budista, imperial japonês, <strong>gregoriano</strong> no Brasil e na Europa).</li>
+        <li>O <code>toString()</code> dela é ilegível. O truque da aula é <code>c.getTime()</code>, que devolve um <code>Date</code> para imprimir.</li>
+        <li><strong>Use as constantes, não números mágicos:</strong> <code>Calendar.SUNDAY</code>, <code>Calendar.DAY_OF_MONTH</code>... O primeiro dia da semana depende do país: domingo no Brasil e nos EUA, segunda na França e na Holanda.</li>
+        <li><strong><code>get(campo)</code></strong> lê um campo: dia da semana, do mês, do ano, ou a ocorrência do dia da semana no mês.</li>
+        <li><strong><code>add</code> × <code>roll</code>:</strong> <code>add</code> soma e <strong>vira</strong> o campo maior (12 horas depois das 18h dá 6h do dia seguinte). <code>roll</code> <strong>não vira</strong> o campo de cima: dá a volta dentro do próprio campo e deixa dia/mês/ano como estavam.</li>
+        <li>Sistema legado em Java 7? Com <code>Date</code> e <code>Calendar</code> você já sabe se virar. Em Java 8+, prefira converter para o <code>java.time</code>.</li>
+      </ul>
+
+      <h3>114 · DateFormat: formatos prontos</h3>
+<pre><code>Calendar calendar = Calendar.getInstance();
+DateFormat[] df = new DateFormat[7];                 // abstrata, mas pode ser tipo de array
+df[0] = DateFormat.getInstance();                    // data e hora curtas
+df[1] = DateFormat.getDateInstance();                // só data (MEDIUM)
+df[2] = DateFormat.getDateTimeInstance();            // data e hora
+df[3] = DateFormat.getDateInstance(DateFormat.SHORT);   // 11/02/2021
+df[4] = DateFormat.getDateInstance(DateFormat.MEDIUM);  // 11 de fev. de 2021
+df[5] = DateFormat.getDateInstance(DateFormat.LONG);    // 11 de fevereiro de 2021
+df[6] = DateFormat.getDateInstance(DateFormat.FULL);    // quinta-feira, 11 de fevereiro de 2021
+
+for (DateFormat dateFormat : df) {
+    System.out.println(dateFormat.format(calendar.getTime()));   // format recebe Date, não Calendar
+}</code></pre>
+      <ul>
+        <li><code>java.text.DateFormat</code> é <strong>abstrata</strong>: os objetos vêm de <code>getInstance</code>, <code>getDateInstance</code> e <code>getDateTimeInstance</code>.</li>
+        <li>Quatro estilos: <strong><code>SHORT</code>, <code>MEDIUM</code>, <code>LONG</code>, <code>FULL</code></strong> (o FULL inclui o dia da semana). O resultado segue o <strong>Locale do sistema operacional</strong> (as saídas acima são de uma JVM em <code>pt-BR</code>).</li>
+        <li><code>format</code> recebe um <strong><code>Date</code></strong>. Passar o <code>Calendar</code> direto não funciona, por isso o <code>calendar.getTime()</code>.</li>
+        <li>O William diz que esses formatos prontos resolvem uns 90% dos casos. Para formatos sob medida existe o <code>SimpleDateFormat</code> (aula 118).</li>
+      </ul>
+
+      <h3>115 · Locale: datas no formato de cada país</h3>
+<pre><code>Locale localeItaly = new Locale("it", "IT");    // língua (ISO 639) + país (ISO 3166)
+Locale localeCH = new Locale("it", "CH");       // italiano falado na Suíça
+Locale localeIndia = new Locale("hi", "IN");
+Locale localeJapao = new Locale("ja", "JP");
+Locale localeHolanda = new Locale("nl", "NL");
+
+Calendar calendar = Calendar.getInstance();
+DateFormat df1 = DateFormat.getDateInstance(DateFormat.FULL, localeItaly);
+System.out.println("Italia " + df1.format(calendar.getTime()));   // Italia giovedì 11 febbraio 2021
+// Suíça: "giovedì, 11 febbraio 2021" (com vírgula) · Japão: "2021年2月11日木曜日"
+
+System.out.println(localeItaly.getDisplayCountry(localeJapao));    // "Itália" escrito em japonês
+System.out.println(localeCH.getDisplayCountry(localeHolanda));     // "Suíça" em holandês (Zwitserland)
+System.out.println(localeItaly.getDisplayLanguage(localeJapao));   // "italiano" em japonês</code></pre>
+      <ul>
+        <li><strong><code>java.util.Locale</code></strong> existe para a <strong>internacionalização</strong>: formatar datas, números e moedas conforme a preferência do usuário ou a configuração da JVM.</li>
+        <li>É criado com <strong>dois códigos ISO</strong>: a <strong>língua</strong> em minúsculas (ISO 639: <code>pt</code>, <code>it</code>, <code>ja</code>) e o <strong>país</strong> em maiúsculas (ISO 3166: <code>BR</code>, <code>IT</code>, <code>CH</code>). O mesmo idioma muda de país para país: <code>it_IT</code> × <code>it_CH</code>.</li>
+        <li><code>DateFormat.getDateInstance(estilo, locale)</code> formata "como se estivesse lá". Diferenças pequenas, como a vírgula na Suíça, importam. Nos números, uma vírgula trocada muda o valor.</li>
+        <li><strong><code>getDisplayCountry(locale)</code></strong> e <strong><code>getDisplayLanguage(locale)</code></strong> dão o nome do país e da língua <strong>traduzidos</strong> para outro Locale. Sem argumento, usam o Locale padrão.</li>
+        <li><strong>De onde vem o Locale do usuário?</strong> Do cabeçalho <code>Accept-Language</code> que o navegador envia, ou de uma <strong>preferência</strong> que o usuário escolhe. Exemplo: a Amazon da Holanda permite escolher o inglês e traduz o site todo, inclusive a formatação.</li>
+      </ul>
+
+      <h3>116 · Números com NumberFormat</h3>
+<pre><code>System.out.println(Locale.getDefault());          // en_US na máquina do William
+String[] isoCountries = Locale.getISOCountries(); // todos os países suportados
+String[] isoLanguages = Locale.getISOLanguages(); // todas as línguas (há menos línguas que países)
+
+Locale localeBR = new Locale("pt", "BR");         // não existe Locale.BRAZIL
+Locale localeJP = Locale.JAPAN;                   // constantes prontas: JAPAN, ITALY, FRANCE, GERMANY...
+Locale localeIT = Locale.ITALY;
+NumberFormat[] nfa = new NumberFormat[4];         // abstrata, como DateFormat
+nfa[0] = NumberFormat.getInstance();              // Locale padrão
+nfa[1] = NumberFormat.getInstance(localeJP);
+nfa[2] = NumberFormat.getInstance(localeBR);
+nfa[3] = NumberFormat.getInstance(localeIT);
+double valor = 100_000_000.2130;                  // no código o separador decimal é SEMPRE o ponto
+for (NumberFormat numberFormat : nfa) {
+    System.out.println(numberFormat.format(valor));
+}
+// en_US e ja_JP: 100,000,000.213   ·   pt_BR e it_IT: 100.000.000,213</code></pre>
+      <ul>
+        <li>O pacote <code>Rdatas</code> ganhou um irmão, o <strong><code>Sformatacao</code></strong>, para a parte de internacionalização.</li>
+        <li><code>Locale.getDefault()</code> mostra como o sistema operacional está configurado. <code>getISOCountries()</code> e <code>getISOLanguages()</code> listam o que é suportado. Há mais países que línguas, porque o português, por exemplo, é falado em vários países.</li>
+        <li><strong>EUA e Japão</strong> usam vírgula no milhar e ponto no decimal. <strong>Brasil e Itália</strong>, o contrário.</li>
+        <li>No IntelliJ, <code>getCompactNumberInstance</code> aparece em vermelho no projeto da aula. Ele é do Java 12, e o <em>language level</em> do projeto está em 8. O que se vê no Java 8 cobre "uns 85%" dos casos.</li>
+      </ul>
+
+      <h3>117 · Moeda, casas decimais e parse</h3>
+<pre><code>// NumberFormatTest01 (números)
+double valor = 1_000.2130;
+for (NumberFormat numberFormat : nfa) {
+    numberFormat.setMaximumFractionDigits(2);          // padrão é 3 para números
+    System.out.println(numberFormat.format(valor));    // 1,000.21 · 1,000.21 · 1.000,21 · 1.000,21
+}
+String valorString = "1000.2130";
+try {
+    System.out.println(nfa[0].parse(valorString));     // 1000.213 (String → Number)
+} catch (ParseException e) {                           // checked!
+    e.printStackTrace();
+}
+
+// NumberFormatTest02 (moeda)
+nfa[0] = NumberFormat.getCurrencyInstance();           // $1,000.21 no en_US
+nfa[1] = NumberFormat.getCurrencyInstance(localeJP);   // iene: 0 casas decimais
+nfa[2] = NumberFormat.getCurrencyInstance(localeBR);   // R$ 1.000,21
+nfa[3] = NumberFormat.getCurrencyInstance(localeIT);   // 1.000,21 €
+for (NumberFormat numberFormat : nfa) {
+    System.out.println(numberFormat.getMaximumFractionDigits());   // 2 · 0 · 2 · 2
+    System.out.println(numberFormat.format(valor));
+}
+nfa[1].parse("1,000");   // ParseException: moeda precisa do símbolo (¥1,000)</code></pre>
+      <ul>
+        <li><strong><code>getCurrencyInstance(locale)</code></strong> formata como <strong>dinheiro</strong>: símbolo, separadores e casas decimais do país.</li>
+        <li><strong>Casas decimais:</strong> <code>getMaximumFractionDigits()</code> é 3 no número comum e 2 na moeda (dólar, real, euro). O <strong>iene tem 0</strong>. <code>setMaximumFractionDigits(2)</code> muda isso.</li>
+        <li><strong><code>parse(String)</code></strong> faz o caminho inverso (texto → <code>Number</code>) e lança <strong><code>ParseException</code></strong> (checked, aulas 95–105). Ele lê do início e <strong>para no primeiro caractere inválido</strong>, ignorando o resto. Se o inválido estiver logo no começo, lança exceção.</li>
+        <li><strong>O parse de moeda exige o formato de moeda</strong>, com o símbolo: <code>"$1,000.21"</code> no <code>en_US</code>, <code>"￥1,000"</code> no Japão. Sem o símbolo: <code>Unparseable number</code>.</li>
+        <li>O <code>_</code> em <code>1_000.2130</code> só vale <strong>no código</strong>. Numa String para parse ele é um caractere inválido.</li>
+        <li><strong>No banco, guarde o número</strong>, nunca o texto formatado ("R$ 1.000,21"). A formatação com o Locale acontece só na hora de exibir.</li>
+      </ul>
+
+      <h3>118 · SimpleDateFormat: formato sob medida</h3>
+<pre><code>String pattern = "'Amsterdam' dd 'de' MMMM 'de' yyyy";   // texto fixo entre aspas simples
+SimpleDateFormat sdf = new SimpleDateFormat(pattern);    // concreta: aqui tem new
+System.out.println(sdf.format(new Date()));              // Amsterdam 15 de February de 2021 (Windows em inglês)
+try {
+    System.out.println(sdf.parse("Amsterdam 15 de February de 2021"));   // String → Date
+} catch (ParseException e) {
+    e.printStackTrace();
+}</code></pre>
+      <ul>
+        <li><code>java.text.SimpleDateFormat</code> (Java 1.1) é <strong>concreta</strong> e bem mais flexível que <code>DateFormat</code>. Ela recebe um <strong>padrão de letras</strong> (tabela na documentação).</li>
+        <li><strong>Letras principais:</strong> <code>G</code> era (AD, "anno Domini"), <code>y</code> ano, <code>M</code> mês, <code>d</code> dia, <code>E</code> dia da semana, <code>H</code> hora 0–23, <code>h</code> hora 1–12, <code>m</code> minuto, <code>s</code> segundo, <code>a</code> AM/PM, <code>z</code> fuso.</li>
+        <li><strong>Quantidade de letras:</strong> <code>MM</code> = 02, <code>MMM</code> = fev (abreviado), <code>MMMM</code> = fevereiro (por extenso). <code>yyyy</code> = 2021.</li>
+        <li><strong>Texto fixo vai entre aspas simples</strong> (<code>'Amsterdam'</code>, <code>'de'</code>), porque senão letras como <code>a</code> e <code>m</code> seriam interpretadas.</li>
+        <li><strong><code>parse</code></strong> segue <strong>o mesmo padrão</strong> e lança <code>ParseException</code> se o texto não bater (por exemplo, sem o "Amsterdam"). Útil para relatórios com formato customizado.</li>
+      </ul>
+
+      <h3>Atenção</h3>
+      <ul>
+        <li><strong><code>MM</code> é mês, <code>mm</code> é minuto.</strong> <code>"dd/mm/yyyy"</code> é um bug clássico. O certo é <code>"dd/MM/yyyy"</code>. Também: <code>HH</code> (0–23) × <code>hh</code> (1–12, precisa do <code>a</code>).</li>
+        <li><strong>Extra: no <code>Calendar</code> o mês começa em 0.</strong> <code>c.get(Calendar.MONTH)</code> em fevereiro dá <code>1</code>. Use <code>Calendar.FEBRUARY</code>, nunca o número.</li>
+        <li><strong><code>DateFormat</code> e <code>NumberFormat</code> são abstratas</strong> (use <code>getXxxInstance</code>). <code>SimpleDateFormat</code> é concreta.</li>
+        <li><strong>Os parses (<code>NumberFormat</code>, <code>SimpleDateFormat</code>) lançam <code>ParseException</code>, que é checked.</strong> Por isso o <code>try/catch</code>.</li>
+        <li><strong>Extra: <code>SimpleDateFormat</code> não é thread-safe.</strong> Não guarde um em atributo <code>static</code> compartilhado. O <code>DateTimeFormatter</code> do <code>java.time</code> (aula 129) é.</li>
+        <li><strong>Extra: <code>new Locale("pt", "BR")</code> é deprecated no Java 19+.</strong> Use <code>Locale.of("pt", "BR")</code> ou <code>Locale.forLanguageTag("pt-BR")</code>.</li>
+        <li><strong>Extra:</strong> para forçar o Locale e o fuso ao rodar: <code>java -Duser.language=pt -Duser.country=BR</code> e a variável <code>TZ=America/Sao_Paulo</code>.</li>
+      </ul>
+
+      <h3>Paralelo com PHP</h3>
+      <ul>
+        <li><strong>Epoch:</strong> <code>time()</code> no PHP devolve <strong>segundos</strong>. Em Java, <code>new Date().getTime()</code> e <code>System.currentTimeMillis()</code> devolvem <strong>milissegundos</strong>. Ao trocar timestamps com uma API PHP, multiplique ou divida por 1000.</li>
+        <li><strong>Letras de formato diferentes:</strong> PHP <code>date('d/m/Y H:i')</code> ≈ Java <code>"dd/MM/yyyy HH:mm"</code>. No PHP, <code>m</code> é mês e <code>i</code> é minuto. No Java, <code>M</code> é mês e <code>m</code> é minuto. Cuidado ao traduzir de cabeça.</li>
+        <li><strong><code>Calendar.add</code> ≈ <code>$dt-&gt;modify('+2 days')</code></strong> ou o <code>addDays(2)</code> do Carbon. <code>DateTime</code> do PHP também é mutável. <code>DateTimeImmutable</code>/<code>CarbonImmutable</code> são o espírito do <code>java.time</code>.</li>
+        <li><strong>Locale:</strong> a extensão <code>intl</code> tem <code>NumberFormatter</code> (≈ <code>NumberFormat</code>, com <code>CURRENCY</code>) e <code>IntlDateFormatter</code> (≈ <code>DateFormat</code> com estilos FULL/LONG...). <code>number_format($v, 2, ',', '.')</code> é a versão "na mão".</li>
+        <li><strong>Laravel:</strong> <code>App::setLocale('pt_BR')</code>, a middleware que lê o <code>Accept-Language</code>, <code>Carbon::setLocale</code> + <code>translatedFormat()</code> e <code>Number::currency(1000.21, 'BRL', 'pt_BR')</code> (Laravel 11). E a mesma regra: guarde o número no banco e formate na view.</li>
+      </ul>
+    </section>
+
+    <section id="flashcards">
+      <h2>Flashcards</h2>
+      <p style="color:var(--muted);margin-top:-6px">Toque no cartão para virar.</p>
+      <div id="flashcards-app"></div>
+    </section>
+
+    <section id="quiz">
+      <h2>Quiz</h2>
+      <div id="quiz-app"></div>
+    </section>
+
+    <section id="estudo">
+      <h2>Material de estudo</h2>
+
+      <h3>Mapa mental</h3>
+<pre><code>Datas legadas + internacionalização
+├── Date (112) · java.util
+│   ├── long de ms desde 01/01/1970 · getTime / setTime
+│   ├── quase tudo deprecated · sem i18n
+│   └── ≠ java.sql.Date
+├── Calendar (113) · abstrata → getInstance()
+│   ├── get(Calendar.DAY_OF_WEEK / DAY_OF_MONTH / DAY_OF_YEAR ...)
+│   ├── getFirstDayOfWeek() == Calendar.SUNDAY
+│   ├── add (vira o campo de cima) × roll (não vira)
+│   └── getTime() → Date
+├── DateFormat (114) · java.text · abstrata
+│   └── SHORT · MEDIUM · LONG · FULL (Locale do SO)
+├── Locale (115–117) · língua ISO 639 + país ISO 3166
+│   ├── getDateInstance(FULL, locale)
+│   ├── getDisplayCountry / getDisplayLanguage(outroLocale)
+│   ├── getDefault · getISOCountries · getISOLanguages
+│   ├── NumberFormat.getInstance(locale) → 1,000.21 × 1.000,21
+│   ├── getCurrencyInstance(locale) → R$ · € · ¥ (0 casas)
+│   └── parse → Number · ParseException (checked)
+└── SimpleDateFormat (118) · concreta
+    ├── padrão: dd MM(MM) yyyy HH mm ss E a z G
+    ├── texto fixo entre 'aspas simples'
+    └── format(Date) · parse(String) → Date</code></pre>
+
+      <h3>Prática no seu WSL (25 minutos)</h3>
+      <p>Datas fixas e Locale explícito para a saída ser previsível. O <code>TZ=</code> fixa o fuso.</p>
+<pre><code>cd ~/java-lab
+S=src/academy/devdojo/maratonajava/javacore/Sformatacao
+mkdir -p $S/test
+
+cat > $S/test/DatasLegadasTest01.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Sformatacao.test;
+
+import java.text.DateFormat;
+import java.text.NumberFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.Locale;
+
+public class DatasLegadasTest01 {
+    public static void main(String[] args) throws ParseException {
+        Locale ptBR = new Locale("pt", "BR");
+        SimpleDateFormat br = new SimpleDateFormat("dd/MM/yyyy HH:mm", ptBR);
+
+        // 112 · Date
+        Date date = new Date(1613061109953L);
+        date.setTime(date.getTime() + 3_600_000);
+        System.out.println(date);                                        // ?
+
+        // 113 · Calendar
+        Calendar c = Calendar.getInstance(ptBR);
+        c.setTime(new Date(1613061109953L));
+        System.out.println(c.get(Calendar.DAY_OF_WEEK));                 // ?
+        System.out.println(c.get(Calendar.DAY_OF_YEAR));                 // ?
+        System.out.println(c.get(Calendar.MONTH));                       // ? (pegadinha)
+        c.add(Calendar.DAY_OF_MONTH, 20);
+        System.out.println(br.format(c.getTime()));                      // ?
+        c.setTime(new Date(1613061109953L));
+        c.roll(Calendar.DAY_OF_MONTH, 20);
+        System.out.println(br.format(c.getTime()));                      // ?
+
+        // 114/115 · DateFormat + Locale
+        Date d = new Date(1613061109953L);
+        System.out.println(DateFormat.getDateInstance(DateFormat.SHORT, ptBR).format(d)); // ?
+        System.out.println(DateFormat.getDateInstance(DateFormat.FULL, ptBR).format(d));  // ?
+        System.out.println(DateFormat.getDateInstance(DateFormat.FULL, Locale.ITALY).format(d));
+        System.out.println(Locale.ITALY.getDisplayCountry(ptBR));        // ?
+
+        // 116/117 · NumberFormat
+        double valor = 1_000.2130;
+        NumberFormat nf = NumberFormat.getInstance(ptBR);
+        System.out.println(nf.getMaximumFractionDigits());               // ?
+        System.out.println(nf.format(valor));                            // ?
+        nf.setMaximumFractionDigits(2);
+        System.out.println(nf.format(valor));                            // ?
+        System.out.println(NumberFormat.getInstance(Locale.JAPAN).format(valor));
+        System.out.println(NumberFormat.getCurrencyInstance(ptBR).format(valor));
+        System.out.println(NumberFormat.getCurrencyInstance(Locale.JAPAN).getMaximumFractionDigits()); // ?
+        System.out.println(NumberFormat.getInstance(Locale.US).parse("1000.2130abc"));                // ?
+
+        // 118 · SimpleDateFormat
+        SimpleDateFormat sdf = new SimpleDateFormat("'Amsterdam' dd 'de' MMMM 'de' yyyy", ptBR);
+        System.out.println(sdf.format(d));                               // ?
+        System.out.println(sdf.parse("Amsterdam 15 de fevereiro de 2021"));  // ?
+    }
+}
+EOF
+
+javac -d out $(find src -name '*.java')
+TZ=America/Sao_Paulo java -cp out academy.devdojo.maratonajava.javacore.Sformatacao.test.DatasLegadasTest01</code></pre>
+      <details>
+        <summary>Ver a saída esperada</summary>
+<pre><code>Thu Feb 11 14:31:49 BRT 2021
+5
+42
+1
+03/03/2021 13:31
+03/02/2021 13:31
+11/02/2021
+quinta-feira, 11 de fevereiro de 2021
+giovedì 11 febbraio 2021
+Itália
+3
+1.000,213
+1.000,21
+1,000.21
+R$ 1.000,21
+0
+1000.213
+Amsterdam 11 de fevereiro de 2021
+Mon Feb 15 00:00:00 BRT 2021
+(os textos longos com Locale podem variar um pouco entre versões do Java)</code></pre>
+      </details>
+      <p><strong>Exercícios:</strong></p>
+      <ol>
+        <li>Troque <code>"dd/MM/yyyy HH:mm"</code> por <code>"dd/mm/yyyy HH:mm"</code> e explique a saída estranha.</li>
+        <li>Com <code>Calendar</code>, descubra em que dia da semana cai o seu próximo aniversário (<code>set(Calendar.MONTH, Calendar.XXX)</code> + <code>get(Calendar.DAY_OF_WEEK)</code>).</li>
+        <li>Imprima 1234567.891 como moeda em <code>pt-BR</code>, <code>en-US</code>, <code>ja-JP</code> e <code>de-DE</code>. Quais usam 0 casas? Onde fica o símbolo?</li>
+        <li>Faça <code>NumberFormat.getCurrencyInstance(ptBR).parse("1.000,21")</code> (sem "R$") e leia a exceção. Depois inclua o símbolo copiando a saída do <code>format</code>.</li>
+        <li>Com <code>SimpleDateFormat</code>, formate a data no padrão "Sexta, 15/08/2025 às 14h30" (dica: <code>EEEE</code> e texto entre aspas).</li>
+      </ol>
+
+      <h3>Glossário</h3>
+      <ul>
+        <li><strong>Epoch</strong>: 1º de janeiro de 1970, 00:00 UTC; o ponto zero do <code>Date</code>.</li>
+        <li><strong>Legado</strong>: sistema ou API antiga que continua em uso e precisa ser mantida.</li>
+        <li><strong>Internacionalização (i18n)</strong>: preparar o sistema para vários idiomas e formatos regionais.</li>
+        <li><strong><code>Locale</code></strong>: combinação língua + país (<code>pt_BR</code>, <code>it_CH</code>) que define formatos.</li>
+        <li><strong>ISO 639 / ISO 3166</strong>: padrões dos códigos de língua (<code>pt</code>) e de país (<code>BR</code>).</li>
+        <li><strong><code>add</code> × <code>roll</code></strong>: somar virando o campo de cima × somar dando a volta só no campo.</li>
+        <li><strong>Padrão (pattern)</strong>: a String de letras que define o formato no <code>SimpleDateFormat</code>.</li>
+        <li><strong>Parse</strong>: converter texto em objeto (<code>Number</code>, <code>Date</code>); lança <code>ParseException</code>.</li>
+        <li><strong><code>Accept-Language</code></strong>: cabeçalho HTTP em que o navegador informa os idiomas preferidos.</li>
+      </ul>
+
+      <h3>Revisão espaçada</h3>
+      <ul class="revisao">
+        <li><span class="dia">Dia 1</span><span>Todos os flashcards + a prática com previsões.</span></li>
+        <li><span class="dia">Dia 3</span><span>Quiz + exercícios 1 a 3.</span></li>
+        <li><span class="dia">Dia 7</span><span>Exercícios 4 e 5 + a tabela de letras do SimpleDateFormat de memória.</span></li>
+        <li><span class="dia">Dia 14</span><span>Flashcards que errou + questões discursivas + comparar com o <code>java.time</code> das aulas 119+.</span></li>
+      </ul>
+
+      <h3>Para aprofundar</h3>
+      <ul>
+        <li>Quais problemas de design da <code>Date</code>/<code>Calendar</code> (mutabilidade, mês base 0, fuso implícito) o <code>java.time</code> resolveu?</li>
+        <li>Como converter <code>Date</code> ↔ <code>Instant</code> ↔ <code>LocalDateTime</code> (<code>date.toInstant()</code>, <code>Date.from(...)</code>)?</li>
+        <li>O que é o CLDR e por que as saídas com Locale mudaram entre o Java 8 e o 9+?</li>
+        <li>Por que usar <code>BigDecimal</code> (e não <code>double</code>) para valores monetários antes de formatar?</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    window.AULA = {
+      flashcards: [
+        ["Qual a ordem histórica das APIs de data do Java?", "Date (1.0) → Calendar → java.time (Java 8)"],
+        ["O que a Date guarda por dentro?", "Um long com os milissegundos desde 01/01/1970 (epoch)"],
+        ["Como somar 1 hora numa Date?", "date.setTime(date.getTime() + 3_600_000)"],
+        ["java.util.Date × java.sql.Date?", "util: a da aplicação; sql: para o banco de dados"],
+        ["Por que a Date ficou obsoleta?", "Quase tudo deprecated, contas em ms na mão e sem suporte a internacionalização"],
+        ["Como obter um Calendar?", "Calendar.getInstance(): a classe é abstrata"],
+        ["Como imprimir um Calendar legível (sem formatador)?", "c.getTime() → Date → println"],
+        ["Como ler o dia do mês num Calendar?", "c.get(Calendar.DAY_OF_MONTH)"],
+        ["Por que usar Calendar.SUNDAY em vez de 1?", "Legibilidade e segurança: as constantes dizem o que o número significa"],
+        ["Diferença entre add e roll no Calendar?", "add vira o campo de cima (dia, mês, ano); roll dá a volta só no campo"],
+        ["Em que número começa o mês no Calendar?", "0 (janeiro = 0, fevereiro = 1) — extra"],
+        ["Quais os 4 estilos do DateFormat?", "SHORT, MEDIUM, LONG, FULL (FULL inclui o dia da semana)"],
+        ["DateFormat.format recebe o quê?", "Um Date (use calendar.getTime())"],
+        ["Como se cria um Locale do Brasil?", "new Locale(\"pt\", \"BR\"): língua ISO 639 + país ISO 3166"],
+        ["Existe Locale.BRAZIL?", "Não; há JAPAN, ITALY, FRANCE, GERMANY, US..."],
+        ["Para que getDisplayCountry(outroLocale)?", "Nome do país traduzido para a língua de outro Locale"],
+        ["Como o sistema descobre o Locale do usuário na web?", "Cabeçalho Accept-Language do navegador ou preferência salva"],
+        ["1000.21 em en_US e em pt_BR?", "1,000.21 e 1.000,21"],
+        ["Quantas casas decimais o NumberFormat usa por padrão? E a moeda?", "3 no número; 2 na maioria das moedas (0 no iene)"],
+        ["Como formatar como dinheiro?", "NumberFormat.getCurrencyInstance(locale).format(valor)"],
+        ["O que o parse do NumberFormat faz com caracteres inválidos no meio?", "Para no primeiro inválido e ignora o resto; se for logo no início, ParseException"],
+        ["Parse de moeda sem o símbolo funciona?", "Não: ParseException (Unparseable number)"],
+        ["O que guardar no banco: \"R$ 1.000,21\" ou 1000.21?", "O número; formata só na exibição"],
+        ["Como escrever texto fixo no padrão do SimpleDateFormat?", "Entre aspas simples: 'Amsterdam' dd 'de' MMMM 'de' yyyy"],
+        ["MM × mm no SimpleDateFormat?", "MM = mês; mm = minuto"]
+      ],
+      quiz: [
+        { tipo: 'multipla', pergunta: 'O que o valor dentro de um java.util.Date representa?', opcoes: ['Segundos desde o ano 1', 'Milissegundos desde 01/01/1970', 'Dias desde 01/01/1900', 'Uma String com a data'], correta: 1,
+          explicacao: 'Date guarda um long com os milissegundos desde a epoch (01/01/1970). Por isso 1 hora = 3.600.000.' },
+        { tipo: 'vf', pergunta: 'Calendar c = new Calendar(); compila.', correta: 1,
+          explicacao: 'Falso. Calendar é abstrata. Usa-se Calendar.getInstance(), que devolve a implementação certa (GregorianCalendar no Brasil).' },
+        { tipo: 'multipla', pergunta: 'São 18h do dia 13. Qual chamada leva a 6h do dia 14?', opcoes: ['c.roll(Calendar.HOUR_OF_DAY, 12)', 'c.add(Calendar.HOUR_OF_DAY, 12)', 'c.set(Calendar.HOUR, 6)', 'c.get(Calendar.HOUR) + 12'], correta: 1,
+          explicacao: 'add soma e vira o dia quando passa da meia-noite. roll daria a volta só nas horas e continuaria no dia 13.' },
+        { tipo: 'multipla', pergunta: 'Qual estilo do DateFormat inclui o dia da semana ("quinta-feira, 11 de fevereiro de 2021")?', opcoes: ['SHORT', 'MEDIUM', 'LONG', 'FULL'], correta: 3,
+          explicacao: 'SHORT: 11/02/2021 · MEDIUM: 11 de fev. de 2021 · LONG: 11 de fevereiro de 2021 · FULL: com o dia da semana.' },
+        { tipo: 'multipla', pergunta: 'Em new Locale("it", "CH"), o que significam "it" e "CH"?', opcoes: ['Itália e China', 'Língua italiana (ISO 639) e país Suíça (ISO 3166)', 'País Itália e cantão suíço', 'Fuso horário e moeda'], correta: 1,
+          explicacao: 'O primeiro código é a língua, em minúsculas. O segundo é o país, em maiúsculas. Italiano da Suíça formata diferente do italiano da Itália.' },
+        { tipo: 'multipla', pergunta: 'NumberFormat.getInstance(new Locale("pt","BR")).format(100_000_000.2130) resulta em:', opcoes: ['100,000,000.213', '100.000.000,213', '100000000,2130', 'R$ 100.000.000,21'], correta: 1,
+          explicacao: 'No Brasil o milhar é ponto e o decimal é vírgula. O padrão do número comum é até 3 casas, e o símbolo só aparece com getCurrencyInstance.' },
+        { tipo: 'vf', pergunta: 'O iene japonês formatado com getCurrencyInstance(Locale.JAPAN) usa 0 casas decimais.', correta: 0,
+          explicacao: 'Verdadeiro. getMaximumFractionDigits() dá 0 para o iene e 2 para dólar, real e euro.' },
+        { tipo: 'multipla', pergunta: 'Qual padrão do SimpleDateFormat produz "15/02/2021 09:05"?', opcoes: ['dd/mm/yyyy HH:MM', 'dd/MM/yyyy HH:mm', 'DD/MM/YYYY hh:mm', 'd/M/y H:m'], correta: 1,
+          explicacao: 'MM = mês, mm = minuto, HH = hora 0–23, yyyy = ano. A opção 1 troca mês e minuto, a 3 usa D (dia do ano) e Y (ano da semana), e a 4 não completa com zeros.' },
+        { tipo: 'discursiva', pergunta: 'Você recebe um sistema legado em Java 7 cheio de Date e Calendar. Explique como somar 10 dias a uma data e imprimi-la no formato brasileiro, e o que mudaria se o projeto fosse para o Java 8+.',
+          explicacao: 'No Java 7: Calendar c = Calendar.getInstance(); c.setTime(data); c.add(Calendar.DAY_OF_MONTH, 10) (add vira mês e ano se precisar); depois new SimpleDateFormat("dd/MM/yyyy", new Locale("pt","BR")).format(c.getTime()). Tomar cuidado com mês base 0, MM × mm e o SimpleDateFormat, que não é thread-safe. No Java 8+, o ideal é converter para java.time: LocalDate.now().plusDays(10).format(DateTimeFormatter.ofPattern("dd/MM/yyyy")), que é imutável, com meses de 1 a 12 e formatador thread-safe (aulas 119+).' },
+        { tipo: 'discursiva', pergunta: 'Compare formatar o valor 1000.21 como moeda brasileira em Java e em PHP/Laravel, e diga como o valor deve ser guardado no banco.',
+          explicacao: 'Java: NumberFormat.getCurrencyInstance(new Locale("pt","BR")).format(1000.21) → "R$ 1.000,21". PHP: (new NumberFormatter("pt_BR", NumberFormatter::CURRENCY))->formatCurrency(1000.21, "BRL"), ou number_format(1000.21, 2, ",", ".") montando o "R$" à mão. No Laravel 11: Number::currency(1000.21, in: "BRL", locale: "pt_BR"). Nos dois mundos, o banco guarda o número (DECIMAL, ou inteiro em centavos), nunca o texto formatado. A formatação com o Locale do usuário acontece só na exibição. Para contas com dinheiro, BigDecimal em Java (e não double).' }
+      ]
+    };
+  </script>
+  <script src="../js/app.js"></script>
+</body>
+</html>
