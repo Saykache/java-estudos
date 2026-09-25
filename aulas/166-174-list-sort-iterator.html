@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>166–174 · List, ordenação e Iterator</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="topo">
+      <a class="voltar" href="../index.html">← Todas as aulas</a>
+      <h1>166–174 · Coleções: List, ordenação, binarySearch, conversão e Iterator</h1>
+      <p>ArrayList e generics, métodos da lista, Comparable × Comparator, busca binária, List ↔ array e remoção segura · <a href="https://www.youtube.com/playlist?list=PL62G310vn6nFIsOCC0H-C2infYgwm8SWW" target="_blank" rel="noopener">playlist</a></p>
+    </header>
+
+    <nav class="abas">
+      <a href="#resumo">Resumo</a>
+      <a href="#flashcards">Flashcards</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#estudo">Material de estudo</a>
+    </nav>
+
+    <p class="aviso">Junta as aulas 166 a 168 (List), 169 a 171 (sorting: Collections.sort, Comparable, Comparator), 172 (binary search), 173 (conversão lista ↔ array) e 174 (Iterator). Continua as <a href="159-165-serializacao-equals-hashcode.html">aulas 159–165</a>. Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. O código (pacote <code>javacore.Ycolecoes</code>, <code>Smartphone</code> e <code>Manga</code> com Hellsing, Berserk, Pokemon, Attack on titan e Dragon ball Z) foi conferido no <a href="https://github.com/devdojobr/maratona-java-virado-no-jiraya" target="_blank" rel="noopener">repositório do professor</a>. A partir da aula 173 o projeto passa para o <em>language level</em> 11. Os itens marcados como "extra" não estão nos vídeos.</p>
+
+    <section id="resumo">
+      <h2>Resumo</h2>
+      <p>A <strong><code>List</code></strong> é a coleção mais usada: <strong>ordenada</strong> (guarda a ordem de inserção e tem índice) e <strong>aceita repetidos</strong>. A implementação mais comum é o <strong><code>ArrayList</code></strong>, um array que cresce sozinho. Aqui você vê como criar, percorrer, buscar (com <code>equals</code>, aulas 161–164), <strong>ordenar</strong> (<code>Comparable</code> para a ordem natural e <code>Comparator</code> para ordens alternativas), fazer <strong>busca binária</strong>, converter entre <strong>lista e array</strong> e <strong>remover com segurança</strong> durante a iteração.</p>
+
+      <h3>166 · ArrayList e generics</h3>
+<pre><code>// Antes do Java 5: lista "crua", aceitava qualquer Object
+List nomesAntigos = new ArrayList();
+nomesAntigos.add("William");
+nomesAntigos.add(123);                     // compilava!
+
+// Com generics (Java 5+) e diamond &lt;&gt; (Java 7+)
+List&lt;String&gt; nomes = new ArrayList&lt;&gt;(16);   // 16 = capacidade inicial
+nomes.add("William");
+nomes.add("DevDojo Academy");
+// nomes.add(123);                         // NÃO compila
+
+for (String nome : nomes) {                // foreach
+    System.out.println(nome);
+}
+nomes.add("Suane");                        // cresce sozinho
+for (int i = 0; i &lt; nomes.size(); i++) {   // size() em vez de length
+    System.out.println(nomes.get(i));      // get(índice) em vez de [i]
+}</code></pre>
+      <ul>
+        <li><code>List</code> é uma <strong>interface</strong>. <code>ArrayList</code> é a implementação: "um array que pode ser incrementado dinamicamente". Você declara pelo tipo genérico (<code>List</code>) e escolhe a implementação no <code>new</code>, pensando no desempenho (aula 165).</li>
+        <li><strong>Generics</strong> (<code>&lt;String&gt;</code>) forçam o tipo <strong>em tempo de compilação</strong>. Sem eles, tudo era <code>Object</code>, e você precisava de cast sem garantia nenhuma. Em <em>bytecode</em> o tipo "some" (compatibilidade com versões antigas), mas o compilador já validou.</li>
+        <li>O <strong>diamond</strong> <code>new ArrayList&lt;&gt;()</code> (Java 7) evita repetir o tipo. O tipo do <code>new</code> precisa bater com o da variável: <code>List&lt;String&gt; x = new ArrayList&lt;Integer&gt;()</code> não compila.</li>
+        <li><strong>Capacidade inicial:</strong> se você já sabe que vão ser uns 300 itens, passe <code>new ArrayList&lt;&gt;(300)</code> e evite redimensionamentos. (O William fala em dobrar o tamanho. No <code>ArrayList</code> atual o crescimento é de 50%, extra.)</li>
+      </ul>
+
+      <h3>167 · Cuidados, remove e addAll</h3>
+<pre><code>// for (String nome : nomes) { nomes.add("Suane"); }   → ConcurrentModificationException
+// for (int i = 0; i &lt; nomes.size(); i++) { nomes.add("Suane"); }   → laço infinito!
+int size = nomes.size();                     // congela o tamanho antes de alterar
+for (int i = 0; i &lt; size; i++) {
+    nomes.add("Suane");
+}
+
+List&lt;Integer&gt; numeros = new ArrayList&lt;&gt;();   // List&lt;int&gt; não existe: usa o wrapper (aulas 106–107)
+numeros.add(1);                                // autoboxing
+
+nomes.remove(0);                // remove pelo ÍNDICE e devolve o elemento removido
+nomes.remove("William");        // remove pelo OBJETO (usa equals) e devolve boolean
+nomes.addAll(nomes2);           // adiciona todos os elementos de outra coleção
+// William · DevDojo · Suane · Academy</code></pre>
+      <ul>
+        <li><strong>Não altere o tamanho da lista dentro de um foreach:</strong> dá <strong><code>ConcurrentModificationException</code></strong>. Com o <code>for</code> indexado e <code>size()</code> na condição, cada <code>add</code> aumenta o limite e o laço <strong>nunca termina</strong>. Guardar o tamanho numa variável resolve, mas mexer no tamanho durante a iteração é má ideia. O jeito certo vem na aula 174.</li>
+        <li>Coleções só guardam <strong>objetos</strong>, porque elas chamam <code>equals</code>/<code>hashCode</code> e primitivos não têm métodos. Por isso <code>List&lt;Integer&gt;</code>, com autoboxing no <code>add(1)</code>.</li>
+        <li><strong><code>remove</code> é sobrecarregado:</strong> <code>remove(int indice)</code> × <code>remove(Object o)</code>, que procura com <strong><code>equals</code></strong>.</li>
+        <li><code>addAll(outraColecao)</code> junta as listas numa linha. "Em entrevista pedem para fazer na mão; no trabalho, você usa o que o Java já resolveu."</li>
+        <li><code>System.out.println(lista)</code> já imprime <code>[a, b, c]</code> (a lista tem <code>toString</code>).</li>
+      </ul>
+
+      <h3>168 · List de objetos: contains, indexOf e add(índice)</h3>
+<pre><code>Smartphone s1 = new Smartphone("1ABC1", "iPhone");
+Smartphone s2 = new Smartphone("22222", "Pixel");
+Smartphone s3 = new Smartphone("33333", "Samsung");
+List&lt;Smartphone&gt; smartphones = new ArrayList&lt;&gt;(6);
+smartphones.add(s1);
+smartphones.add(s2);
+smartphones.add(0, s3);                        // insere NA POSIÇÃO 0 e empurra os outros
+// Samsung · iPhone · Pixel
+
+Smartphone s4 = new Smartphone("22222", "Pixel");   // outro objeto, mesmo serial
+System.out.println(smartphones.contains(s4));        // true: contains usa EQUALS
+int indexSmartphone4 = smartphones.indexOf(s4);      // 2 (ou -1 se não existir)
+System.out.println(smartphones.get(indexSmartphone4));
+// smartphones.clear();                              // esvazia a lista</code></pre>
+      <ul>
+        <li>O cenário: os dados vêm do banco e viram objetos, e você trabalha com a <strong>coleção</strong> deles.</li>
+        <li><code>add(indice, elemento)</code> insere numa posição específica, porque a lista <strong>mantém a ordem do índice</strong>.</li>
+        <li><strong><code>contains</code> e <code>indexOf</code> chamam o <code>equals</code></strong> de cada elemento (dá para ver no debug, com breakpoint no <code>equals</code>). Por isso implementar <code>equals</code>/<code>hashCode</code> em toda classe de domínio é importante. É também o custo O(n) da aula 165: 10 mil celulares, até 10 mil <code>equals</code>.</li>
+        <li><code>indexOf</code> devolve <strong><code>-1</code></strong> quando não encontra, e <code>get(-1)</code> lança <code>IndexOutOfBoundsException</code>. Confira antes (<code>if (indice != -1)</code>).</li>
+      </ul>
+
+      <h3>169 · Collections.sort e a classe Manga</h3>
+<pre><code>List&lt;String&gt; mangas = new ArrayList&lt;&gt;(6);
+mangas.add("Hellsing Ultimate");
+mangas.add("Berserk");
+mangas.add("Pokemon");
+mangas.add("Attack on titan");
+mangas.add("Dragon ball Z");
+Collections.sort(mangas);        // Attack on titan · Berserk · Dragon ball Z · Hellsing Ultimate · Pokemon
+
+List&lt;Double&gt; dinheiros = new ArrayList&lt;&gt;(List.of(100.21, 23.98, 21.21, 98.10));
+Collections.sort(dinheiros);     // [21.21, 23.98, 98.1, 100.21]
+
+// Collections.sort(smartphones);   → NÃO compila: ordenar Smartphone por quê?
+
+public Manga(Long id, String nome, double preco) {
+    Objects.requireNonNull(id, "Id não pode ser null");     // falha cedo, com mensagem clara
+    Objects.requireNonNull(nome, "Nome não pode ser null");
+    ...
+}
+// equals/hashCode gerados pela IDE com id, nome e preco (Objects.hash(id, nome, preco))</code></pre>
+      <ul>
+        <li><strong><code>Collections</code></strong> (com s) é a classe utilitária de métodos estáticos. <code>Collections.sort(lista)</code> ordena <strong>a própria lista</strong>: Strings em ordem alfabética, números do menor para o maior.</li>
+        <li>Para uma classe sua, o Java não sabe o critério: <code>Collections.sort(smartphones)</code> <strong>não compila</strong>.</li>
+        <li><strong>A IDE gera <code>equals</code>/<code>hashCode</code></strong> (Alt+Insert). Você escolhe os campos e os que não podem ser nulos. O William ficou com o template do Java 7 (<code>Objects.hash</code>).</li>
+        <li><strong><code>Objects.requireNonNull(valor, mensagem)</code></strong> no construtor lança <code>NullPointerException</code> <strong>na hora</strong>, com uma mensagem útil, em vez de estourar lá na frente sem explicação.</li>
+      </ul>
+
+      <h3>170 · Comparable: a ordem natural</h3>
+<pre><code>public class Manga implements Comparable&lt;Manga&gt; {
+    ...
+    @Override
+    public int compareTo(Manga outroManga) {
+        // negativo se this &lt; outroManga · 0 se iguais · positivo se this &gt; outroManga
+        // if (this.id &lt; outroManga.getId()) return -1;
+        // else if (this.id.equals(outroManga.getId())) return 0;
+        // else return 1;
+        return this.nome.compareTo(outroManga.getNome());        // delega para a String
+        // return this.id.compareTo(outroManga.getId());          // Long já é Comparable
+        // return Double.compare(preco, outroManga.getPreco());   // primitivo: usa o wrapper
+    }
+}
+
+Collections.sort(mangas);   // agora compila e chama o compareTo por dentro
+// Manga{id=3, nome='Attack on titan'...} · Berserk · Dragon ball Z · Hellsing Ultimate · Pokemon</code></pre>
+      <ul>
+        <li>A <code>String</code> se ordena porque <strong>implementa <code>Comparable</code></strong>. Faça o mesmo: <code>implements Comparable&lt;Manga&gt;</code> e o método <strong><code>compareTo</code></strong>.</li>
+        <li><strong>A regra do retorno:</strong> <strong>negativo</strong> se <code>this</code> vem antes, <strong>0</strong> se empata e <strong>positivo</strong> se <code>this</code> vem depois. Não precisa ser -1/1, qualquer negativo ou positivo vale.</li>
+        <li><strong>Delegue sempre que puder:</strong> <code>Long</code>, <code>String</code> e <code>Double</code> já são <code>Comparable</code>. Um <code>if/else</code> de 6 linhas vira <code>return this.id.compareTo(outro.getId())</code>. Para primitivo (<code>double preco</code>): <code>Double.compare(a, b)</code> (ou <code>Double.valueOf(preco).compareTo(...)</code>).</li>
+        <li>Quem chama o <code>compareTo</code> é o algoritmo de ordenação do Java. Com um breakpoint dá para ver <code>this</code> e o outro sendo comparados par a par.</li>
+      </ul>
+
+      <h3>171 · Comparator: ordens alternativas</h3>
+<pre><code>class MangaByIdComparator implements Comparator&lt;Manga&gt; {   // classe separada, fora do Manga
+    @Override
+    public int compare(Manga manga1, Manga manga2) {
+        return manga1.getId().compareTo(manga2.getId());
+    }
+}
+
+Collections.sort(mangas);                              // ordem natural (compareTo): por nome
+Collections.sort(mangas, new MangaByIdComparator());   // ordem alternativa: por id
+mangas.sort(new MangaByIdComparator());                // o mesmo, pelo método da própria List
+// 1 Berserk · 2 Dragon ball Z · 3 Attack on titan · 4 Pokemon · 5 Hellsing Ultimate</code></pre>
+      <ul>
+        <li><strong>O problema:</strong> o <code>compareTo</code> por nome é usado no sistema inteiro há um ano. Trocar para id "solta o inferno na terra". Uma <strong>ordem diferente</strong> num lugar específico vem de um <strong><code>Comparator</code></strong>, sem tocar no <code>Manga</code>.</li>
+        <li><strong><code>Comparable</code></strong>: <strong>dentro</strong> da classe, 1 argumento (<code>compareTo(outro)</code>), é a ordem <strong>natural</strong> (única). <strong><code>Comparator</code></strong>: <strong>classe à parte</strong>, 2 argumentos (<code>compare(a, b)</code>), <strong>quantas ordens quiser</strong>. A regra do retorno é a mesma.</li>
+        <li><code>Collections.sort(lista, comparator)</code> ou <code>lista.sort(comparator)</code>. No <code>list.sort</code> o comparator é obrigatório. Com <code>null</code>, ele usa a ordem natural.</li>
+        <li>Com classes anônimas (aula 191) e lambdas (aulas 195+) isso fica em uma linha: <code>mangas.sort(Comparator.comparing(Manga::getId))</code> (extra).</li>
+      </ul>
+
+      <h3>172 · Busca binária</h3>
+<pre><code>List&lt;Integer&gt; numeros = new ArrayList&lt;&gt;(List.of(2, 0, 4, 3));
+Collections.sort(numeros);                             // OBRIGATÓRIO antes: [0, 2, 3, 4]
+// índice: 0 1 2 3  ·  valor: 0 2 3 4
+System.out.println(Collections.binarySearch(numeros, 2));    // 1  (achou no índice 1)
+System.out.println(Collections.binarySearch(numeros, 0));    // 0
+System.out.println(Collections.binarySearch(numeros, 1));    // -2 → -(ponto de inserção) - 1 = -(1) - 1
+System.out.println(Collections.binarySearch(numeros, -1));   // -1 → -(0) - 1
+
+// Com objetos e ordem customizada: ordene E busque com o MESMO comparator
+MangaByIdComparator mangaByIdComparator = new MangaByIdComparator();
+mangas.sort(mangaByIdComparator);
+Manga mangaToSearch = new Manga(2L, "Dragon ball Z", 2.99);
+System.out.println(Collections.binarySearch(mangas, mangaToSearch, mangaByIdComparator));   // 1
+// id 6 → -6 (entraria no fim, posição 5)</code></pre>
+      <ul>
+        <li>A <strong>busca binária</strong> divide a lista ao meio a cada passo, então é O(log n), bem mais rápida que o <code>indexOf</code> (O(n)). Em troca, <strong>exige a lista ordenada</strong> pelo mesmo critério. Senão, "o resultado não é confiável".</li>
+        <li><strong>Encontrou:</strong> devolve o <strong>índice</strong> (≥ 0). <strong>Não encontrou:</strong> devolve <strong><code>-(ponto de inserção) - 1</code></strong>, onde o ponto de inserção é onde o elemento deveria entrar para manter a ordem.</li>
+        <li><strong>Por que o "−1"?</strong> Sem ele, "não achei, mas entraria na posição 0" daria <code>0</code>, igual a "achei na posição 0". Com o −1, o resultado só é <strong>≥ 0 se o elemento existe</strong>.</li>
+        <li>Com objetos ordenados por um <code>Comparator</code>, passe <strong>o mesmo comparator</strong> para o <code>binarySearch</code>. Ele compara pelo critério do comparator (o id), <strong>não pelo <code>equals</code></strong>.</li>
+        <li>Existe também para arrays: <code>Arrays.binarySearch(array, chave)</code>, com as mesmas regras.</li>
+      </ul>
+
+      <h3>173 · List ↔ array</h3>
+<pre><code>// Lista → array
+List&lt;Integer&gt; numeros = new ArrayList&lt;&gt;(List.of(1, 2, 3));
+Integer[] listToArray = numeros.toArray(new Integer[0]);   // o array de 0 posições só informa o TIPO
+System.out.println(Arrays.toString(listToArray));          // [1, 2, 3]
+
+// Array → lista: Arrays.asList cria uma lista LIGADA ao array e de tamanho FIXO
+Integer[] numerosArray = {1, 2, 3};
+List&lt;Integer&gt; arrayToList = Arrays.asList(numerosArray);
+arrayToList.set(0, 12);
+System.out.println(Arrays.toString(numerosArray));   // [12, 2, 3] ← o array mudou junto!
+System.out.println(arrayToList);                     // [12, 2, 3]
+// arrayToList.add(19);                              → UnsupportedOperationException
+
+// Cópia independente e mutável
+List&lt;Integer&gt; numerosList = new ArrayList&lt;&gt;(Arrays.asList(numerosArray));
+numerosList.add(15);                                  // [12, 2, 3, 15]
+
+List&lt;String&gt; strings = Arrays.asList("1", "2");       // lista direto dos valores (varargs)
+List&lt;String&gt; imutavel = List.of("1", "2");            // Java 9+: imutável de verdade</code></pre>
+      <ul>
+        <li><strong><code>toArray(new Integer[0])</code></strong> devolve um array do tipo certo. O <code>toArray()</code> sem argumento devolve <code>Object[]</code>, o que "geralmente não é bom". Passar <code>new Integer[0]</code> é o recomendado (a IDE sugere, e é tão rápido quanto passar o tamanho).</li>
+        <li><strong><code>Arrays.asList(array)</code> tem duas pegadinhas:</strong> a lista fica <strong>ligada ao array</strong> (alterar um altera o outro) e tem <strong>tamanho fixo</strong> (<code>add</code>/<code>remove</code> lançam <code>UnsupportedOperationException</code>). O <code>set</code> funciona.</li>
+        <li>Para uma lista <strong>independente e mutável</strong>: <code>new ArrayList&lt;&gt;(Arrays.asList(...))</code>, porque o <code>ArrayList</code> tem um construtor que recebe outra coleção.</li>
+        <li>Para criar numa linha: <code>Arrays.asList(1, 2, 3)</code> ou, no Java 9+, <strong><code>List.of(1, 2, 3)</code></strong>. Por isso o projeto passou para o language level 11.</li>
+      </ul>
+
+      <h3>174 · Iterator e removeIf</h3>
+<pre><code>// public Manga(Long id, String nome, double preco, int quantidade) { this(id, nome, preco); ... }
+mangas.add(new Manga(5L, "Hellsing Ultimate", 19.9, 0));
+mangas.add(new Manga(1L, "Berserk", 9.5, 5));
+mangas.add(new Manga(4L, "Pokemon", 3.2, 0));
+mangas.add(new Manga(3L, "Attack on titan", 11.20, 2));
+mangas.add(new Manga(2L, "Dragon ball Z", 2.99, 0));
+
+// for (Manga manga : mangas) { if (manga.getQuantidade() == 0) mangas.remove(manga); }
+//   → ConcurrentModificationException
+
+Iterator&lt;Manga&gt; mangaIterator = mangas.iterator();
+while (mangaIterator.hasNext()) {                     // tem alguém na fila?
+    if (mangaIterator.next().getQuantidade() == 0) {  // chama o próximo
+        mangaIterator.remove();                       // remove PELO ITERATOR (seguro)
+    }
+}
+
+mangas.removeIf(manga -&gt; manga.getQuantidade() == 0);  // Java 8: o mesmo, em uma linha
+// [Manga{id=1, nome='Berserk'...quantidade=5}, Manga{id=3, nome='Attack on titan'...quantidade=2}]</code></pre>
+      <ul>
+        <li>O construtor novo reaproveita o antigo com <strong><code>this(...)</code></strong> (aulas 58–59), e o código que usava o de 3 argumentos continua funcionando.</li>
+        <li><strong>Remover dentro do foreach</strong> dá <code>ConcurrentModificationException</code>.</li>
+        <li><strong><code>Iterator</code></strong> é a "fila do banco": <code>hasNext()</code> olha se tem alguém, <code>next()</code> chama o próximo e <strong><code>iterator.remove()</code></strong> tira da lista quem acabou de ser chamado, sem bagunçar a iteração.</li>
+        <li><strong><code>removeIf(condição)</code></strong> (Java 8) faz o mesmo com uma <strong>lambda</strong>: <code>manga -&gt; manga.getQuantidade() == 0</code>. O nome antes da seta é só uma variável, como a do foreach. Por baixo, usa o mesmo <code>Iterator</code>. Programação funcional é assunto das aulas 195+.</li>
+      </ul>
+
+      <h3>Atenção</h3>
+      <ul>
+        <li><strong>Declare pela interface:</strong> <code>List&lt;X&gt; l = new ArrayList&lt;&gt;()</code>.</li>
+        <li><strong>Nunca altere o tamanho da lista num foreach.</strong> Use <code>Iterator.remove()</code> ou <code>removeIf</code>.</li>
+        <li><strong><code>contains</code>, <code>indexOf</code> e <code>remove(Object)</code> dependem do <code>equals</code></strong>. <code>binarySearch</code> depende da <strong>ordem</strong> (<code>compareTo</code>/<code>compare</code>).</li>
+        <li><strong><code>Comparable</code> = ordem natural, dentro da classe, <code>compareTo(1)</code>. <code>Comparator</code> = outras ordens, fora, <code>compare(2)</code>.</strong></li>
+        <li><strong><code>Arrays.asList</code>: ligado ao array e tamanho fixo. <code>List.of</code>: totalmente imutável</strong> (nem <code>set</code> funciona, nem aceita <code>null</code>).</li>
+        <li><strong>Extra: armadilha com <code>List&lt;Integer&gt;</code>:</strong> <code>numeros.remove(1)</code> remove o <strong>índice</strong> 1, não o valor 1. Para remover o valor: <code>numeros.remove(Integer.valueOf(1))</code>.</li>
+        <li><strong>Extra: <code>compareTo</code> coerente com <code>equals</code>:</strong> o recomendado é <code>compareTo == 0</code> quando <code>equals</code> é <code>true</code>. Coleções ordenadas (<code>TreeSet</code>, aula 176) usam o <code>compareTo</code> para decidir o que é "repetido".</li>
+      </ul>
+
+      <h3>Paralelo com PHP</h3>
+      <ul>
+        <li><strong>Array do PHP × List:</strong> o array do PHP é lista e dicionário ao mesmo tempo, sem tipo. <code>List&lt;String&gt;</code> garante o tipo na compilação. No PHP isso vem com PHPDoc (<code>@var list&lt;string&gt;</code>) e PHPStan. A <code>Collection</code> do Laravel é o parente mais próximo da <code>List</code>.</li>
+        <li><strong>Equivalências:</strong>
+          <ul>
+            <li><code>add</code> ≈ <code>$a[] = </code>/<code>push</code>, <code>size</code> ≈ <code>count</code>, <code>get(i)</code> ≈ <code>$a[$i]</code>.</li>
+            <li><code>contains</code> ≈ <code>in_array</code>/<code>contains</code>, <code>indexOf</code> ≈ <code>array_search</code> (que devolve <code>false</code>, não −1).</li>
+            <li><code>addAll</code> ≈ <code>array_merge</code>/<code>merge</code>, <code>clear</code> ≈ <code>$a = []</code>.</li>
+          </ul>
+        </li>
+        <li><strong>Ordenação:</strong> <code>Collections.sort</code> ≈ <code>sort()</code>, e o Comparator ≈ <code>usort($a, fn($x, $y) =&gt; $x-&gt;id &lt;=&gt; $y-&gt;id)</code>. O <strong>spaceship <code>&lt;=&gt;</code></strong> do PHP devolve −1/0/1, a mesma regra do <code>compareTo</code>. No Laravel: <code>$c-&gt;sortBy('id')</code>. O PHP não tem um "Comparable" que o <code>sort</code> use sozinho.</li>
+        <li><strong>Remover durante a iteração:</strong> no PHP, um <code>foreach</code> com <code>unset($a[$k])</code> funciona (o foreach itera sobre uma cópia). No Java, dá exceção. O <code>removeIf</code> equivale a <code>array_filter</code>/<code>$c-&gt;reject(fn($m) =&gt; $m-&gt;quantidade == 0)</code>, com a diferença de que o Java altera a própria lista e o PHP devolve uma nova.</li>
+        <li><strong>Busca binária:</strong> o PHP não tem nativa. <code>array_search</code> é sempre linear.</li>
+      </ul>
+    </section>
+
+    <section id="flashcards">
+      <h2>Flashcards</h2>
+      <p style="color:var(--muted);margin-top:-6px">Toque no cartão para virar.</p>
+      <div id="flashcards-app"></div>
+    </section>
+
+    <section id="quiz">
+      <h2>Quiz</h2>
+      <div id="quiz-app"></div>
+    </section>
+
+    <section id="estudo">
+      <h2>Material de estudo</h2>
+
+      <h3>Mapa mental</h3>
+<pre><code>List (ordenada por índice, aceita repetidos)
+├── Criar (166): List&lt;String&gt; l = new ArrayList&lt;&gt;(capacidade) · generics = tipo checado na compilação
+├── Operações (167–168)
+│   ├── add · add(i, x) · get(i) · size · remove(i) × remove(obj) · addAll · clear
+│   ├── contains / indexOf → usam equals · indexOf = -1 se não achar
+│   └── só objetos (wrappers) · não mexa no tamanho no foreach
+├── Ordenar (169–171)
+│   ├── Collections.sort(lista) → ordem natural (Comparable)
+│   ├── Comparable&lt;T&gt;: compareTo(outro) → negativo · 0 · positivo (delegue: id.compareTo)
+│   └── Comparator&lt;T&gt;: compare(a, b) em classe separada · sort(lista, comp) / lista.sort(comp)
+├── Buscar (172): Collections.binarySearch(listaOrdenada, chave[, comp])
+│   └── achou: índice · não achou: -(inserção) - 1
+├── Converter (173)
+│   ├── lista.toArray(new Integer[0])
+│   ├── Arrays.asList(array): ligado + tamanho fixo
+│   └── new ArrayList&lt;&gt;(Arrays.asList(...)) · List.of (imutável, Java 9+)
+└── Remover com segurança (174): Iterator (hasNext/next/remove) · removeIf(lambda)</code></pre>
+
+      <h3>Prática no seu WSL (25 minutos)</h3>
+<pre><code>cd ~/java-lab
+Y=src/academy/devdojo/maratonajava/javacore/Ycolecoes
+mkdir -p $Y/dominio $Y/test
+
+cat > $Y/dominio/Manga.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Ycolecoes.dominio;
+
+import java.util.Objects;
+
+public class Manga implements Comparable&lt;Manga&gt; {
+    private Long id;
+    private String nome;
+    private double preco;
+    private int quantidade;
+
+    public Manga(Long id, String nome, double preco) {
+        Objects.requireNonNull(id, "Id não pode ser null");
+        Objects.requireNonNull(nome, "Nome não pode ser null");
+        this.id = id;
+        this.nome = nome;
+        this.preco = preco;
+    }
+
+    public Manga(Long id, String nome, double preco, int quantidade) {
+        this(id, nome, preco);
+        this.quantidade = quantidade;
+    }
+
+    @Override
+    public int compareTo(Manga outroManga) {
+        return this.nome.compareTo(outroManga.getNome());
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Manga manga = (Manga) o;
+        return Double.compare(manga.preco, preco) == 0 &amp;&amp; id.equals(manga.id) &amp;&amp; nome.equals(manga.nome);
+    }
+
+    @Override
+    public int hashCode() { return Objects.hash(id, nome, preco); }
+
+    @Override
+    public String toString() { return id + " " + nome + " (" + preco + ", qtd " + quantidade + ")"; }
+
+    public Long getId() { return id; }
+    public String getNome() { return nome; }
+    public double getPreco() { return preco; }
+    public int getQuantidade() { return quantidade; }
+}
+EOF
+
+cat > $Y/test/ListasTest01.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Ycolecoes.test;
+
+import academy.devdojo.maratonajava.javacore.Ycolecoes.dominio.Manga;
+
+import java.util.*;
+
+class MangaByIdComparator implements Comparator&lt;Manga&gt; {
+    @Override
+    public int compare(Manga manga1, Manga manga2) {
+        return manga1.getId().compareTo(manga2.getId());
+    }
+}
+
+public class ListasTest01 {
+    public static void main(String[] args) {
+        List&lt;String&gt; nomes = new ArrayList&lt;&gt;(List.of("William", "DevDojo"));
+        nomes.addAll(List.of("Suane", "Academy"));
+        System.out.println(nomes);                                   // ?
+        System.out.println(nomes.remove("William") + " " + nomes);  // ?
+
+        List&lt;Manga&gt; mangas = new ArrayList&lt;&gt;(6);
+        mangas.add(new Manga(5L, "Hellsing Ultimate", 19.9, 0));
+        mangas.add(new Manga(1L, "Berserk", 9.5, 5));
+        mangas.add(new Manga(4L, "Pokemon", 3.2, 0));
+        mangas.add(new Manga(3L, "Attack on titan", 11.20, 2));
+        mangas.add(new Manga(2L, "Dragon ball Z", 2.99, 0));
+
+        System.out.println(mangas.indexOf(new Manga(4L, "Pokemon", 3.2)));   // ? (equals)
+        Collections.sort(mangas);                                  // Comparable: nome
+        System.out.println(mangas.get(0) + " | " + mangas.get(4));  // ?
+
+        MangaByIdComparator porId = new MangaByIdComparator();
+        mangas.sort(porId);                                        // Comparator: id
+        System.out.println(mangas.get(0) + " | " + mangas.get(4));  // ?
+        System.out.println(Collections.binarySearch(mangas, new Manga(2L, "Dragon ball Z", 2.99), porId)); // ?
+        System.out.println(Collections.binarySearch(mangas, new Manga(6L, "One Piece", 5.0), porId));     // ?
+
+        List&lt;Integer&gt; numeros = new ArrayList&lt;&gt;(List.of(2, 0, 4, 3));
+        Collections.sort(numeros);
+        System.out.println(numeros + " " + Collections.binarySearch(numeros, 1));   // ?
+
+        Integer[] numerosArray = {1, 2, 3};
+        List&lt;Integer&gt; ligada = Arrays.asList(numerosArray);
+        ligada.set(0, 12);
+        System.out.println(Arrays.toString(numerosArray));        // ?
+        try {
+            ligada.add(19);
+        } catch (UnsupportedOperationException e) {
+            System.out.println("UnsupportedOperationException");
+        }
+        Integer[] deVolta = new ArrayList&lt;&gt;(ligada).toArray(new Integer[0]);
+        System.out.println(deVolta.length);                        // ?
+
+        Iterator&lt;Manga&gt; it = mangas.iterator();
+        while (it.hasNext()) {
+            if (it.next().getQuantidade() == 0) it.remove();
+        }
+        System.out.println(mangas);                                // ?
+    }
+}
+EOF
+
+javac -d out $(find src -name '*.java')
+java -cp out academy.devdojo.maratonajava.javacore.Ycolecoes.test.ListasTest01</code></pre>
+      <details>
+        <summary>Ver a saída esperada</summary>
+<pre><code>[William, DevDojo, Suane, Academy]
+true [DevDojo, Suane, Academy]
+2
+3 Attack on titan (11.2, qtd 2) | 4 Pokemon (3.2, qtd 0)
+1 Berserk (9.5, qtd 5) | 5 Hellsing Ultimate (19.9, qtd 0)
+1
+-6
+[0, 2, 3, 4] -2
+[12, 2, 3]
+UnsupportedOperationException
+3
+[1 Berserk (9.5, qtd 5), 3 Attack on titan (11.2, qtd 2)]</code></pre>
+      </details>
+      <p><strong>Exercícios:</strong></p>
+      <ol>
+        <li>Troque o <code>Iterator</code> por um foreach com <code>mangas.remove(manga)</code> e leia a exceção. Depois resolva com <code>removeIf</code>.</li>
+        <li>Crie <code>MangaByPrecoComparator</code> (use <code>Double.compare</code>) e ordene do mais barato ao mais caro. Depois inverta a ordem com <code>Collections.reverseOrder(comparator)</code>.</li>
+        <li>Mude o <code>compareTo</code> do <code>Manga</code> para ordenar por id e veja quais linhas da prática mudam de resultado.</li>
+        <li>Numa <code>List&lt;Integer&gt;</code> com <code>[10, 20, 30]</code>, chame <code>remove(1)</code> e depois <code>remove(Integer.valueOf(10))</code>. Explique o que cada um removeu.</li>
+        <li>Faça <code>binarySearch</code> numa lista <strong>não</strong> ordenada várias vezes e veja o resultado "não confiável".</li>
+      </ol>
+
+      <h3>Glossário</h3>
+      <ul>
+        <li><strong><code>List</code></strong>: coleção ordenada por índice que aceita repetidos.</li>
+        <li><strong><code>ArrayList</code></strong>: implementação de <code>List</code> sobre um array redimensionável.</li>
+        <li><strong>Generics</strong>: parâmetro de tipo (<code>&lt;String&gt;</code>) checado em compilação.</li>
+        <li><strong>Diamond (<code>&lt;&gt;</code>)</strong>: deixa o compilador inferir o tipo no <code>new</code>.</li>
+        <li><strong><code>Comparable</code></strong>: interface da ordem natural (<code>compareTo</code>), implementada pela própria classe.</li>
+        <li><strong><code>Comparator</code></strong>: objeto externo que define uma ordem (<code>compare</code>).</li>
+        <li><strong>Busca binária</strong>: busca O(log n) que divide a lista ordenada ao meio a cada passo.</li>
+        <li><strong>Ponto de inserção</strong>: onde o elemento entraria para manter a lista ordenada.</li>
+        <li><strong><code>Iterator</code></strong>: objeto que percorre a coleção (<code>hasNext</code>, <code>next</code>) e remove com segurança.</li>
+        <li><strong><code>ConcurrentModificationException</code></strong>: exceção ao alterar a estrutura da coleção enquanto um foreach a percorre.</li>
+      </ul>
+
+      <h3>Revisão espaçada</h3>
+      <ul class="revisao">
+        <li><span class="dia">Dia 1</span><span>Todos os flashcards + a prática com previsões.</span></li>
+        <li><span class="dia">Dia 3</span><span>Quiz + exercícios 1 a 3.</span></li>
+        <li><span class="dia">Dia 7</span><span>Exercícios 4 e 5 + escrever de memória um Comparable e um Comparator.</span></li>
+        <li><span class="dia">Dia 14</span><span>Flashcards que errou + questões discursivas.</span></li>
+      </ul>
+
+      <h3>Para aprofundar</h3>
+      <ul>
+        <li>Qual algoritmo o <code>Collections.sort</code> usa (TimSort) e por que ele é estável?</li>
+        <li><code>ArrayList</code> × <code>LinkedList</code>: em que operações cada um é melhor?</li>
+        <li>Como <code>Comparator.comparing(Manga::getPreco).thenComparing(Manga::getNome)</code> encadeia critérios?</li>
+        <li>O que é <em>fail-fast</em> e por que os iteradores do <code>ArrayList</code> lançam <code>ConcurrentModificationException</code>?</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    window.AULA = {
+      flashcards: [
+        ["List é interface ou classe?", "Interface; ArrayList é a implementação mais comum"],
+        ["O que é um ArrayList?", "Um array que cresce sozinho, com ordem de inserção e índice"],
+        ["O que os generics (<String>) garantem?", "O tipo checado em tempo de compilação; sem cast e sem tipos misturados"],
+        ["Para que a capacidade inicial new ArrayList<>(300)?", "Evitar redimensionamentos quando você já sabe o tamanho aproximado"],
+        ["Tamanho e acesso por índice numa List?", "size() e get(i)"],
+        ["O que acontece ao dar add dentro de um foreach da mesma lista?", "ConcurrentModificationException"],
+        ["Por que List<int> não existe?", "Coleções guardam objetos (usam equals/hashCode); use List<Integer>"],
+        ["remove(0) × remove(\"William\")?", "Pelo índice (devolve o elemento) × pelo objeto via equals (devolve boolean)"],
+        ["Como juntar duas listas?", "lista1.addAll(lista2)"],
+        ["O que contains e indexOf usam para comparar?", "O equals de cada elemento"],
+        ["O que indexOf devolve se não encontrar?", "-1"],
+        ["Como inserir numa posição específica?", "lista.add(indice, elemento)"],
+        ["Por que Collections.sort(smartphones) não compila?", "Smartphone não é Comparable: o Java não sabe o critério"],
+        ["O que Objects.requireNonNull(id, \"msg\") faz?", "Lança NullPointerException na hora, com mensagem, se o valor for null"],
+        ["Qual a regra de retorno do compareTo/compare?", "Negativo: vem antes · 0: empate · positivo: vem depois"],
+        ["Como comparar por id (Long) sem if/else?", "return this.id.compareTo(outro.getId());"],
+        ["Como comparar um double primitivo?", "Double.compare(a, b)"],
+        ["Comparable × Comparator?", "Ordem natural dentro da classe (compareTo, 1 arg) × ordens alternativas em classe separada (compare, 2 args)"],
+        ["Duas formas de ordenar com Comparator?", "Collections.sort(lista, comp) e lista.sort(comp)"],
+        ["O que binarySearch exige?", "Lista ordenada pelo mesmo critério (e o mesmo comparator, se houver)"],
+        ["O que binarySearch devolve se não encontrar?", "-(ponto de inserção) - 1 (sempre negativo)"],
+        ["Como converter List em array do tipo certo?", "lista.toArray(new Integer[0])"],
+        ["Pegadinhas do Arrays.asList(array)?", "Fica ligado ao array e tem tamanho fixo (add lança UnsupportedOperationException)"],
+        ["Como ter uma cópia mutável e independente de um array?", "new ArrayList<>(Arrays.asList(array))"],
+        ["Como remover durante a iteração com segurança?", "Iterator (hasNext/next/remove) ou removeIf(lambda)"]
+      ],
+      quiz: [
+        { tipo: 'multipla', pergunta: 'Qual declaração segue a boa prática da aula?', opcoes: ['ArrayList<String> nomes = new ArrayList<String>();', 'List<String> nomes = new ArrayList<>();', 'List nomes = new ArrayList();', 'List<String> nomes = new ArrayList<Object>();'], correta: 1,
+          explicacao: 'Tipo genérico (interface) na variável, implementação no new, generics para checar o tipo e diamond para não repetir. A 3ª perde a checagem de tipo e a 4ª não compila.' },
+        { tipo: 'vf', pergunta: 'Chamar nomes.add(...) dentro de for (String n : nomes) lança ConcurrentModificationException.', correta: 0,
+          explicacao: 'Verdadeiro. O foreach usa um Iterator que detecta a mudança estrutural. Com o for indexado e size() na condição, o risco é o laço infinito.' },
+        { tipo: 'multipla', pergunta: 'Duas instâncias de Smartphone com o mesmo serial (equals por serial). lista.contains(outraInstancia) retorna:', opcoes: ['false, porque são objetos diferentes', 'true, porque contains usa equals', 'Lança exceção', 'Depende do hashCode'], correta: 1,
+          explicacao: 'contains, indexOf e remove(Object) percorrem a lista chamando equals. Com equals por serial, é true.' },
+        { tipo: 'multipla', pergunta: 'Em compareTo(Manga outro), o que retornar para que this venha DEPOIS de outro?', opcoes: ['Um número negativo', 'Zero', 'Um número positivo', 'true'], correta: 2,
+          explicacao: 'Positivo: this é "maior" e vem depois. Negativo: vem antes. Zero: empate.' },
+        { tipo: 'multipla', pergunta: 'O sistema inteiro ordena Manga por nome (compareTo). Você precisa, numa tela, ordenar por id. O que fazer?', opcoes: ['Mudar o compareTo para id', 'Criar um Comparator<Manga> por id e usar lista.sort(comparator)', 'Implementar Comparable duas vezes', 'Não é possível'], correta: 1,
+          explicacao: 'Comparator dá ordens alternativas sem alterar a ordem natural usada no resto do sistema.' },
+        { tipo: 'multipla', pergunta: 'Lista ordenada [0, 2, 3, 4]. Quanto devolve Collections.binarySearch(lista, 1)?', opcoes: ['-1', '1', '-2', '0'], correta: 2,
+          explicacao: '1 não existe e entraria no índice 1 (ponto de inserção). Então: -(1) - 1 = -2.' },
+        { tipo: 'vf', pergunta: 'Depois de List<Integer> l = Arrays.asList(array); l.set(0, 12);, o array original também passa a ter 12 na posição 0.', correta: 0,
+          explicacao: 'Verdadeiro. Arrays.asList cria uma lista ligada ao array. set funciona e reflete no array, mas add e remove lançam UnsupportedOperationException.' },
+        { tipo: 'multipla', pergunta: 'Qual forma remove com segurança os mangás de quantidade 0 enquanto percorre a lista?', opcoes: ['for (Manga m : mangas) if (m.getQuantidade() == 0) mangas.remove(m);', 'Iterator it = mangas.iterator(); while (it.hasNext()) if (it.next().getQuantidade() == 0) it.remove();', 'for (int i = 0; i < mangas.size(); i++) mangas.clear();', 'mangas.remove(0) até acabar'], correta: 1,
+          explicacao: 'Remova pelo próprio iterator. O foreach com lista.remove lança ConcurrentModificationException. removeIf também serve.' },
+        { tipo: 'discursiva', pergunta: 'Explique a diferença entre Comparable e Comparator e quando usar cada um, com o exemplo do Manga.',
+          explicacao: 'Comparable<Manga> é implementado pela própria classe Manga, com compareTo(Manga outro) (1 argumento), e define a ordem NATURAL, que é única. É o que Collections.sort(lista) usa sem argumentos. Na aula, por nome, delegando para String.compareTo. Comparator<Manga> é uma classe separada (MangaByIdComparator) com compare(Manga a, Manga b) (2 argumentos), e define ordens ALTERNATIVAS: pode haver vários (por id, por preço) sem mexer no Manga. É usado com Collections.sort(lista, comp) ou lista.sort(comp). Use Comparable para a ordem padrão do domínio e Comparator quando precisar de outra ordem num contexto específico, ou quando não puder alterar a classe. A regra do retorno é a mesma: negativo, zero, positivo.' },
+        { tipo: 'discursiva', pergunta: 'No PHP você ordena objetos com usort($lista, fn($a, $b) => $a->id <=> $b->id). Traduza para Java e compare os dois modelos.',
+          explicacao: 'Java: lista.sort(new MangaByIdComparator()), com compare devolvendo a.getId().compareTo(b.getId()). Ou, com lambda (aulas 195+): lista.sort((a, b) -> a.getId().compareTo(b.getId())), ou lista.sort(Comparator.comparing(Manga::getId)). O <=> do PHP devolve -1/0/1, a mesma convenção do compareTo/compare. A diferença de modelo: em Java a classe pode declarar uma ordem natural (implements Comparable), que Collections.sort, TreeSet e TreeMap usam automaticamente. No PHP não existe esse contrato, e todo usort recebe a função. Os dois ordenam a própria lista no lugar. Já a Collection do Laravel (sortBy) devolve uma nova coleção.' }
+      ]
+    };
+  </script>
+  <script src="../js/app.js"></script>
+</body>
+</html>
