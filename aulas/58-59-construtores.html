@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>58–59 · Construtores</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="topo">
+      <a class="voltar" href="../index.html">← Todas as aulas</a>
+      <h1>58–59 · Construtores</h1>
+      <p>Construtor padrão, parâmetros obrigatórios, sobrecarga e a chamada this(...) · <a href="https://www.youtube.com/playlist?list=PL62G310vn6nFIsOCC0H-C2infYgwm8SWW" target="_blank" rel="noopener">playlist</a></p>
+    </header>
+
+    <nav class="abas">
+      <a href="#resumo">Resumo</a>
+      <a href="#flashcards">Flashcards</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#estudo">Material de estudo</a>
+    </nav>
+
+    <p class="aviso">Junta as aulas 58 (construtores) e 59 (sobrecarga de construtores). Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. Os valores do anime seguem os da página anterior. A ordem "atributos antes do construtor", o <code>Alt+Insert → Constructor</code> e os itens marcados como "extra" não estão nos vídeos.</p>
+
+    <section id="resumo">
+      <h2>Resumo</h2>
+      <p>Repare nos parênteses de <code>new Anime()</code>. Parecem de método, mas <strong>não são</strong>: eles chamam o <strong>construtor</strong>, o código que roda quando o objeto é criado. Toda classe tem um. Se você não escrever nenhum, o compilador cria um vazio. Escrevendo o seu, você <strong>obriga</strong> quem cria o objeto a passar os dados necessários, e o <code>init</code> da aula 57 deixa de ser preciso. As aulas usam o pacote novo <code>javacore.Dconstrutores</code>, com uma cópia de <code>Anime</code> e dos testes.</p>
+
+      <h3>58 · O que é um construtor</h3>
+<pre><code>public class Anime {
+    private String nome;
+    private String tipo;
+    private int episodios;
+    private String genero;
+
+    // acesso + NOME DA CLASSE + (parâmetros) — sem tipo de retorno, nem void
+    public Anime(String nome, String tipo, int episodios, String genero) {
+        this.nome = nome;
+        this.tipo = tipo;
+        this.episodios = episodios;
+        this.genero = genero;
+    }
+
+    public Anime() {             // sobrecarga: permite criar sem dados
+    }
+}
+
+// AnimeTeste01
+Anime anime = new Anime("Akudama Drive", "TV", 12, "Ação");   // tudo numa linha
+Anime anime2 = new Anime();                                   // tudo com valor padrão</code></pre>
+      <ul>
+        <li><strong>A sintaxe:</strong> modificador de acesso, o <strong>nome exato da classe</strong> (por isso começa com maiúscula) e os parâmetros. <strong>Não tem tipo de retorno, nem <code>void</code>.</strong></li>
+        <li><strong>O construtor padrão:</strong> se a classe não declara <em>nenhum</em> construtor, o Java adiciona um vazio e sem parâmetros na compilação. O William abre o <code>Anime.class</code> na pasta <code>out</code> e mostra que ele está lá, mesmo sem aparecer no código. Todas as classes que você criou até agora tinham um.</li>
+        <li><strong>Declarou um, perdeu o padrão.</strong> Com <code>Anime(String nome)</code> declarado, o compilador <strong>não</strong> adiciona mais o vazio, e <code>new Anime()</code> para de compilar.</li>
+        <li><strong>A vantagem é forçar regras.</strong> Com o <code>init</code> dava para criar um anime sem nome. Com um construtor que exige o nome, isso <strong>não compila mais</strong>. Ainda dá para passar <code>""</code>, mas aí é uma validação para fazer dentro do construtor.</li>
+        <li><strong>O construtor roda antes de qualquer método</strong> do objeto: é a primeira coisa que acontece.</li>
+        <li><strong>Sobrecarga de construtores</strong> funciona como a de métodos: vários construtores com parâmetros diferentes. Com o completo e o vazio, dá para criar das duas formas.</li>
+        <li>Com duas classes <code>Anime</code> no projeto (pacotes <code>Csobrecargametodos</code> e <code>Dconstrutores</code>), atenção ao <code>import</code>. O <code>Alt+Enter</code> oferece as duas opções.</li>
+      </ul>
+
+      <h3>59 · Pegadinha, novos requisitos e <code>this(...)</code></h3>
+<pre><code>public class Anime {
+    // ... atributos + private String estudio;
+
+    public Anime() {
+        System.out.println("Dentro do construtor sem argumentos");
+    }
+
+    public Anime(String nome, String tipo, int episodios, String genero) {
+        this();                          // chama o construtor sem argumentos
+        this.nome = nome;
+        this.tipo = tipo;
+        this.episodios = episodios;
+        this.genero = genero;
+    }
+
+    public Anime(String nome, String tipo, int episodios, String genero, String estudio) {
+        this(nome, tipo, episodios, genero);   // reaproveita o de 4 parâmetros
+        this.estudio = estudio;
+    }
+}
+
+new Anime("Akudama Drive", "TV", 12, "Ação", "Pierrot");
+// 1) entra no de 5 → 2) this(...) vai para o de 4 → 3) this() vai para o vazio
+//    (imprime a mensagem) → 4) volta e termina o de 4 → 5) termina o de 5 (estudio)</code></pre>
+      <ul>
+        <li><strong>Pegadinha de certificação:</strong> <code>public void Anime(...)</code> <strong>é um método</strong>, não um construtor, porque tem retorno. Compila (quebrando a convenção de nome de método), mas <code>new Anime(...)</code> com aqueles argumentos deixa de compilar, já que o construtor "sumiu". Atenção redobrada na hora de ler o código.</li>
+        <li><strong>Novo requisito, o estúdio:</strong> mudar a assinatura do construtor quebraria todo mundo que já usa, como na aula 57. A saída é <strong>um construtor a mais</strong> com 5 parâmetros.</li>
+        <li>Para não repetir as atribuições, um construtor chama outro com <strong><code>this(argumentos)</code></strong>. Não é <code>this.Anime(...)</code>: construtor tem essa sintaxe especial. O Java escolhe qual chamar pela quantidade e pelos tipos dos argumentos, e <code>Ctrl+B</code> no <code>this(...)</code> mostra qual é.</li>
+        <li>No debug (<code>Shift+F9</code>, <code>F8</code>) dá para ver a cadeia: a execução pula de construtor em construtor e depois volta, terminando cada um de baixo para cima.</li>
+        <li><strong>Regra 1:</strong> <code>this(...)</code> só pode ser usado <strong>dentro de um construtor</strong>. Num método (<code>imprime</code>), não compila.</li>
+        <li><strong>Regra 2:</strong> <code>this(...)</code> tem que ser a <strong>primeira instrução executável</strong> do construtor. Um <code>println</code> antes dele não compila. Um comentário antes, sim.</li>
+      </ul>
+
+      <h3>Atenção</h3>
+      <ul>
+        <li><strong>Construtor não tem retorno.</strong> Qualquer tipo na frente, inclusive <code>void</code>, transforma o construtor em método.</li>
+        <li><strong>O construtor padrão some</strong> quando você declara qualquer construtor. Se ainda quiser <code>new Anime()</code>, declare o vazio você mesmo.</li>
+        <li><code>this(...)</code> só dentro de construtor e sempre na primeira linha. Por isso só dá para chamar <strong>um</strong> outro construtor.</li>
+        <li><strong>Extra: construtor não se chama como método.</strong> <code>anime.Anime("x")</code> não existe. Ele só roda com <code>new</code> ou via <code>this(...)</code>/<code>super(...)</code>.</li>
+        <li><strong>Extra: ordem de criação.</strong> Primeiro os atributos recebem os valores padrão e os inicializados na declaração. Depois roda o corpo do construtor. Os blocos de inicialização (aula 60) entram nesse meio.</li>
+        <li><strong>Extra: construtor e setters convivem.</strong> O construtor garante os dados <em>obrigatórios</em> na criação. Os setters (com validação) servem para o que pode mudar depois. Se o construtor precisar validar, chame o setter dentro dele: <code>setEpisodios(episodios)</code>.</li>
+        <li><strong>Extra:</strong> <code>Alt+Insert → Constructor</code> gera o construtor com os atributos que você marcar.</li>
+        <li><strong>Extra:</strong> um construtor <code>private</code> impede <code>new</code> de fora da classe, útil em classes utilitárias e no padrão Singleton, mais à frente.</li>
+      </ul>
+
+      <h3>Paralelo com PHP</h3>
+      <ul>
+        <li><strong>O nome:</strong> em PHP o construtor é <code>__construct()</code>. Em Java, ele tem o nome da classe. Curiosidade: o PHP 4 também usava o nome da classe como construtor, e esse estilo foi removido no PHP 8.</li>
+        <li><strong>Vários construtores:</strong> o PHP tem <strong>um só</strong> <code>__construct</code>, sem sobrecarga. A flexibilidade vem de parâmetros opcionais, argumentos nomeados ou métodos estáticos como <code>Anime::fromArray()</code>. Em Java, você declara vários construtores.</li>
+        <li><strong>Construtor padrão:</strong> igual nas duas, porque sem construtor declarado dá para criar o objeto sem argumentos. A diferença é que em Java, ao declarar um construtor com parâmetros, <code>new Anime()</code> passa a ser erro de <em>compilação</em>.</li>
+        <li><strong>Menos repetição:</strong> a <em>constructor property promotion</em> do PHP 8 (<code>public function __construct(private string $nome)</code>) não existe em Java. O mais próximo são os <code>record</code> (Java 16+) ou o <code>Alt+Insert</code>/Lombok.</li>
+        <li><strong>Encadear:</strong> <code>this(...)</code> chama outro construtor da mesma classe. O equivalente do <code>parent::__construct()</code> é o <code>super(...)</code>, que aparece com herança.</li>
+      </ul>
+    </section>
+
+    <section id="flashcards">
+      <h2>Flashcards</h2>
+      <p style="color:var(--muted);margin-top:-6px">Toque no cartão para virar.</p>
+      <div id="flashcards-app"></div>
+    </section>
+
+    <section id="quiz">
+      <h2>Quiz</h2>
+      <div id="quiz-app"></div>
+    </section>
+
+    <section id="estudo">
+      <h2>Material de estudo</h2>
+
+      <h3>Mapa mental</h3>
+<pre><code>Construtores
+├── O que é (58)
+│   ├── os () de new Anime() chamam o construtor
+│   ├── acesso + NomeDaClasse(parâmetros) — sem retorno
+│   └── roda antes de qualquer método do objeto
+├── Construtor padrão (58)
+│   ├── sem nenhum declarado → o compilador cria um vazio
+│   └── declarou algum → o padrão NÃO é criado
+├── Para que serve (58)
+│   ├── obrigar dados na criação (nome)
+│   └── substitui o init: tudo numa linha
+├── Sobrecarga (58–59)
+│   ├── vários construtores, parâmetros diferentes
+│   └── novo requisito (estúdio) → construtor novo, sem quebrar ninguém
+└── this(...) (59)
+    ├── chama outro construtor da mesma classe
+    ├── só dentro de construtor
+    ├── primeira instrução executável
+    └── pegadinha: void Anime() é MÉTODO</code></pre>
+
+      <h3>Prática no seu WSL (20 minutos)</h3>
+<pre><code>cd ~/java-lab
+D=src/academy/devdojo/maratonajava/javacore/Dconstrutores
+mkdir -p $D/dominio $D/test
+
+cat > $D/dominio/Anime.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Dconstrutores.dominio;
+
+public class Anime {
+    private String nome;
+    private String tipo;
+    private int episodios;
+    private String genero;
+    private String estudio;
+
+    public Anime() {
+        System.out.println("Dentro do construtor sem argumentos");
+    }
+
+    public Anime(String nome, String tipo, int episodios, String genero) {
+        this();
+        System.out.println("Dentro do construtor de 4");
+        this.nome = nome;
+        this.tipo = tipo;
+        this.episodios = episodios;
+        this.genero = genero;
+    }
+
+    public Anime(String nome, String tipo, int episodios, String genero, String estudio) {
+        this(nome, tipo, episodios, genero);
+        System.out.println("Dentro do construtor de 5");
+        this.estudio = estudio;
+    }
+
+    public void imprime() {
+        System.out.println(nome + " | " + tipo + " | " + episodios + " | " + genero + " | " + estudio);
+    }
+}
+EOF
+
+cat > $D/test/AnimeTeste01.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Dconstrutores.test;
+
+import academy.devdojo.maratonajava.javacore.Dconstrutores.dominio.Anime;
+
+public class AnimeTeste01 {
+    public static void main(String[] args) {
+        Anime anime = new Anime("Akudama Drive", "TV", 12, "Ação", "Pierrot");  // ?
+        anime.imprime();                                                        // ?
+        Anime vazio = new Anime();                                              // ?
+        vazio.imprime();                                                        // ?
+    }
+}
+EOF
+
+javac -d out $(find src -name '*.java')
+java -cp out academy.devdojo.maratonajava.javacore.Dconstrutores.test.AnimeTeste01
+javap -cp out academy.devdojo.maratonajava.javacore.Dconstrutores.dominio.Anime   # lista os construtores</code></pre>
+      <details>
+        <summary>Ver a saída esperada</summary>
+<pre><code>Dentro do construtor sem argumentos
+Dentro do construtor de 4
+Dentro do construtor de 5
+Akudama Drive | TV | 12 | Ação | Pierrot
+Dentro do construtor sem argumentos
+null | null | 0 | null | null</code></pre>
+      </details>
+      <p><strong>Exercícios:</strong></p>
+      <ol>
+        <li>Apague o construtor vazio e tente compilar o teste. Leia o erro no <code>new Anime()</code>.</li>
+        <li>Numa classe sem nenhum construtor, compile e rode <code>javap</code> nela: o construtor padrão aparece?</li>
+        <li>Mova o <code>System.out.println</code> para <strong>antes</strong> do <code>this(...)</code> e leia o erro. Depois ponha um comentário antes e veja que compila.</li>
+        <li>Crie <code>Pessoa(String nome, int idade)</code> que chama o <code>setIdade</code> (com a validação da aula 54) dentro do construtor.</li>
+        <li>Escreva <code>public void Anime(String nome)</code> e explique por que <code>new Anime("x")</code> não compila.</li>
+      </ol>
+
+      <h3>Glossário</h3>
+      <ul>
+        <li><strong>Construtor</strong>: bloco com o nome da classe, sem retorno, executado na criação do objeto com <code>new</code>.</li>
+        <li><strong>Construtor padrão (default)</strong>: construtor vazio que o compilador adiciona quando a classe não declara nenhum.</li>
+        <li><strong>Sobrecarga de construtores</strong>: vários construtores com listas de parâmetros diferentes.</li>
+        <li><strong><code>this(...)</code></strong>: chamada a outro construtor da mesma classe. Primeira instrução, só dentro de construtor.</li>
+        <li><strong>Encadeamento de construtores</strong>: um construtor delegando para outro, para não repetir código.</li>
+        <li><strong><code>javap</code></strong>: ferramenta da JDK que lista os membros de um <code>.class</code>.</li>
+      </ul>
+
+      <h3>Revisão espaçada</h3>
+      <ul class="revisao">
+        <li><span class="dia">Dia 1</span><span>Todos os flashcards + a prática com previsões.</span></li>
+        <li><span class="dia">Dia 3</span><span>Quiz + exercícios 1, 2 e 3.</span></li>
+        <li><span class="dia">Dia 7</span><span>Exercícios 4 e 5 + desenhar a cadeia de construtores da aula 59.</span></li>
+        <li><span class="dia">Dia 14</span><span>Flashcards que errou + questões discursivas.</span></li>
+      </ul>
+
+      <h3>Para aprofundar</h3>
+      <ul>
+        <li>Qual a ordem exata de inicialização de um objeto (valores padrão, atributos, blocos, construtor)? (aula 60)</li>
+        <li>O que é <code>super()</code> e por que o compilador o insere implicitamente em todo construtor? (herança, aula 74)</li>
+        <li>Como o <em>canonical constructor</em> de um <code>record</code> substitui todo esse código?</li>
+        <li>O que é o padrão Builder e quando ele é melhor que muitos construtores sobrecarregados?</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    window.AULA = {
+      flashcards: [
+        ["O que os parênteses de new Anime() chamam?", "O construtor da classe"],
+        ["Qual a sintaxe de um construtor?", "Modificador de acesso + nome exato da classe + (parâmetros) + { corpo }"],
+        ["Construtor tem tipo de retorno?", "Não, nem void"],
+        ["O que acontece se a classe não declara nenhum construtor?", "O compilador adiciona um construtor vazio (padrão)"],
+        ["Como provar que o construtor padrão existe?", "Olhando o .class compilado (pasta out ou javap)"],
+        ["Declarei Anime(String nome). new Anime() ainda compila?", "Não: com um construtor declarado, o padrão não é criado"],
+        ["Qual a principal vantagem do construtor?", "Obrigar a passar os dados necessários na criação do objeto"],
+        ["Quando o construtor executa?", "Na criação, antes de qualquer método do objeto"],
+        ["Como permitir criar o objeto com e sem dados?", "Sobrecarga: declarar o construtor completo e um vazio"],
+        ["public void Anime() é um construtor?", "Não: tem retorno (void), então é um método"],
+        ["Como adicionar um parâmetro novo sem quebrar quem usa?", "Criar um construtor a mais (sobrecarga)"],
+        ["Como um construtor chama outro da mesma classe?", "Com this(argumentos);"],
+        ["Onde this(...) pode ser usado?", "Só dentro de um construtor"],
+        ["Em que posição this(...) deve ficar?", "Primeira instrução executável do construtor (comentário antes pode)"],
+        ["Como o Java escolhe qual construtor o this(...) chama?", "Pela quantidade e pelos tipos dos argumentos"],
+        ["Dá para chamar dois construtores com this(...) no mesmo construtor?", "Não: só um, e na primeira linha"],
+        ["Pode chamar o construtor como método (anime.Anime())?", "Não: só com new ou this(...)/super(...)"],
+        ["Construtor e setters: qual o papel de cada um?", "Construtor: dados obrigatórios na criação. Setters: o que pode mudar depois"],
+        ["Como validar dados no construtor reaproveitando o setter?", "Chamar setX(valor) dentro do construtor"],
+        ["Atalho do IntelliJ para gerar construtor?", "Alt+Insert → Constructor"],
+        ["Para que serve um construtor private?", "Impedir new de fora da classe (utilitárias, Singleton)"],
+        ["Como se chama o construtor no PHP?", "__construct()"],
+        ["PHP permite vários construtores?", "Não: um só __construct; usa parâmetros opcionais ou métodos estáticos"],
+        ["Qual o equivalente Java de parent::__construct()?", "super(...), visto com herança"],
+        ["Qual o equivalente Java da constructor promotion do PHP 8?", "Não existe; o mais próximo é record (Java 16+)"]
+      ],
+      quiz: [
+        { tipo: 'vf', pergunta: 'Um construtor tem o mesmo nome da classe e não tem tipo de retorno.', correta: 0,
+          explicacao: 'Verdadeiro: acesso + nome da classe + parâmetros. Nem void.' },
+        { tipo: 'multipla', pergunta: 'Qual das opções é um construtor válido da classe Anime?', opcoes: ['public void Anime() { }', 'public Anime() { }', 'public anime() { }', 'public Anime Anime() { }'], correta: 1,
+          explicacao: 'Sem retorno e com o nome exato da classe (maiúsculas contam). Com void ou outro tipo, vira método.' },
+        { tipo: 'multipla', pergunta: 'Uma classe não declara nenhum construtor. O que acontece com new Classe()?', opcoes: ['Não compila', 'Compila: o compilador adicionou um construtor vazio', 'Compila, mas lança exceção ao rodar', 'Só funciona se a classe for public'], correta: 1,
+          explicacao: 'Sem nenhum construtor declarado, o compilador adiciona o construtor padrão, sem parâmetros.' },
+        { tipo: 'vf', pergunta: 'Se a classe declara só o construtor Anime(String nome), o compilador ainda adiciona o construtor vazio.', correta: 1,
+          explicacao: 'Falso: o construtor padrão só é adicionado quando não há nenhum. Aí new Anime() deixa de compilar.' },
+        { tipo: 'multipla', pergunta: 'Como um construtor chama outro construtor da mesma classe?', opcoes: ['this.Anime(nome);', 'Anime(nome);', 'this(nome);', 'super.Anime(nome);'], correta: 2,
+          explicacao: 'A sintaxe especial é this(argumentos). O Java escolhe o construtor pela lista de argumentos.' },
+        { tipo: 'multipla', pergunta: 'Qual construtor NÃO compila?', opcoes: ['public Anime(String n) { this(); nome = n; }', 'public Anime(String n) { /* delega */ this(); }', 'public Anime(String n) { System.out.println(n); this(); }', 'public Anime() { System.out.println("oi"); }'], correta: 2,
+          explicacao: 'this(...) tem que ser a primeira instrução executável. Comentários antes podem, mas um println não.' },
+        { tipo: 'vf', pergunta: 'É possível usar this(...) dentro de um método comum, como imprime(), para reconstruir o objeto.', correta: 1,
+          explicacao: 'Falso: this(...) só é permitido dentro de construtores.' },
+        { tipo: 'multipla', pergunta: 'Com os construtores Anime(), Anime(4 parâmetros) que chama this() e Anime(5 parâmetros) que chama this(4...), o que acontece em new Anime(5 argumentos)?', opcoes: ['Executa só o de 5', 'Executa o de 5, depois o de 4, depois o vazio', 'Entra no de 5, delega ao de 4, que delega ao vazio; os corpos terminam do vazio para o de 5', 'Erro: não se pode encadear construtores'], correta: 2,
+          explicacao: 'Cada this(...) é a primeira linha: a execução desce até o vazio, que termina primeiro. Depois o de 4 conclui e, por último, o de 5 atribui o estúdio.' },
+        { tipo: 'discursiva', pergunta: 'Por que o construtor é melhor que o método init da aula 57 para garantir que todo anime tenha nome?',
+          explicacao: 'O init é um método comum: nada obriga alguém a chamá-lo, então dá para criar um anime sem nome com new Anime() e esquecer o init. Um construtor que exige o nome, sem o construtor vazio, torna isso impossível: new Anime() nem compila. Os dados obrigatórios são garantidos no momento da criação, e o construtor roda antes de qualquer método.' },
+        { tipo: 'discursiva', pergunta: 'Em PHP você faria __construct(string $nome, ?string $estudio = null). Como a aula 59 resolve o mesmo problema em Java, e por que não quebra quem já usava o construtor antigo?',
+          explicacao: 'Java não tem parâmetro opcional e o PHP não tem sobrecarga. Em Java cria-se um construtor a mais: Anime(nome, tipo, episodios, genero, estudio), que chama this(nome, tipo, episodios, genero) na primeira linha e só atribui o estúdio. O construtor de 4 parâmetros continua existindo com a mesma assinatura, então todo código que o chamava continua compilando, e a delegação com this(...) evita repetir as atribuições.' }
+      ]
+    };
+  </script>
+  <script src="../js/app.js"></script>
+</body>
+</html>
