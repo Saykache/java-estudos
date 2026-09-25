@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>76 · Sobrescrita do toString</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="topo">
+      <a class="voltar" href="../index.html">← Todas as aulas</a>
+      <h1>76 · Sobrescrita do toString</h1>
+      <p>Por que println(objeto) mostra Classe@hash, como sobrescrever toString() e as regras da sobrescrita · <a href="https://www.youtube.com/playlist?list=PL62G310vn6nFIsOCC0H-C2infYgwm8SWW" target="_blank" rel="noopener">playlist</a></p>
+    </header>
+
+    <nav class="abas">
+      <a href="#resumo">Resumo</a>
+      <a href="#flashcards">Flashcards</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#estudo">Material de estudo</a>
+    </nav>
+
+    <p class="aviso">Aula "Sobrescrita do método toString". Feito a partir da legenda automática baixada com <code>ferramentas/transcricao.py</code>. O código (pacote <code>javacore.Isobrescrita</code>, anime "Dr. Stone") foi conferido no <a href="https://github.com/devdojobr/maratona-java-virado-no-jiraya" target="_blank" rel="noopener">repositório do professor</a>. Os itens marcados como "extra" não estão no vídeo.</p>
+
+    <section id="resumo">
+      <h2>Resumo</h2>
+      <p>Desde a aula 39, imprimir um objeto mostra algo como <code>...Anime@1b6d3586</code>. Agora dá para entender o porquê: <strong>toda classe é um <code>Object</code></strong> (aula 74), e <code>Object</code> tem o método <strong><code>toString()</code></strong>, que o <code>println</code> chama sozinho. Como é um método herdado, ele pode ser <strong>sobrescrito</strong>. Com isso, o método <code>imprime()</code> que o curso escrevia em cada classe deixa de ser necessário.</p>
+
+      <h3>De onde vem o <code>Classe@hash</code></h3>
+<pre><code>// o que Object.toString() faz (ver com Ctrl+B em Object, Ctrl+F "toString"):
+public String toString() {
+    return getClass().getName() + "@" + Integer.toHexString(hashCode());
+}
+
+Anime anime = new Anime("Dr. Stone");
+System.out.println(anime);
+// academy.devdojo.maratonajava.javacore.Isobrescrita.dominio.Anime@1b6d3586</code></pre>
+      <ul>
+        <li><code>getClass().getName()</code> é o <strong>nome completo</strong> da classe (pacote + nome), seguido de <code>@</code> e do <strong>hash code</strong> em hexadecimal.</li>
+        <li>Toda vez que você passa um objeto para o <code>println</code>, ele chama <code>toString()</code>. Escrever <code>System.out.println(anime.toString())</code> é redundante.</li>
+      </ul>
+
+      <h3>Sobrescrevendo</h3>
+<pre><code>package academy.devdojo.maratonajava.javacore.Isobrescrita.dominio;
+
+public class Anime extends Object {        // "extends Object" é implícito; está aqui só para lembrar
+    private String nome;
+
+    public Anime(String nome) {
+        this.nome = nome;
+    }
+
+    @Override
+    public String toString() {              // mesma assinatura do Object
+        return "Anime{" +
+                "nome='" + nome + '\'' +
+                '}';
+    }
+    // getNome / setNome
+}
+
+// AnimeTest01
+Anime anime = new Anime("Dr. Stone");
+System.out.println(anime);                  // Anime{nome='Dr. Stone'}</code></pre>
+      <ul>
+        <li>Basta declarar <code>public String toString()</code> na sua classe. O IntelliJ mostra o ícone de "overrides" na margem.</li>
+        <li>Pode retornar o que fizer sentido para um ser humano ler: só <code>this.nome</code>, ou algo mais descritivo.</li>
+        <li><strong><code>@Override</code></strong> é a garantia: com a anotação, errar o nome (<code>toStrin</code>) vira <strong>erro de compilação</strong>. Sem ela, você só teria criado um método novo, e o <code>println</code> continuaria mostrando <code>Classe@hash</code>.</li>
+        <li><strong>A IDE gera:</strong> <code>Alt+Insert → toString()</code>, marque os atributos e dê OK. O formato padrão é <code>Anime{nome='Dr. Stone'}</code>.</li>
+      </ul>
+
+      <h3>As regras da sobrescrita</h3>
+      <ul>
+        <li><strong>Mesmo nome</strong> e <strong>mesmos parâmetros</strong>, em quantidade e tipo. Se o original não tem parâmetros, o sobrescrito também não tem.</li>
+        <li><strong>Tipo de retorno igual ou uma subclasse dele</strong>. Isso se chama <em>retorno covariante</em>: onde a mãe retorna <code>Pessoa</code>, a filha pode retornar <code>Funcionario</code>.</li>
+        <li><strong>O modificador de acesso não pode ser mais restritivo.</strong> Se o <code>toString()</code> de <code>Object</code> é <code>public</code>, o seu também tem que ser. <code>protected String toString()</code> dá erro (<em>attempting to assign weaker access privileges</em>). Pode manter ou dar <em>mais</em> acesso, nunca tirar.</li>
+        <li>O William promete detalhar essas regras nas próximas aulas. O resumo prático: <strong>na dúvida, coloque <code>@Override</code></strong>, e o compilador confere tudo.</li>
+      </ul>
+
+      <h3>Atenção</h3>
+      <ul>
+        <li><strong><code>tostring()</code> ≠ <code>toString()</code>.</strong> Sem <code>@Override</code>, um erro de digitação cria outro método e ninguém percebe.</li>
+        <li><strong>Extra: concatenação também chama <code>toString()</code>.</strong> <code>"Assistindo: " + anime</code> vira <code>"Assistindo: Anime{nome='Dr. Stone'}"</code>.</li>
+        <li><strong>Extra: referência <code>null</code>.</strong> <code>println(anime)</code> com <code>anime == null</code> imprime <code>null</code>, mas <code>anime.toString()</code> lança <code>NullPointerException</code>. Mais um motivo para não chamar <code>toString()</code> explicitamente.</li>
+        <li><strong>Extra: relação bidirecional + toString = <code>StackOverflowError</code>.</strong> Se o <code>toString()</code> do <code>Jogador</code> inclui o <code>time</code>, e o do <code>Time</code> inclui os <code>jogadores</code>, um chama o outro sem fim (é o problema da aula 67). Num dos lados, mostre só o nome.</li>
+        <li><strong>Extra: cuidado com dados sensíveis.</strong> O <code>toString()</code> aparece em logs e no debugger. Nunca inclua senha, token ou dado pessoal sem necessidade.</li>
+        <li><strong>Extra:</strong> <code>Arrays.toString(animes)</code> usa o <code>toString()</code> de cada elemento, e passa a mostrar <code>[Anime{nome='Dr. Stone'}, ...]</code>.</li>
+      </ul>
+
+      <h3>Paralelo com PHP</h3>
+      <ul>
+        <li><strong><code>__toString()</code> × <code>toString()</code>:</strong> mesma ideia. <code>echo $anime</code> no PHP chama <code>__toString()</code>, assim como <code>System.out.println(anime)</code> chama <code>toString()</code>.</li>
+        <li><strong>Sem implementar:</strong> no PHP, <code>echo $objeto</code> sem <code>__toString</code> dá <strong>erro</strong> (<em>Object could not be converted to string</em>). Em Java nunca dá erro, porque sempre existe o <code>toString()</code> herdado de <code>Object</code>, que imprime <code>Classe@hash</code>.</li>
+        <li><strong>No Laravel:</strong> o <code>__toString()</code> de um Model devolve o JSON (<code>toJson()</code>). Em Java você decide o formato; a IDE gera o estilo <code>Anime{nome='...'}</code>.</li>
+        <li><strong>Interface:</strong> no PHP 8, a classe com <code>__toString</code> implementa <code>Stringable</code> automaticamente. Em Java não é preciso, porque todo objeto já tem <code>toString()</code>.</li>
+        <li><strong>Depuração:</strong> <code>var_dump</code>/<code>dd()</code> mostram o objeto inteiro sem escrever nada. Em Java, um bom <code>toString()</code> é o que torna o <code>println</code> e os logs úteis.</li>
+      </ul>
+    </section>
+
+    <section id="flashcards">
+      <h2>Flashcards</h2>
+      <p style="color:var(--muted);margin-top:-6px">Toque no cartão para virar.</p>
+      <div id="flashcards-app"></div>
+    </section>
+
+    <section id="quiz">
+      <h2>Quiz</h2>
+      <div id="quiz-app"></div>
+    </section>
+
+    <section id="estudo">
+      <h2>Material de estudo</h2>
+
+      <h3>Mapa mental</h3>
+<pre><code>toString
+├── Origem
+│   ├── toda classe é um Object
+│   └── Object.toString() = nomeCompleto@hashHex
+├── Quem chama
+│   ├── println(objeto)
+│   └── concatenação "texto" + objeto
+├── Sobrescrever
+│   ├── public String toString() { return ...; }
+│   ├── @Override (erro se a assinatura estiver errada)
+│   └── Alt+Insert → toString()
+└── Regras da sobrescrita
+    ├── mesmo nome e parâmetros
+    ├── retorno igual ou subclasse (covariante)
+    └── acesso igual ou mais aberto (nunca mais restritivo)</code></pre>
+
+      <h3>Prática no seu WSL (10 minutos)</h3>
+<pre><code>cd ~/java-lab
+I=src/academy/devdojo/maratonajava/javacore/Isobrescrita
+mkdir -p $I/dominio $I/test
+
+cat > $I/dominio/Anime.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Isobrescrita.dominio;
+
+public class Anime {
+    private String nome;
+
+    public Anime(String nome) {
+        this.nome = nome;
+    }
+
+    @Override
+    public String toString() {
+        return "Anime{" + "nome='" + nome + '\'' + '}';
+    }
+}
+EOF
+
+cat > $I/test/AnimeTest01.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Isobrescrita.test;
+
+import academy.devdojo.maratonajava.javacore.Isobrescrita.dominio.Anime;
+import java.util.Arrays;
+
+public class AnimeTest01 {
+    public static void main(String[] args) {
+        Anime anime = new Anime("Dr. Stone");
+        System.out.println(anime);                          // ?
+        System.out.println("Assistindo: " + anime);         // ?
+        Anime[] animes = {anime, new Anime("Haikyuu")};
+        System.out.println(Arrays.toString(animes));        // ?
+        Anime nenhum = null;
+        System.out.println(nenhum);                         // ?
+    }
+}
+EOF
+
+javac -d out $(find src -name '*.java')
+java -cp out academy.devdojo.maratonajava.javacore.Isobrescrita.test.AnimeTest01</code></pre>
+      <details>
+        <summary>Ver a saída esperada</summary>
+<pre><code>Anime{nome='Dr. Stone'}
+Assistindo: Anime{nome='Dr. Stone'}
+[Anime{nome='Dr. Stone'}, Anime{nome='Haikyuu'}]
+null</code></pre>
+      </details>
+      <p><strong>Exercícios:</strong></p>
+      <ol>
+        <li>Comente o <code>toString()</code> e rode de novo para ver o <code>Classe@hash</code>.</li>
+        <li>Troque <code>public</code> por <code>protected</code> no <code>toString()</code> e leia o erro.</li>
+        <li>Renomeie para <code>tostring()</code> mantendo o <code>@Override</code>. Depois tire a anotação e compare.</li>
+        <li>Substitua o <code>imprime()</code> de <code>Pessoa</code> e <code>Funcionario</code> (aulas 71–75) por <code>toString()</code>. O da filha deve usar <code>super.toString()</code> e acrescentar o salário.</li>
+      </ol>
+
+      <h3>Glossário</h3>
+      <ul>
+        <li><strong><code>toString()</code></strong>: método de <code>Object</code> que devolve uma representação em texto do objeto.</li>
+        <li><strong>Hash code</strong>: número inteiro associado ao objeto, mostrado em hexadecimal no <code>toString()</code> padrão.</li>
+        <li><strong><code>@Override</code></strong>: anotação que pede ao compilador para confirmar que o método sobrescreve um da superclasse.</li>
+        <li><strong>Retorno covariante</strong>: o método sobrescrito pode retornar uma subclasse do tipo original.</li>
+        <li><strong>Anotação</strong>: metadado com <code>@</code> que o compilador ou frameworks leem (<code>@Override</code>, e depois muitas outras).</li>
+      </ul>
+
+      <h3>Revisão espaçada</h3>
+      <ul class="revisao">
+        <li><span class="dia">Dia 1</span><span>Todos os flashcards + a prática.</span></li>
+        <li><span class="dia">Dia 3</span><span>Quiz + exercícios 1, 2 e 3.</span></li>
+        <li><span class="dia">Dia 7</span><span>Exercício 4 + recitar as 3 regras da sobrescrita.</span></li>
+        <li><span class="dia">Dia 14</span><span>Flashcards que errou + questões discursivas.</span></li>
+      </ul>
+
+      <h3>Para aprofundar</h3>
+      <ul>
+        <li>Quais outros métodos de <code>Object</code> costumam ser sobrescritos (<code>equals</code>, <code>hashCode</code>) e por que andam juntos?</li>
+        <li>Como os <code>record</code> (Java 16+) geram <code>toString()</code> automaticamente?</li>
+        <li>Por que exceções também podem ter sobrescrita, mas com regras próprias? (aula 105)</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    window.AULA = {
+      flashcards: [
+        ["De onde vem o método toString()?", "Da classe Object, que toda classe Java estende"],
+        ["O que o toString() padrão de Object retorna?", "Nome completo da classe + \"@\" + hash code em hexadecimal"],
+        ["Quem chama o toString() quando você faz println(objeto)?", "O próprio println, automaticamente"],
+        ["println(anime.toString()) é necessário?", "Não: é redundante, o println já chama"],
+        ["Qual a assinatura do toString()?", "public String toString()"],
+        ["Para que serve @Override?", "O compilador confirma que o método realmente sobrescreve um da superclasse"],
+        ["O que acontece se você escrever tostring() sem @Override?", "Cria um método novo; o println continua mostrando Classe@hash"],
+        ["Como gerar o toString() no IntelliJ?", "Alt+Insert → toString() e escolher os atributos"],
+        ["Qual o formato gerado pelo IntelliJ?", "Anime{nome='Dr. Stone'}"],
+        ["Regra 1 da sobrescrita?", "Mesmo nome e mesmos parâmetros (quantidade e tipo)"],
+        ["Regra 2 da sobrescrita?", "Retorno igual ou subclasse do original (covariante)"],
+        ["Regra 3 da sobrescrita?", "O acesso não pode ser mais restritivo (public continua public)"],
+        ["protected String toString() compila?", "Não: seria mais restritivo que o public de Object"],
+        ["\"Texto: \" + objeto chama toString()?", "Sim: a concatenação usa o toString()"],
+        ["println(null) de uma referência Anime imprime o quê?", "null (mas anime.toString() lançaria NullPointerException)"],
+        ["Qual o risco de toString() em relação bidirecional?", "Um chama o outro sem parar: StackOverflowError"],
+        ["O que não colocar no toString()?", "Dados sensíveis (senhas, tokens): ele aparece em logs"],
+        ["Equivalente PHP do toString()?", "__toString()"],
+        ["echo de um objeto sem __toString no PHP dá o quê? E em Java?", "PHP: erro. Java: imprime Classe@hash (nunca erro)"]
+      ],
+      quiz: [
+        { tipo: 'vf', pergunta: 'System.out.println(objeto) chama automaticamente o método toString() do objeto.', correta: 0,
+          explicacao: 'Verdadeiro: por isso chamar objeto.toString() dentro do println é redundante.' },
+        { tipo: 'multipla', pergunta: 'Sem sobrescrever, o que println(new Anime("Dr. Stone")) mostra?', opcoes: ['Dr. Stone', 'Anime{nome=Dr. Stone}', 'o nome completo da classe + @ + hash', 'Erro de compilação'], correta: 2,
+          explicacao: 'É o toString() herdado de Object: getClass().getName() + "@" + hash em hexadecimal.' },
+        { tipo: 'multipla', pergunta: 'Qual assinatura sobrescreve corretamente o toString()?', opcoes: ['public void toString()', 'public String toString()', 'public String toString(String s)', 'protected String toString()'], correta: 1,
+          explicacao: 'Mesmo nome, sem parâmetros, retorno String e acesso public.' },
+        { tipo: 'vf', pergunta: 'Sem @Override, escrever public String tostring() na classe faz o println usar esse método.', correta: 1,
+          explicacao: 'Falso: tostring (minúsculo) é outro método. O println continua usando o toString() de Object. Com @Override, seria erro de compilação.' },
+        { tipo: 'multipla', pergunta: 'Qual regra NÃO vale para a sobrescrita?', opcoes: ['Mesmo nome do método', 'Mesmos parâmetros', 'O acesso pode ser mais restritivo', 'Retorno igual ou subclasse'], correta: 2,
+          explicacao: 'O acesso nunca pode ser mais restritivo. Pode ser igual ou mais aberto.' },
+        { tipo: 'multipla', pergunta: 'Como gerar o toString() pela IDE?', opcoes: ['Ctrl+F9', 'Alt+Insert → toString()', 'Shift+F6', 'Ctrl+Alt+O'], correta: 1,
+          explicacao: 'Alt+Insert abre o menu de geração (construtor, getters/setters, toString...).' },
+        { tipo: 'multipla', pergunta: 'Com toString() retornando "Anime{nome=\'Dr. Stone\'}", o que imprime System.out.println("Assistindo: " + anime);?', opcoes: ['Assistindo: anime', 'Assistindo: Anime{nome=\'Dr. Stone\'}', 'Assistindo: Anime@1b6d3586', 'Erro de compilação'], correta: 1,
+          explicacao: 'A concatenação com String chama o toString() do objeto.' },
+        { tipo: 'vf', pergunta: 'Anime a = null; System.out.println(a); lança NullPointerException.', correta: 1,
+          explicacao: 'Falso: o println trata null e imprime "null". Já a.toString() lançaria NullPointerException.' },
+        { tipo: 'discursiva', pergunta: 'Explique por que qualquer objeto Java pode ser impresso com println, mesmo sem você escrever nenhum método para isso.',
+          explicacao: 'Toda classe estende Object, direta ou indiretamente (aula 74), e Object define toString(). Ao receber um objeto, o println chama toString(). Se a classe não sobrescreveu, roda a versão de Object, que retorna o nome completo da classe + @ + o hash code em hexadecimal. Sobrescrevendo com public String toString() (e @Override), a saída passa a ser o texto que você definir.' },
+        { tipo: 'discursiva', pergunta: 'Compare o toString() do Java com o __toString() do PHP: o que acontece em cada linguagem quando você não implementa e tenta imprimir o objeto?',
+          explicacao: 'A ideia é a mesma: um método chamado automaticamente quando o objeto precisa virar texto (echo no PHP, println ou concatenação em Java). A diferença está na ausência. No PHP, sem __toString, echo $obj lança um erro (Object could not be converted to string). Em Java nunca há erro, porque todo objeto herda o toString() de Object, que imprime Classe@hash. Por isso, em Java, sobrescrever é uma questão de legibilidade, não de funcionar.' }
+      ]
+    };
+  </script>
+  <script src="../js/app.js"></script>
+</body>
+</html>
