@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>84–86 · Classes abstratas</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="topo">
+      <a class="voltar" href="../index.html">← Todas as aulas</a>
+      <h1>84–86 · Classes abstratas</h1>
+      <p>Classe que não pode ser instanciada, métodos abstratos que obrigam as subclasses e a regra da primeira classe concreta · <a href="https://www.youtube.com/playlist?list=PL62G310vn6nFIsOCC0H-C2infYgwm8SWW" target="_blank" rel="noopener">playlist</a></p>
+    </header>
+
+    <nav class="abas">
+      <a href="#resumo">Resumo</a>
+      <a href="#flashcards">Flashcards</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#estudo">Material de estudo</a>
+    </nav>
+
+    <p class="aviso">Junta as aulas 84 (classes abstratas), 85 (métodos abstratos) e 86 (regras dos métodos abstratos). Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. O código (pacote <code>javacore.Lclassesabstratas</code>, Nami e Touya) foi conferido no <a href="https://github.com/devdojobr/maratona-java-virado-no-jiraya" target="_blank" rel="noopener">repositório do professor</a>. Os itens marcados como "extra" não estão nos vídeos.</p>
+
+    <section id="resumo">
+      <h2>Resumo</h2>
+      <p>Na empresa, ninguém é "só funcionário": a pessoa é <strong>desenvolvedor</strong>, <strong>gerente</strong>, supervisor, do RH... <code>Funcionario</code> é um <strong>molde</strong> (template) que junta o que todos têm em comum (nome, salário), mas não deveria virar objeto sozinho. A palavra <code>abstract</code> resolve esse problema de <strong>design de código</strong>: na classe, ela <strong>proíbe o <code>new</code></strong>; no método, ela <strong>obriga as subclasses a implementar</strong>. O contrário de abstrato é <strong>concreto</strong>.</p>
+
+      <h3>84 · Classe abstrata: não pode dar new</h3>
+<pre><code>public abstract class Funcionario {
+    protected String nome;
+    protected double salario;
+
+    public Funcionario(String nome, double salario) {   // abstrata TEM construtor
+        this.nome = nome;
+        this.salario = salario;
+    }
+}
+
+public class Gerente extends Funcionario {
+    public Gerente(String nome, double salario) {
+        super(nome, salario);                            // herança normal (aulas 71–75)
+    }
+    @Override
+    public String toString() { return "Gerente{nome='" + nome + "', salario=" + salario + "}"; }
+}
+// Desenvolvedor: igual, com "Desenvolvedor{...}"
+
+Gerente gerente = new Gerente("Nami", 5000);
+Desenvolvedor desenvolvedor = new Desenvolvedor("Touya", 12000);
+// Funcionario f = new Funcionario("Tsubasa", 2000);   // NÃO compila: Funcionario é abstract</code></pre>
+      <ul>
+        <li><strong>O problema:</strong> antes do <code>abstract</code>, dava para criar <code>new Funcionario(...)</code>, um objeto que "não deveria existir" no exemplo da empresa.</li>
+        <li><code>public abstract class Funcionario</code> transforma a classe num template: <strong>não pode ser instanciada</strong>. Só as subclasses concretas (<code>Gerente</code>, <code>Desenvolvedor</code>) viram objetos.</li>
+        <li>A classe abstrata <strong>continua tendo construtor</strong>, e a herança funciona igual: para criar um gerente você precisa de nome e salário, então o construtor do <code>Gerente</code> chama <code>super(nome, salario)</code>.</li>
+        <li>Uma classe abstrata foi criada <strong>para ser estendida</strong>, ou seja, para ser superclasse.</li>
+        <li><strong><code>abstract</code> + <code>final</code> não combinam:</strong> um diz "tem que ser estendida", o outro "não pode ser estendida" (aulas 77–79). Não compila.</li>
+        <li>Os atributos são <code>protected</code> para as subclasses acessarem <code>nome</code> e <code>salario</code> direto no <code>toString</code>.</li>
+      </ul>
+
+      <h3>85 · Método abstrato: o contrato</h3>
+      <p>Agora todo funcionário precisa de <strong>cálculo de bônus</strong>. Primeiro o William coloca um método concreto em <code>Funcionario</code> (10% para todos: Nami vai a 5500.0 e Touya a 13200.0) e sobrescreve em <code>Desenvolvedor</code> (5%). Funciona, mas o <code>Gerente</code> fica com os 10% "herdados" sem ninguém ter decidido isso: se entrar um cargo novo e alguém esquecer, ele ganha o bônus padrão calado. A versão final:</p>
+<pre><code>public abstract class Funcionario {
+    protected String nome;
+    protected double salario;
+
+    public Funcionario(String nome, double salario) {
+        this.nome = nome;
+        this.salario = salario;
+        calculaBonus();                      // quem executa é o OBJETO (Gerente/Desenvolvedor)
+    }
+
+    public abstract void calculaBonus();     // sem corpo: termina com ;
+}
+
+public class Gerente extends Funcionario {
+    ...
+    @Override
+    public void calculaBonus() {
+        this.salario = this.salario + this.salario * 0.2;     // 20%
+    }
+}
+
+public class Desenvolvedor extends Funcionario {
+    ...
+    @Override
+    public void calculaBonus() {
+        this.salario = this.salario + this.salario * 0.05;    // 5%
+    }
+}
+// Gerente{nome='Nami', salario=6000.0}
+// Desenvolvedor{nome='Touya', salario=12600.0}</code></pre>
+      <ul>
+        <li>"O verdadeiro poder das classes abstratas" está nos <strong>métodos abstratos</strong>: um sinal (uma bandeira) dizendo "quem estender <code>Funcionario</code> <strong>precisa</strong> calcular o bônus".</li>
+        <li>Método abstrato <strong>não tem corpo</strong>. A subclasse concreta que não implementar <strong>não compila</strong>: o Gerente ficou com erro até ganhar o <code>@Override</code>.</li>
+        <li>Implementar com o corpo <strong>vazio</strong> também cumpre o contrato (compila). O Gerente fica com 5000, mas foi uma decisão explícita, não um esquecimento.</li>
+        <li><strong>Quem executa é sempre o objeto:</strong> mesmo chamando <code>calculaBonus()</code> dentro do construtor de <code>Funcionario</code>, roda a versão do <code>Desenvolvedor</code>, porque o objeto é um <code>Desenvolvedor</code>. "Se não entendeu, desenhe o objeto."</li>
+        <li>Classe abstrata pode ter métodos <strong>abstratos e concretos</strong> ao mesmo tempo (ex.: <code>toString</code> em <code>Funcionario</code>). Um método concreto faz sentido quando a lógica é igual para todos, como "deletar funcionário"; a subclasse que precisar muda com sobrescrita.</li>
+        <li><strong>Classe concreta não pode ter método abstrato.</strong> Tirar o <code>abstract</code> da classe <code>Funcionario</code> gera erro de compilação.</li>
+      </ul>
+
+      <h3>86 · Mais de um nível abstrato</h3>
+<pre><code>public abstract class Pessoa {
+    public abstract void imprime();
+}
+
+public abstract class Funcionario extends Pessoa {    // abstrata: NÃO é obrigada a implementar imprime
+    ...
+    @Override
+    public void imprime() {                            // mas pode, e aí vale para todas as filhas
+        System.out.println("Imprimindo...");
+    }
+}
+
+gerente.imprime();         // Imprimindo...
+desenvolvedor.imprime();   // Imprimindo...</code></pre>
+      <ul>
+        <li><strong>Regra:</strong> uma classe abstrata que estende outra abstrata <strong>não é obrigada</strong> a implementar os métodos abstratos herdados.</li>
+        <li>A obrigação cai na <strong>primeira classe concreta</strong> da hierarquia. Sem a implementação em <code>Funcionario</code>, <code>Gerente</code> e <code>Desenvolvedor</code> davam erro: "precisa ser declarada abstrata ou implementar <code>imprime()</code>".</li>
+        <li>Basta implementar <strong>uma vez</strong>: como <code>Funcionario</code> implementou <code>imprime()</code>, as filhas herdam e o erro some.</li>
+        <li>Java não tem herança múltipla de classes, mas tem <strong>hierarquia</strong>: <code>Gerente</code> → pai <code>Funcionario</code> → avô <code>Pessoa</code> → bisavô <code>Object</code>. O Gerente <strong>é um</strong> Funcionario, <strong>é uma</strong> Pessoa e <strong>é um</strong> Object.</li>
+        <li>Próximo passo: <strong>interfaces</strong> (aulas 87–89), "uma versão mais robusta da classe abstrata".</li>
+      </ul>
+
+      <h3>Atenção</h3>
+      <ul>
+        <li><strong>Método abstrato termina com <code>;</code></strong>, sem <code>{ }</code>. Escrever <code>public abstract void calculaBonus() { }</code> não compila.</li>
+        <li><strong>Classe abstrata não precisa ter método abstrato</strong> (a da aula 84 não tinha nenhum). Mas se tem método abstrato, a classe <strong>tem</strong> que ser abstrata.</li>
+        <li><strong>Não dá <code>new</code>, mas dá para usar como tipo:</strong> <code>Funcionario f = new Gerente("Nami", 5000);</code> compila. É a base do polimorfismo (aulas 90–94).</li>
+        <li><strong>Extra: método abstrato não pode ser <code>private</code>, <code>static</code> nem <code>final</code></strong>, porque nesses três casos a subclasse não conseguiria sobrescrever.</li>
+        <li><strong>Extra: cuidado ao chamar método sobrescrevível no construtor.</strong> Ele roda <em>antes</em> do corpo do construtor da subclasse e dos seus atributos serem inicializados. Aqui funciona porque <code>salario</code> está em <code>Funcionario</code>. Se o <code>Gerente</code> tivesse <code>private double percentual = 0.2;</code> e usasse no <code>calculaBonus</code>, o valor lido seria <code>0.0</code> (exercício 3).</li>
+        <li><strong>Extra: o bônus é aplicado a cada <code>new</code></strong>, porque está no construtor. Chamar <code>calculaBonus()</code> de novo depois aplica o bônus de novo (juros sobre juros).</li>
+      </ul>
+
+      <h3>Paralelo com PHP</h3>
+      <ul>
+        <li><strong>É praticamente igual:</strong> <code>abstract class Funcionario</code> e <code>abstract public function calculaBonus(): void;</code>. <code>new Funcionario()</code> no PHP lança <code>Error: Cannot instantiate abstract class</code>, só que em tempo de execução. Em Java, o erro aparece na compilação.</li>
+        <li><strong>A mesma regra da primeira classe concreta:</strong> no PHP, uma classe abstrata também pode deixar o método abstrato para as filhas, e a primeira concreta que não implementar dá <em>Fatal error</em> ao carregar a classe.</li>
+        <li><code>abstract final</code> também é proibido no PHP.</li>
+        <li><strong>Laravel está cheio disso:</strong> <code>Illuminate\Database\Eloquent\Model</code> é abstrata. Você nunca faz <code>new Model</code>, faz <code>class User extends Model</code>. <code>Illuminate\Foundation\Http\FormRequest</code> e muitos <code>Command</code>/<code>Job</code> seguem o mesmo contrato "estenda e implemente".</li>
+        <li>O construtor da abstrata chamando <code>calculaBonus()</code> é o padrão <strong>Template Method</strong>: a mãe define o fluxo e as filhas preenchem um passo. É o que o <code>Model::boot()</code> do Eloquent faz com <code>booted()</code> nas filhas.</li>
+      </ul>
+    </section>
+
+    <section id="flashcards">
+      <h2>Flashcards</h2>
+      <p style="color:var(--muted);margin-top:-6px">Toque no cartão para virar.</p>
+      <div id="flashcards-app"></div>
+    </section>
+
+    <section id="quiz">
+      <h2>Quiz</h2>
+      <div id="quiz-app"></div>
+    </section>
+
+    <section id="estudo">
+      <h2>Material de estudo</h2>
+
+      <h3>Mapa mental</h3>
+<pre><code>abstract
+├── Classe abstrata (84)
+│   ├── template: "funcionário" sozinho não existe
+│   ├── não pode dar new (é o contrário de concreta)
+│   ├── tem construtor → subclasse chama super(...)
+│   ├── feita para ser estendida
+│   └── abstract + final → não compila
+├── Método abstrato (85)
+│   ├── sem corpo: public abstract void calculaBonus();
+│   ├── contrato: toda subclasse concreta implementa
+│   ├── corpo vazio também cumpre o contrato
+│   ├── quem executa é o objeto (Gerente 20%, Desenvolvedor 5%)
+│   └── só existe dentro de classe abstrata
+└── Hierarquia (86)
+    ├── Pessoa (abstract imprime) ← Funcionario (abstract) ← Gerente
+    ├── abstrata que estende abstrata não é obrigada a implementar
+    ├── a primeira concreta é obrigada
+    └── implementou uma vez → as filhas herdam</code></pre>
+
+      <h3>Prática no seu WSL (20 minutos)</h3>
+<pre><code>cd ~/java-lab
+L=src/academy/devdojo/maratonajava/javacore/Lclassesabstratas
+mkdir -p $L/dominio $L/test
+
+cat > $L/dominio/Pessoa.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Lclassesabstratas.dominio;
+
+public abstract class Pessoa {
+    public abstract void imprime();
+}
+EOF
+
+cat > $L/dominio/Funcionario.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Lclassesabstratas.dominio;
+
+public abstract class Funcionario extends Pessoa {
+    protected String nome;
+    protected double salario;
+
+    public Funcionario(String nome, double salario) {
+        this.nome = nome;
+        this.salario = salario;
+        calculaBonus();
+    }
+
+    public abstract void calculaBonus();
+
+    @Override
+    public void imprime() {
+        System.out.println("Imprimindo...");
+    }
+}
+EOF
+
+cat > $L/dominio/Gerente.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Lclassesabstratas.dominio;
+
+public class Gerente extends Funcionario {
+    public Gerente(String nome, double salario) {
+        super(nome, salario);
+    }
+
+    @Override
+    public void calculaBonus() {
+        this.salario = this.salario + this.salario * 0.2;
+    }
+
+    @Override
+    public String toString() {
+        return "Gerente{nome='" + nome + "', salario=" + salario + "}";
+    }
+}
+EOF
+
+cat > $L/dominio/Desenvolvedor.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Lclassesabstratas.dominio;
+
+public class Desenvolvedor extends Funcionario {
+    public Desenvolvedor(String nome, double salario) {
+        super(nome, salario);
+    }
+
+    @Override
+    public void calculaBonus() {
+        this.salario = this.salario + this.salario * 0.05;
+    }
+
+    @Override
+    public String toString() {
+        return "Desenvolvedor{nome='" + nome + "', salario=" + salario + "}";
+    }
+}
+EOF
+
+cat > $L/test/FuncionarioTest01.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Lclassesabstratas.test;
+
+import academy.devdojo.maratonajava.javacore.Lclassesabstratas.dominio.Desenvolvedor;
+import academy.devdojo.maratonajava.javacore.Lclassesabstratas.dominio.Funcionario;
+import academy.devdojo.maratonajava.javacore.Lclassesabstratas.dominio.Gerente;
+
+public class FuncionarioTest01 {
+    public static void main(String[] args) {
+        Gerente gerente = new Gerente("Nami", 5000);
+        Desenvolvedor desenvolvedor = new Desenvolvedor("Touya", 12000);
+        System.out.println(gerente);                  // ?
+        System.out.println(desenvolvedor);            // ?
+        gerente.imprime();                            // ?
+        Funcionario f = new Gerente("Sanji", 1000);   // tipo abstrato, objeto concreto
+        System.out.println(f);                        // ?
+        f.calculaBonus();
+        System.out.println(f);                        // ? (bônus de novo)
+    }
+}
+EOF
+
+javac -d out $(find src -name '*.java')
+java -cp out academy.devdojo.maratonajava.javacore.Lclassesabstratas.test.FuncionarioTest01</code></pre>
+      <details>
+        <summary>Ver a saída esperada</summary>
+<pre><code>Gerente{nome='Nami', salario=6000.0}
+Desenvolvedor{nome='Touya', salario=12600.0}
+Imprimindo...
+Gerente{nome='Sanji', salario=1200.0}
+Gerente{nome='Sanji', salario=1440.0}</code></pre>
+      </details>
+      <p><strong>Exercícios:</strong></p>
+      <ol>
+        <li>No teste, escreva <code>new Funcionario("Tsubasa", 2000)</code> e leia o erro do <code>javac</code>. Depois tente <code>public abstract final class Funcionario</code>.</li>
+        <li>Crie <code>Estagiario extends Funcionario</code> <strong>sem</strong> <code>calculaBonus</code> e leia o erro. Implemente com o corpo vazio e confira que compila.</li>
+        <li>No <code>Gerente</code>, crie <code>private double percentual = 0.2;</code> e use <code>this.salario * percentual</code> no <code>calculaBonus</code>. Rode e explique por que a Nami ficou com 5000.0.</li>
+        <li>Tire a implementação de <code>imprime()</code> de <code>Funcionario</code>: onde aparecem os erros? Resolva implementando só em <code>Gerente</code> e <code>Desenvolvedor</code>, com mensagens diferentes.</li>
+      </ol>
+
+      <h3>Glossário</h3>
+      <ul>
+        <li><strong>Classe abstrata</strong>: classe marcada com <code>abstract</code>; não pode ser instanciada, existe para ser estendida.</li>
+        <li><strong>Classe concreta</strong>: classe normal, que pode virar objeto com <code>new</code>.</li>
+        <li><strong>Método abstrato</strong>: assinatura sem corpo (<code>;</code> no fim) que obriga as subclasses concretas a implementar.</li>
+        <li><strong>Método concreto</strong>: método com corpo; pode existir em classe abstrata.</li>
+        <li><strong>Contrato</strong>: o conjunto de métodos que quem estende a classe se compromete a implementar.</li>
+        <li><strong>Template</strong>: molde com o que é comum; o detalhe fica para as subclasses.</li>
+        <li><strong>Template Method</strong> (extra): padrão em que a superclasse define o fluxo e chama métodos abstratos que as filhas implementam.</li>
+      </ul>
+
+      <h3>Revisão espaçada</h3>
+      <ul class="revisao">
+        <li><span class="dia">Dia 1</span><span>Todos os flashcards + a prática com previsões.</span></li>
+        <li><span class="dia">Dia 3</span><span>Quiz + exercícios 1 e 2.</span></li>
+        <li><span class="dia">Dia 7</span><span>Exercícios 3 e 4 + desenhar a hierarquia Object ← Pessoa ← Funcionario ← Gerente.</span></li>
+        <li><span class="dia">Dia 14</span><span>Flashcards que errou + questões discursivas.</span></li>
+      </ul>
+
+      <h3>Para aprofundar</h3>
+      <ul>
+        <li>Qual a diferença entre classe abstrata e interface depois do Java 8 (métodos <code>default</code>)? Quando escolher cada uma?</li>
+        <li>Por que o livro <em>Effective Java</em> recomenda não chamar métodos sobrescrevíveis no construtor?</li>
+        <li>O que é o padrão Template Method e onde ele aparece no próprio JDK (por exemplo, <code>AbstractList</code>)?</li>
+        <li>O que são <em>sealed classes</em> (Java 17) e como elas limitam quem pode estender uma classe abstrata?</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    window.AULA = {
+      flashcards: [
+        ["O que significa uma classe abstract?", "Que ela não pode ser instanciada (não dá new); existe para ser estendida"],
+        ["Qual o contrário de abstrato?", "Concreto: a classe normal, que pode virar objeto"],
+        ["Por que Funcionario é abstrata no exemplo da aula?", "Na empresa ninguém é só funcionário: é gerente, desenvolvedor... Funcionario é um template"],
+        ["Classe abstrata tem construtor?", "Sim; as subclasses o chamam com super(nome, salario)"],
+        ["Pode ter abstract e final na mesma classe?", "Não: abstract exige ser estendida, final proíbe"],
+        ["Classe abstrata precisa ter método abstrato?", "Não. Mas se tiver método abstrato, a classe precisa ser abstrata"],
+        ["Como se declara um método abstrato?", "public abstract void calculaBonus(); (sem corpo, termina com ;)"],
+        ["Para que serve um método abstrato?", "Obrigar todas as subclasses concretas a implementar o método (contrato)"],
+        ["O que acontece se uma subclasse concreta não implementar o método abstrato?", "Erro de compilação"],
+        ["Implementar o método abstrato com corpo vazio vale?", "Sim, compila: o contrato foi cumprido"],
+        ["Qual o problema de deixar calculaBonus concreto (10%) em Funcionario?", "Uma subclasse que esquecer de sobrescrever ganha o bônus padrão sem ninguém perceber"],
+        ["calculaBonus() é chamado no construtor de Funcionario. Qual versão roda?", "A do objeto criado (Gerente ou Desenvolvedor): quem executa é sempre o objeto"],
+        ["Bônus da aula: Gerente e Desenvolvedor?", "Gerente 20% (Nami 5000 → 6000.0), Desenvolvedor 5% (Touya 12000 → 12600.0)"],
+        ["Classe abstrata pode ter métodos concretos?", "Sim, pode misturar métodos abstratos e concretos"],
+        ["Classe concreta pode ter método abstrato?", "Não, não compila"],
+        ["Abstrata que estende abstrata precisa implementar os métodos abstratos herdados?", "Não; a obrigação é da primeira classe concreta"],
+        ["Funcionario implementou imprime() de Pessoa. Gerente precisa implementar?", "Não: herda a implementação; basta implementar uma vez"],
+        ["Qual a hierarquia completa do Gerente da aula 86?", "Gerente → Funcionario → Pessoa → Object"],
+        ["Dá para declarar uma variável do tipo abstrato?", "Sim: Funcionario f = new Gerente(...); só o new da abstrata é proibido"],
+        ["Método abstrato pode ser private, static ou final?", "Não (extra): nos três casos não daria para sobrescrever"],
+        ["Por que é arriscado chamar método sobrescrevível no construtor?", "Ele roda antes dos atributos da subclasse serem inicializados (extra)"],
+        ["O que vem depois de classes abstratas no curso?", "Interfaces, \"uma versão mais robusta da classe abstrata\""]
+      ],
+      quiz: [
+        { tipo: 'vf', pergunta: 'Uma classe abstrata não pode ser instanciada com new.', correta: 0,
+          explicacao: 'Verdadeiro. new Funcionario(...) não compila. Só as subclasses concretas viram objetos.' },
+        { tipo: 'multipla', pergunta: 'Qual declaração de método abstrato compila?', opcoes: ['public abstract void calculaBonus() { }', 'public abstract void calculaBonus();', 'public void abstract calculaBonus();', 'private abstract void calculaBonus();'], correta: 1,
+          explicacao: 'Método abstrato não tem corpo e termina com ;. O modificador vem antes do tipo de retorno, e private impediria a sobrescrita.' },
+        { tipo: 'vf', pergunta: 'Uma classe abstrata pode ter construtor.', correta: 0,
+          explicacao: 'Verdadeiro. Funcionario tem construtor com nome e salário, chamado pelas subclasses com super(nome, salario).' },
+        { tipo: 'vf', pergunta: 'É possível declarar public abstract final class Funcionario.', correta: 1,
+          explicacao: 'Falso. abstract significa "tem que ser estendida" e final "não pode ser estendida": sentidos opostos, não compila.' },
+        { tipo: 'multipla', pergunta: 'Funcionario tem public abstract void calculaBonus(). Gerente extends Funcionario e não implementa o método. O que acontece?', opcoes: ['Gerente herda um corpo vazio', 'Erro de compilação em Gerente', 'Erro só em tempo de execução', 'Gerente vira abstrata automaticamente'], correta: 1,
+          explicacao: 'A subclasse concreta precisa implementar o método abstrato (nem que seja com corpo vazio) ou ser declarada abstract.' },
+        { tipo: 'multipla', pergunta: 'Gerente aplica 20% de bônus no calculaBonus, chamado pelo construtor de Funcionario. O que imprime System.out.println(new Gerente("Nami", 5000))?', opcoes: ["Gerente{nome='Nami', salario=5000.0}", "Gerente{nome='Nami', salario=5500.0}", "Gerente{nome='Nami', salario=6000.0}", 'Não compila: construtor não chama método abstrato'], correta: 2,
+          explicacao: 'Quem executa é o objeto: o construtor de Funcionario chama o calculaBonus do Gerente, 5000 + 5000 * 0.2 = 6000.0.' },
+        { tipo: 'multipla', pergunta: 'Sobre métodos em classes abstratas e concretas, qual afirmação está correta?', opcoes: ['Classe abstrata só pode ter métodos abstratos', 'Classe concreta pode ter método abstrato se for public', 'Classe abstrata pode misturar métodos abstratos e concretos', 'Toda classe abstrata precisa ter pelo menos um método abstrato'], correta: 2,
+          explicacao: 'A abstrata pode ter os dois tipos (e até nenhum abstrato, como na aula 84). Método abstrato só existe em classe abstrata.' },
+        { tipo: 'multipla', pergunta: 'Pessoa (abstrata) tem abstract void imprime(). Funcionario (abstrata) extends Pessoa e implementa imprime(). Gerente extends Funcionario. O que é verdade?', opcoes: ['Funcionario era obrigada a implementar imprime()', 'Gerente também precisa implementar imprime()', 'Gerente herda imprime() de Funcionario e compila', 'Gerente não pode chamar imprime()'], correta: 2,
+          explicacao: 'Abstrata que estende abstrata não é obrigada a implementar, mas se implementar, basta uma vez: as filhas herdam. Sem isso, a obrigação cairia na primeira concreta (Gerente).' },
+        { tipo: 'discursiva', pergunta: 'Por que o William trocou o calculaBonus concreto (10% em Funcionario) por um método abstrato? Use o caso do Gerente na sua resposta.',
+          explicacao: 'Com o método concreto, só o Desenvolvedor sobrescreveu (5%) e o Gerente ficou com os 10% herdados sem ninguém ter decidido. Um cargo novo que esquecesse de sobrescrever também ganharia o bônus padrão calado. Com public abstract void calculaBonus();, toda subclasse concreta é obrigada pelo compilador a implementar o cálculo (o Gerente ganhou 20%). Mesmo um corpo vazio vira uma decisão explícita, não um esquecimento.' },
+        { tipo: 'discursiva', pergunta: 'Compare classes abstratas em Java e em PHP e dê um exemplo do Laravel que usa a mesma ideia.',
+          explicacao: 'A sintaxe e as regras são quase iguais: abstract class, abstract public function x(): void;, sem instanciar, primeira classe concreta obrigada a implementar, abstract final proibido. A diferença é quando o erro aparece: em Java, na compilação; no PHP, ao carregar ou instanciar a classe (Error: Cannot instantiate abstract class, Fatal error por método não implementado). No Laravel, Illuminate\\Database\\Eloquent\\Model é abstrata: ninguém faz new Model, e sim class User extends Model, herdando o comportamento comum.' }
+      ]
+    };
+  </script>
+  <script src="../js/app.js"></script>
+</body>
+</html>
