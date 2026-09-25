@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>137–143 · Scanner e IO</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="topo">
+      <a class="voltar" href="../index.html">← Todas as aulas</a>
+      <h1>137–143 · Scanner com delimitadores e IO de arquivos</h1>
+      <p>Tokens e delimitadores, File, FileWriter, FileReader, BufferedWriter, BufferedReader e diretórios · <a href="https://www.youtube.com/playlist?list=PL62G310vn6nFIsOCC0H-C2infYgwm8SWW" target="_blank" rel="noopener">playlist</a></p>
+    </header>
+
+    <nav class="abas">
+      <a href="#resumo">Resumo</a>
+      <a href="#flashcards">Flashcards</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#estudo">Material de estudo</a>
+    </nav>
+
+    <p class="aviso">Junta a aula 137 (Scanner: tokens e delimitadores) com as aulas 138 a 143 (IO pt 01 a pt 06). Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. O código (pacotes <code>javacore.Uregex</code> e <code>javacore.Vio</code>, "Levi, Eren, Mikasa", "O DevDojo é lindo...") foi conferido no <a href="https://github.com/devdojobr/maratona-java-virado-no-jiraya" target="_blank" rel="noopener">repositório do professor</a>. O William usa Windows, e os caminhos da prática estão adaptados para o WSL. Os itens marcados como "extra" não estão nos vídeos.</p>
+
+    <section id="resumo">
+      <h2>Resumo</h2>
+      <p>A aula 137 fecha as classes de texto: <strong>tokens</strong> são os pedaços que sobram quando você quebra um texto pelos <strong>delimitadores</strong>, e o <code>Scanner</code> ainda converte cada pedaço para o tipo certo. Depois começa o <strong>IO</strong> (entrada e saída), "um dos assuntos mais legais, porque você vê o resultado quase de forma física". O pacote <code>java.io</code> tem <strong>uma classe para cada propósito</strong>, e elas são <strong>encadeadas</strong>:</p>
+<pre><code>File            → representa o arquivo/diretório (criar, apagar, renomear, consultar)
+FileWriter      → escreve caracteres no arquivo (baixo nível)
+FileReader      → lê caracteres do arquivo (baixo nível)
+BufferedWriter  → embrulha um Writer e escreve via buffer em memória (mais rápido)
+BufferedReader  → embrulha um Reader e lê linha a linha via buffer
+
+new BufferedWriter(new FileWriter(new File("file.txt"), true))   ← encadeamento</code></pre>
+
+      <h3>137 · Tokens, delimitadores e Scanner</h3>
+<pre><code>String texto = "Levi, Eren, Mikasa, true, 200";
+String[] nomes = texto.split(",");          // delimitador: , → tokens: "Levi", " Eren", ...
+for (String nome : nomes) {
+    System.out.println(nome.trim());        // todos são String
+}
+
+String texto2 = "Levi,Eren,Mikasa,true,200";
+Scanner scanner = new Scanner(texto2);      // Scanner lendo uma String (não o teclado)
+scanner.useDelimiter(",");                  // o padrão é o espaço em branco
+while (scanner.hasNext()) {                 // existe um próximo token?
+    if (scanner.hasNextInt()) {
+        int i = scanner.nextInt();
+        System.out.println("Int " + i);
+    } else if (scanner.hasNextBoolean()) {
+        boolean b = scanner.nextBoolean();
+        System.out.println("Boolean " + b);
+    } else {
+        System.out.println(scanner.next());
+    }
+}
+// Levi · Eren · Mikasa · Boolean true · Int 200</code></pre>
+      <ul>
+        <li><strong>Delimitador</strong> é o separador (a vírgula). <strong>Token</strong> é o resultado da quebra (os nomes). O delimitador é uma <strong>regex</strong>: pode ser <code>" "</code>, <code>"\\d"</code>...</li>
+        <li><code>split</code> sempre devolve <strong>String</strong>. Para ter <code>true</code> como <code>boolean</code> e <code>200</code> como <code>int</code>, use o <strong><code>Scanner</code></strong>, a mesma classe de ler o teclado (aulas 68–69), aqui lendo uma String.</li>
+        <li>O Scanner funciona como <strong>dois ponteiros</strong>: <code>hasNext...()</code> <strong>espia</strong> se existe o próximo (e de que tipo), e <code>next...()</code> <strong>anda</strong> e devolve o valor.</li>
+        <li><code>hasNextInt</code>/<code>nextInt</code>, <code>hasNextBoolean</code>/<code>nextBoolean</code>, <code>hasNextDouble</code>... Com eles você trata cada token pelo tipo.</li>
+      </ul>
+
+      <h3>138 · File</h3>
+<pre><code>File file = new File("file.txt");     // só um objeto: NÃO cria nada no disco
+try {
+    boolean isCreated = file.createNewFile();                       // agora cria (false se já existia)
+    System.out.println("Created " + isCreated);
+    System.out.println("path " + file.getPath());                   // file.txt
+    System.out.println("path absolute " + file.getAbsolutePath());  // /home/.../file.txt
+    System.out.println("is directory " + file.isDirectory());       // false
+    System.out.println("is file " + file.isFile());                 // true
+    System.out.println("is hidden " + file.isHidden());             // false
+    System.out.println("last modified " + Instant.ofEpochMilli(file.lastModified())
+            .atZone(ZoneId.systemDefault()));                       // long de ms → data legível
+    if (file.exists()) {
+        System.out.println("Deleted " + file.delete());             // true
+    }
+} catch (IOException exception) {                                   // createNewFile lança IOException (checked)
+    exception.printStackTrace();
+}</code></pre>
+      <ul>
+        <li>Só o nome (<code>"file.txt"</code>) cria o arquivo <strong>onde o programa roda</strong> (a raiz do projeto no IntelliJ). Um caminho absoluto no Windows precisa de <code>\\</code> (a barra é escape).</li>
+        <li><strong><code>new File(...)</code> não toca no disco.</strong> Quem cria é <code>createNewFile()</code>, que <strong>não sobrescreve</strong>: se o arquivo existe, devolve <code>false</code>.</li>
+        <li><code>delete()</code> num arquivo inexistente devolve <code>false</code>, sem exceção. A boa prática é checar <code>exists()</code> antes.</li>
+        <li><code>getPath()</code> devolve o caminho como foi passado, e <code>getAbsolutePath()</code> o caminho completo. Existem ainda <code>isDirectory</code>, <code>isFile</code>, <code>isHidden</code>, <code>canRead</code>, <code>canWrite</code>...</li>
+        <li><code>lastModified()</code> devolve os <strong>milissegundos desde 1970</strong> (aula 112). O jeito moderno de ler é <code>Instant.ofEpochMilli(...).atZone(ZoneId.systemDefault())</code> (aulas 122 e 128).</li>
+      </ul>
+
+      <h3>139 · FileWriter</h3>
+<pre><code>File file = new File("file.txt");
+try (FileWriter fw = new FileWriter(file, true)) {    // true = append (acrescenta no fim)
+    fw.write("O DevDojo é lindo, é o melhor curso do brasillllllll\nContinuando a cantoria na próxima linha\n");
+    fw.flush();                                       // descarrega o buffer antes de fechar
+} catch (IOException ex) {
+    ex.printStackTrace();
+}</code></pre>
+      <ul>
+        <li>O construtor aceita o <strong>nome</strong> ou um <strong><code>File</code></strong>. O William passa o <code>File</code> para mostrar o encadeamento. Se o arquivo não existe, o <code>FileWriter</code> <strong>cria</strong>.</li>
+        <li><strong>Recurso do sistema operacional precisa ser fechado</strong>, e o <strong>try-with-resources</strong> (aula 103) fecha sozinho. O <code>FileWriter</code> é <code>Closeable</code>.</li>
+        <li><strong><code>flush()</code>:</strong> o SO usa um buffer, como a barrinha de carregamento do YouTube. Antes de fechar, o <code>flush</code> "cospe" o que ficou no buffer para o arquivo.</li>
+        <li><strong>Sobrescrever × acrescentar:</strong> <code>new FileWriter(file)</code> <strong>apaga o conteúdo</strong> e escreve de novo. <code>new FileWriter(file, true)</code> acrescenta no fim (<em>append</em>).</li>
+        <li>O <code>\n</code> quebra a linha, mas <strong>não é garantido em todo sistema operacional</strong> (o Windows usa <code>\r\n</code>). O <code>BufferedWriter</code> resolve isso na aula 141.</li>
+      </ul>
+
+      <h3>140 · FileReader</h3>
+<pre><code>try (FileReader fr = new FileReader(file)) {
+    // Opção 1: ler num array
+    // char[] in = new char[1000];
+    // int size = fr.read(in);          // devolve QUANTOS caracteres leu
+    // for (char c : in) System.out.print(c);
+
+    // Opção 2: caractere por caractere até o fim
+    int i;
+    while ((i = fr.read()) != -1) {     // read() devolve o código do caractere; -1 = fim do arquivo
+        System.out.print((char) i);     // cast int → char
+    }
+} catch (IOException e) {
+    e.printStackTrace();
+}</code></pre>
+      <ul>
+        <li>É a classe <strong>mais baixo nível</strong> de leitura. O construtor recebe o <code>File</code> ou o nome.</li>
+        <li><strong><code>read()</code></strong> lê <strong>um caractere</strong> e devolve um <strong><code>int</code></strong> com o código dele (<code>65</code> = <code>'A'</code>, <code>79</code> = <code>'O'</code>). No <strong>fim do arquivo devolve <code>-1</code></strong>.</li>
+        <li>O laço <code>while ((i = fr.read()) != -1)</code> <strong>lê, guarda e compara</strong> ao mesmo tempo. Sem o <code>(char)</code>, só aparecem números.</li>
+        <li><code>read(char[])</code> preenche o array e devolve <strong>quantos</strong> caracteres leu. Com um array pequeno (30), você lê só o começo do arquivo.</li>
+      </ul>
+
+      <h3>141 · BufferedWriter</h3>
+<pre><code>try (FileWriter fw = new FileWriter(file, true);
+     BufferedWriter bw = new BufferedWriter(fw)) {     // encapsula o FileWriter
+    bw.write("O DevDojo é lindo, é o melhor curso do brasillllllll");
+    bw.newLine();                                      // quebra de linha do SO
+    bw.flush();
+} catch (IOException ex) {
+    ex.printStackTrace();
+}</code></pre>
+      <ul>
+        <li><code>FileWriter</code> e <code>FileReader</code> são <em>low level</em> e não foram feitos pensando em desempenho. Para arquivos grandes, use os <strong>Buffered</strong>.</li>
+        <li>O <code>BufferedWriter</code> <strong>encapsula</strong> um <code>Writer</code>: acumula os dados num buffer <strong>em memória</strong> e grava no disco em blocos, o que é bem mais rápido que ir ao disco a cada escrita. O construtor aceita o tamanho do buffer (<code>new BufferedWriter(fw, 2048)</code>), mas o padrão costuma bastar.</li>
+        <li><strong><code>newLine()</code></strong> usa o separador de linha do <strong>sistema operacional</strong> (<code>System.lineSeparator()</code>): <code>\n</code> no Linux e no Mac, <code>\r\n</code> no Windows.</li>
+        <li>Continua precisando de <code>flush()</code> e de ser fechado (try-with-resources).</li>
+        <li>Dica do William: o nome da variável acompanha a classe (<code>bw</code> para BufferedWriter, <code>br</code> para BufferedReader). O plugin <em>Rainbow Brackets</em> colore parênteses aninhados.</li>
+      </ul>
+
+      <h3>142 · BufferedReader</h3>
+<pre><code>try (FileReader fr = new FileReader(file);
+     BufferedReader br = new BufferedReader(fr)) {
+    String linha;
+    while ((linha = br.readLine()) != null) {   // lê uma LINHA inteira; fim do arquivo = null
+        System.out.println(linha);
+    }
+} catch (IOException e) {
+    e.printStackTrace();
+}</code></pre>
+      <ul>
+        <li>Mesmo padrão: o <code>BufferedReader</code> encapsula o <code>FileReader</code>.</li>
+        <li><strong><code>readLine()</code></strong> lê a <strong>linha inteira</strong>, sem o <code>\n</code>, bem mais eficiente que caractere por caractere. No fim devolve <strong><code>null</code></strong> (e não <code>-1</code>).</li>
+        <li>O William resume assim: mais classes encadeadas dão um pouco mais de código, mas <strong>cada classe tem um propósito</strong> (coesão, aulas 39–43), e isso deixa o código mais fácil de manter.</li>
+      </ul>
+
+      <h3>143 · File para diretórios</h3>
+<pre><code>File fileDiretorio = new File("pasta");
+boolean isDiretorioCreated = fileDiretorio.mkdir();               // cria o diretório (false se já existe)
+File fileArquivoDiretorio = new File(fileDiretorio, "arquivo.txt"); // (pai, nome) → pasta/arquivo.txt
+boolean isFileCreated = fileArquivoDiretorio.createNewFile();
+
+File fileRenamed = new File(fileDiretorio, "arquivo_renomeado.txt");
+boolean isRenamed = fileArquivoDiretorio.renameTo(fileRenamed);   // renomeia (recebe um File!)
+
+File diretorioRenamed = new File("pasta2");
+boolean isDiretorioRenomeado = fileDiretorio.renameTo(diretorioRenamed);</code></pre>
+      <ul>
+        <li>O mesmo <code>File</code> representa arquivo <strong>ou</strong> diretório: depende do método chamado. <strong><code>mkdir()</code></strong> cria o diretório (o nome vem do Unix).</li>
+        <li><strong>Arquivo dentro do diretório:</strong> dá para passar o caminho completo, mas é melhor o construtor <strong><code>new File(diretorio, "arquivo.txt")</code></strong>. Com só <code>new File("arquivo.txt")</code>, ele vai para a raiz do projeto.</li>
+        <li><strong><code>renameTo(File destino)</code></strong> recebe um <code>File</code>, não uma String. O destino define <strong>nome e lugar</strong>: <code>new File("arquivo_renomeado.txt")</code> tira o arquivo da pasta (renomear é mover). Para manter na pasta, crie o destino com o mesmo pai.</li>
+        <li>Todos devolvem <code>boolean</code> e <strong>não lançam exceção</strong> quando não conseguem. Rodando de novo: <code>mkdir</code> dá <code>false</code> (a pasta existe), e <code>renameTo</code> dá <code>false</code> se o destino já existe. Use o debug passo a passo para acompanhar.</li>
+      </ul>
+
+      <h3>Atenção</h3>
+      <ul>
+        <li><strong><code>new File()</code> não cria nada</strong>, mas <code>new FileWriter()</code> cria o arquivo (e <strong>apaga o conteúdo</strong>, se não for <code>append</code>).</li>
+        <li><strong>Fim do arquivo:</strong> <code>FileReader.read()</code> → <code>-1</code> · <code>BufferedReader.readLine()</code> → <code>null</code>.</li>
+        <li><strong>Sempre feche</strong> (try-with-resources). Ao escrever sem fechar nem dar <code>flush</code>, parte do texto pode não chegar ao arquivo.</li>
+        <li><strong>Extra: fechar o de fora fecha o de dentro.</strong> <code>bw.close()</code> já fecha o <code>FileWriter</code>. Declarar os dois no <code>try( )</code> (como na aula) também funciona.</li>
+        <li><strong>Extra: encoding.</strong> <code>FileReader</code>/<code>FileWriter</code> usam o charset padrão da JVM (UTF-8 a partir do Java 18). Em versões antigas no Windows, os acentos podiam quebrar. Seja explícito: <code>new FileWriter(file, StandardCharsets.UTF_8, true)</code> (Java 11+).</li>
+        <li><strong>Extra:</strong> <code>mkdirs()</code> cria as pastas intermediárias (<code>a/b/c</code>). <code>listFiles()</code> lista o conteúdo do diretório. <code>delete()</code> num diretório não vazio devolve <code>false</code>.</li>
+        <li><strong>Extra:</strong> o NIO (<code>Path</code>/<code>Files</code>, aulas 144+) é a API mais nova e mais prática: <code>Files.readAllLines(path)</code> e <code>Files.writeString(path, texto)</code>.</li>
+      </ul>
+
+      <h3>Paralelo com PHP</h3>
+      <ul>
+        <li><strong>Tokens:</strong> <code>split(",")</code> ≈ <code>explode(',', $s)</code> (separador fixo) ou <code>preg_split</code> (regex). O PHP não tem um Scanner tipado: você converte à mão (<code>(int)</code>, <code>filter_var</code>), ou usa <code>str_getcsv</code> para CSV.</li>
+        <li><strong>File ↔ funções do PHP:</strong>
+          <ul>
+            <li><code>exists</code> ≈ <code>file_exists</code>, <code>isDirectory</code>/<code>isFile</code> ≈ <code>is_dir</code>/<code>is_file</code>.</li>
+            <li><code>lastModified</code> ≈ <code>filemtime</code> (em <strong>segundos</strong>, não ms).</li>
+            <li><code>delete</code> ≈ <code>unlink</code>, <code>mkdir</code> ≈ <code>mkdir</code>, <code>renameTo</code> ≈ <code>rename</code>, <code>getAbsolutePath</code> ≈ <code>realpath</code>.</li>
+            <li><code>createNewFile</code> ≈ <code>touch</code> (que, diferente do Java, não falha se o arquivo existe).</li>
+          </ul>
+        </li>
+        <li><strong>Escrever:</strong> <code>new FileWriter(file, true)</code> ≈ <code>file_put_contents($f, $s, FILE_APPEND)</code>. <code>newLine()</code> ≈ <code>PHP_EOL</code>.</li>
+        <li><strong>Ler linha a linha:</strong> <code>while ((linha = br.readLine()) != null)</code> ≈ <code>while (($linha = fgets($h)) !== false)</code> (no PHP o fim é <code>false</code>, e a linha vem <strong>com</strong> o <code>\n</code>). Ler tudo: <code>file_get_contents</code> ≈ <code>Files.readString</code>, e <code>file()</code> ≈ <code>Files.readAllLines</code>.</li>
+        <li><strong>Fechar:</strong> no PHP o <code>fclose</code> costuma ficar implícito no fim do script. Em Java, um servidor roda por meses, então vazar recurso derruba a aplicação. Daí o try-with-resources.</li>
+        <li><strong>Laravel:</strong> <code>Storage::put</code>, <code>append</code>, <code>get</code>, <code>exists</code>, <code>delete</code>, <code>makeDirectory</code>, <code>move</code>. É uma camada acima, como o NIO.</li>
+      </ul>
+    </section>
+
+    <section id="flashcards">
+      <h2>Flashcards</h2>
+      <p style="color:var(--muted);margin-top:-6px">Toque no cartão para virar.</p>
+      <div id="flashcards-app"></div>
+    </section>
+
+    <section id="quiz">
+      <h2>Quiz</h2>
+      <div id="quiz-app"></div>
+    </section>
+
+    <section id="estudo">
+      <h2>Material de estudo</h2>
+
+      <h3>Mapa mental</h3>
+<pre><code>Tokens e IO
+├── Tokens (137)
+│   ├── delimitador (regex) quebra o texto → tokens
+│   ├── split(",") → String[] (tudo String)
+│   └── Scanner(texto).useDelimiter(",") · hasNextInt/nextInt · hasNextBoolean · next
+├── File (138, 143)
+│   ├── new File() não cria · createNewFile() cria (false se existe)
+│   ├── exists · delete · getPath · getAbsolutePath · isFile · isDirectory · isHidden
+│   ├── lastModified (ms) → Instant.ofEpochMilli
+│   └── mkdir · new File(dir, "nome") · renameTo(File) (renomear = mover)
+├── Escrita (139, 141)
+│   ├── FileWriter(file, true) · write · flush (append ou sobrescreve)
+│   └── BufferedWriter(fw) · newLine() (separador do SO) · buffer em memória
+├── Leitura (140, 142)
+│   ├── FileReader.read() → int, -1 no fim · read(char[]) → quantos leu
+│   └── BufferedReader(fr).readLine() → String, null no fim
+└── Regras
+    ├── try-with-resources (Closeable) + flush
+    ├── IOException (checked)
+    └── encadeamento: uma classe, um propósito</code></pre>
+
+      <h3>Prática no seu WSL (20 minutos)</h3>
+<pre><code>cd ~/java-lab
+V=src/academy/devdojo/maratonajava/javacore/Vio
+mkdir -p $V/test
+
+cat > $V/test/IoTest01.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Vio.test;
+
+import java.io.*;
+import java.util.Scanner;
+
+public class IoTest01 {
+    public static void main(String[] args) throws IOException {
+        // 137 · Scanner com delimitador
+        Scanner scanner = new Scanner("Levi,Eren,Mikasa,true,200");
+        scanner.useDelimiter(",");
+        while (scanner.hasNext()) {
+            if (scanner.hasNextInt()) System.out.println("Int " + scanner.nextInt());
+            else if (scanner.hasNextBoolean()) System.out.println("Boolean " + scanner.nextBoolean());
+            else System.out.println(scanner.next());
+        }
+
+        // 138 · File
+        File file = new File("lab-io.txt");
+        if (file.exists()) file.delete();                     // começa limpo
+        System.out.println("Created " + file.createNewFile());      // ?
+        System.out.println("Created " + file.createNewFile());      // ? (de novo)
+        System.out.println("is file " + file.isFile());             // ?
+
+        // 139/141 · escrita
+        try (FileWriter fw = new FileWriter(file)) {                 // sobrescreve
+            fw.write("Linha 1\n");
+        }
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(file, true))) {   // append
+            bw.write("Linha 2");
+            bw.newLine();
+            bw.write("Linha 3");
+            bw.newLine();
+        }
+
+        // 140 · FileReader: caractere por caractere
+        try (FileReader fr = new FileReader(file)) {
+            System.out.println(fr.read());                           // ? (código do 1º caractere)
+            char[] in = new char[4];
+            System.out.println(fr.read(in) + " " + new String(in)); // ?
+        }
+
+        // 142 · BufferedReader: linha por linha
+        try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+            String linha;
+            int n = 0;
+            while ((linha = br.readLine()) != null) {
+                System.out.println(++n + ": " + linha);
+            }
+        }
+
+        // 143 · diretórios
+        File pasta = new File("lab-pasta");
+        System.out.println("Pasta criada? " + pasta.mkdir());        // ?
+        File arquivo = new File(pasta, "arquivo.txt");
+        System.out.println("arquivo criado? " + arquivo.createNewFile());
+        File renomeado = new File(pasta, "arquivo_renomeado.txt");
+        System.out.println("renomeado? " + arquivo.renameTo(renomeado));
+        System.out.println(String.join(",", pasta.list()));          // ? (extra: conteúdo da pasta)
+    }
+}
+EOF
+
+javac -d out $(find src -name '*.java')
+rm -rf lab-pasta
+java -cp out academy.devdojo.maratonajava.javacore.Vio.test.IoTest01
+cat lab-io.txt; ls lab-pasta</code></pre>
+      <details>
+        <summary>Ver a saída esperada</summary>
+<pre><code>Levi
+Eren
+Mikasa
+Boolean true
+Int 200
+Created true
+Created false
+is file true
+76
+4 inha
+1: Linha 1
+2: Linha 2
+3: Linha 3
+Pasta criada? true
+arquivo criado? true
+renomeado? true
+arquivo_renomeado.txt
+(cat e ls mostram o mesmo conteúdo)
+Linha 1
+Linha 2
+Linha 3
+arquivo_renomeado.txt</code></pre>
+      </details>
+      <p><strong>Exercícios:</strong></p>
+      <ol>
+        <li>Rode o programa uma segunda vez <strong>sem</strong> o <code>rm -rf lab-pasta</code>. Quais <code>boolean</code>s mudam e por quê?</li>
+        <li>Troque o primeiro <code>new FileWriter(file)</code> por <code>new FileWriter(file, true)</code> e rode duas vezes. O que acontece com o arquivo?</li>
+        <li>Tire o <code>try-with-resources</code> do <code>BufferedWriter</code> (sem <code>close</code> nem <code>flush</code>) e veja o que chega no arquivo.</li>
+        <li>Leia um CSV <code>nome;idade;ativo</code> (três linhas) com <code>BufferedReader</code> e, em cada linha, um <code>Scanner</code> com <code>useDelimiter(";")</code> que leia a idade como <code>int</code> e o ativo como <code>boolean</code>.</li>
+        <li>Crie <code>a/b/c</code> com <code>mkdir()</code> e depois com <code>mkdirs()</code>. Qual funciona e por quê?</li>
+      </ol>
+
+      <h3>Glossário</h3>
+      <ul>
+        <li><strong>Token</strong>: cada pedaço resultante da quebra de um texto.</li>
+        <li><strong>Delimitador</strong>: o separador (regex) usado para quebrar o texto.</li>
+        <li><strong>IO (entrada e saída)</strong>: ler e escrever dados fora do programa (arquivos, rede, console).</li>
+        <li><strong>Buffer</strong>: área de memória que acumula dados antes de gravar ou depois de ler, para reduzir o acesso ao disco.</li>
+        <li><strong><code>flush</code></strong>: forçar a gravação do que está no buffer.</li>
+        <li><strong>Append</strong>: acrescentar no fim do arquivo em vez de sobrescrever.</li>
+        <li><strong>Encadeamento (decorator)</strong>: uma classe embrulha a outra para acrescentar comportamento (<code>BufferedReader(FileReader(File))</code>).</li>
+        <li><strong>Separador de linha</strong>: <code>\n</code> (Linux/Mac) ou <code>\r\n</code> (Windows); <code>newLine()</code> e <code>System.lineSeparator()</code> escolhem o certo.</li>
+        <li><strong>Caminho relativo / absoluto</strong>: a partir de onde o programa roda / a partir da raiz do sistema.</li>
+      </ul>
+
+      <h3>Revisão espaçada</h3>
+      <ul class="revisao">
+        <li><span class="dia">Dia 1</span><span>Todos os flashcards + a prática com previsões.</span></li>
+        <li><span class="dia">Dia 3</span><span>Quiz + exercícios 1 a 3.</span></li>
+        <li><span class="dia">Dia 7</span><span>Exercícios 4 e 5 + desenhar o encadeamento File → FileWriter → BufferedWriter.</span></li>
+        <li><span class="dia">Dia 14</span><span>Flashcards que errou + questões discursivas.</span></li>
+      </ul>
+
+      <h3>Para aprofundar</h3>
+      <ul>
+        <li>Qual a diferença entre as famílias <code>Reader</code>/<code>Writer</code> (caracteres) e <code>InputStream</code>/<code>OutputStream</code> (bytes)? Quando usar cada uma?</li>
+        <li>O que é o padrão <em>Decorator</em> e por que o <code>java.io</code> é o exemplo clássico dele?</li>
+        <li>Como ler um arquivo de vários GB sem estourar a memória?</li>
+        <li>O que o <code>PrintWriter</code> acrescenta (<code>println</code>, <code>printf</code>) em relação ao <code>BufferedWriter</code>?</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    window.AULA = {
+      flashcards: [
+        ["O que são token e delimitador?", "Delimitador é o separador (ex.: vírgula); tokens são os pedaços resultantes"],
+        ["O que split devolve?", "Um String[]: todos os tokens como String"],
+        ["Como ler tokens já convertidos (int, boolean)?", "Scanner(texto) + useDelimiter(\",\") + hasNextInt/nextInt, hasNextBoolean/nextBoolean"],
+        ["Qual o delimitador padrão do Scanner?", "Espaço em branco"],
+        ["hasNext() × next()?", "hasNext espia se existe o próximo token; next anda e devolve o token"],
+        ["new File(\"file.txt\") cria o arquivo?", "Não: só cria o objeto; quem cria é createNewFile()"],
+        ["createNewFile() num arquivo que já existe?", "Devolve false e não sobrescreve"],
+        ["Por que checar exists() antes de delete()?", "Boa prática; delete() num inexistente só devolve false"],
+        ["getPath() × getAbsolutePath()?", "O caminho como foi passado × o caminho completo no disco"],
+        ["O que lastModified() devolve?", "Os milissegundos desde 1970 (use Instant.ofEpochMilli para ler)"],
+        ["new FileWriter(file) × new FileWriter(file, true)?", "Sobrescreve o conteúdo × acrescenta no fim (append)"],
+        ["Para que serve flush()?", "Descarregar no arquivo o que ficou no buffer antes de fechar"],
+        ["Por que usar try-with-resources com FileWriter/FileReader?", "São recursos do SO (Closeable) e precisam ser fechados"],
+        ["O que FileReader.read() devolve?", "Um int com o código do caractere; -1 no fim do arquivo"],
+        ["Como imprimir o caractere lido pelo read()?", "Com cast: (char) i"],
+        ["O que read(char[]) devolve?", "Quantos caracteres foram lidos para o array"],
+        ["Por que BufferedWriter/BufferedReader?", "Usam um buffer em memória e são bem mais rápidos que os File* diretos"],
+        ["Por que newLine() em vez de \\n?", "newLine usa o separador de linha do SO (\\r\\n no Windows)"],
+        ["O que readLine() devolve no fim do arquivo?", "null"],
+        ["Como criar um diretório?", "new File(\"pasta\").mkdir()"],
+        ["Como criar um arquivo dentro de um diretório?", "new File(diretorio, \"arquivo.txt\").createNewFile()"],
+        ["O que renameTo recebe?", "Um File de destino (nome e lugar); renomear para outro lugar = mover"],
+        ["mkdir/renameTo lançam exceção quando falham?", "Não: devolvem false"],
+        ["Fechar o BufferedWriter fecha o FileWriter?", "Sim: fechar o de fora fecha o de dentro (extra)"],
+        ["Qual API mais nova substitui boa parte do java.io?", "NIO: Path e Files (aulas 144+)"]
+      ],
+      quiz: [
+        { tipo: 'multipla', pergunta: 'Scanner s = new Scanner("Levi,true,200"); s.useDelimiter(","); Qual chamada devolve 200 como int (depois de consumir os dois primeiros)?', opcoes: ['s.next()', 's.nextInt()', 's.nextLine()', 's.split(",")[2]'], correta: 1,
+          explicacao: 'nextInt converte o token para int. next devolveria a String "200", e Scanner não tem split.' },
+        { tipo: 'vf', pergunta: 'File file = new File("file.txt"); já cria o arquivo no disco.', correta: 1,
+          explicacao: 'Falso. É só um objeto que representa o caminho. Quem cria é file.createNewFile() (ou um FileWriter).' },
+        { tipo: 'multipla', pergunta: 'O arquivo já existe com conteúdo. O que new FileWriter(file) (sem o segundo argumento) faz com ele?', opcoes: ['Lança exceção: o arquivo já existe', 'Acrescenta no fim', 'Apaga o conteúdo e escreve do zero', 'Abre só para leitura'], correta: 2,
+          explicacao: 'Sem append, o FileWriter sobrescreve. Com new FileWriter(file, true), acrescenta no fim.' },
+        { tipo: 'multipla', pergunta: 'Qual laço lê um arquivo inteiro com FileReader?', opcoes: ['while (fr.read() != null)', 'int i; while ((i = fr.read()) != -1) System.out.print((char) i);', 'while (fr.hasNext()) fr.read();', 'for (char c : fr) System.out.print(c);'], correta: 1,
+          explicacao: 'read() devolve o código do caractere como int e -1 no fim. O cast (char) mostra a letra.' },
+        { tipo: 'multipla', pergunta: 'O que BufferedReader.readLine() devolve quando chega ao fim do arquivo?', opcoes: ['-1', '"" (String vazia)', 'null', 'Lança EOFException'], correta: 2,
+          explicacao: 'readLine devolve null no fim. -1 é do read() do FileReader, e uma linha em branco no meio do arquivo é "".' },
+        { tipo: 'vf', pergunta: 'bw.newLine() sempre grava "\\n", independentemente do sistema operacional.', correta: 1,
+          explicacao: 'Falso. newLine usa o separador de linha do sistema (System.lineSeparator()): \\r\\n no Windows, \\n no Linux e no Mac.' },
+        { tipo: 'multipla', pergunta: 'Qual a principal vantagem do BufferedWriter sobre o FileWriter puro?', opcoes: ['Escreve em qualquer encoding sem configuração', 'Acumula em memória e grava em blocos, bem mais rápido', 'Não precisa ser fechado', 'Cria diretórios automaticamente'], correta: 1,
+          explicacao: 'O buffer reduz os acessos ao disco. Mesmo assim precisa de flush e de ser fechado.' },
+        { tipo: 'multipla', pergunta: 'arquivo = new File(pasta, "arquivo.txt"); Qual renameTo mantém o arquivo dentro de "pasta"?', opcoes: ['arquivo.renameTo(new File("renomeado.txt"))', 'arquivo.renameTo(new File(pasta, "renomeado.txt"))', 'arquivo.renameTo("renomeado.txt")', 'arquivo.rename("renomeado.txt")'], correta: 1,
+          explicacao: 'O destino define nome e lugar. Sem o pai, o arquivo vai para a raiz do projeto (move). renameTo recebe File, não String.' },
+        { tipo: 'discursiva', pergunta: 'Explique o encadeamento new BufferedReader(new FileReader(new File("file.txt"))): o que cada classe faz e por que o java.io é dividido assim.',
+          explicacao: 'File só representa o caminho (e sabe criar, apagar, renomear e consultar). FileReader abre o arquivo e lê caracteres em baixo nível (read() devolve um int, -1 no fim). BufferedReader embrulha o Reader, lê blocos para um buffer em memória e oferece readLine(), que devolve a linha inteira ou null no fim. Cada classe tem um propósito só (coesão), e elas se combinam por composição (padrão Decorator): dá para trocar o FileReader por outro Reader, ou tirar o buffer, sem mudar o resto. O custo é um pouco mais de código. Tudo precisa ser fechado (try-with-resources), e fechar o BufferedReader fecha o FileReader.' },
+        { tipo: 'discursiva', pergunta: 'Traduza para Java o PHP: file_put_contents("log.txt", "linha" . PHP_EOL, FILE_APPEND); e depois um laço que lê o arquivo com fgets. Compare os cuidados de cada linguagem.',
+          explicacao: 'Escrita: try (BufferedWriter bw = new BufferedWriter(new FileWriter("log.txt", true))) { bw.write("linha"); bw.newLine(); }, onde true = FILE_APPEND e newLine() = PHP_EOL. Leitura: try (BufferedReader br = new BufferedReader(new FileReader("log.txt"))) { String l; while ((l = br.readLine()) != null) { ... } }. No PHP, fgets devolve false no fim e a linha vem com o \\n. No Java, readLine devolve null e tira o separador. Em Java, IOException é checked (try/catch ou throws), e fechar é obrigatório de verdade: o processo roda por muito tempo e vazar recurso derruba a aplicação. No PHP, o fim da requisição costuma fechar tudo. Para o jeito curto, o NIO: Files.writeString(path, s, APPEND) e Files.readAllLines(path).' }
+      ]
+    };
+  </script>
+  <script src="../js/app.js"></script>
+</body>
+</html>
