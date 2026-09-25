@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>80–83 · Enumeração</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="topo">
+      <a class="voltar" href="../index.html">← Todas as aulas</a>
+      <h1>80–83 · Enumeração (enum)</h1>
+      <p>Opções fixas com tipo próprio, atributos e construtor no enum, métodos por constante e busca por atributo · <a href="https://www.youtube.com/playlist?list=PL62G310vn6nFIsOCC0H-C2infYgwm8SWW" target="_blank" rel="noopener">playlist</a></p>
+    </header>
+
+    <nav class="abas">
+      <a href="#resumo">Resumo</a>
+      <a href="#flashcards">Flashcards</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#estudo">Material de estudo</a>
+    </nav>
+
+    <p class="aviso">Junta as aulas 80 (introdução), 81 (construtores e atributos), 82 (sobrescrita de métodos) e 83 (busca por atributos). Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. O código (pacote <code>javacore.Kenum</code>, clientes Tsubasa e Akira) foi conferido no <a href="https://github.com/devdojobr/maratona-java-virado-no-jiraya" target="_blank" rel="noopener">repositório do professor</a>. <code>ordinal()</code>, enum no <code>switch</code> e os itens marcados como "extra" não estão nos vídeos.</p>
+
+    <section id="resumo">
+      <h2>Resumo</h2>
+      <p>Muitos atributos só podem assumir <strong>poucas opções fixas</strong>: tipo de cliente (pessoa física ou jurídica), dia da semana, período do dia, forma de pagamento. Guardar isso numa <code>String</code> deixa a porta aberta para "Pessoa_juridica", "pessoa fisica" e outras variações. Uma <strong>enumeração</strong> (<code>enum</code>) é um tipo especial de classe que <strong>lista as únicas opções válidas</strong>, e o compilador não aceita outra coisa. E, por ser uma classe, o enum pode ter atributos, construtor e métodos.</p>
+
+      <h3>80 · O problema e o enum</h3>
+<pre><code>// Com String: cada um escreve de um jeito
+new Cliente("Tsubasa", "PESSOA_FISICA");
+new Cliente("Tsubasa", "Pessoa_juridica");   // compila... e suja o banco de dados
+
+// Com enum
+public enum TipoCliente {
+    PESSOA_FISICA,
+    PESSOA_JURIDICA
+}
+
+public class Cliente {
+    private String nome;
+    private TipoCliente tipoCliente;          // Cliente TEM UM TipoCliente
+    public Cliente(String nome, TipoCliente tipoCliente) { ... }
+}
+
+new Cliente("Tsubasa", TipoCliente.PESSOA_FISICA);
+// new Cliente("Tsubasa", "PESSOA_FISICA");   // NÃO compila: o tipo é TipoCliente</code></pre>
+      <ul>
+        <li><strong>A inconsistência de dados:</strong> com <code>String</code>, outra pessoa da equipe escreve "Pessoa_juridica" e o código aceita. Com 15 milhões de registros no banco, corrigir isso depois "dá um trabalhão".</li>
+        <li>Validar a String (<code>if (!tipo.equals("PESSOA_FISICA") &amp;&amp; ...)</code>) até funciona, mas é feio e fácil de esquecer. Detalhe da aula: Strings se comparam com <code>equals</code> (ou <code>equalsIgnoreCase</code>), não com <code>==</code>. Isso volta mais à frente.</li>
+        <li><strong><code>enum</code></strong> se cria como uma classe (<code>public enum TipoCliente</code>, com as mesmas regras de nome). Os valores listados são como <strong>constantes <code>public static final</code> do tipo <code>TipoCliente</code></strong>, e por isso usam MAIÚSCULAS e se acessam por <code>TipoCliente.PESSOA_FISICA</code>.</li>
+        <li>Qual o tipo de <code>PESSOA_FISICA</code>? É <code>TipoCliente</code>. Não é String nem int.</li>
+        <li>O enum <strong>força</strong> quem cria o objeto a escolher uma das opções. Para aceitar uma nova, é preciso acrescentá-la ao enum. O William: "gosto muito disso no Java, que é fortemente tipado e evita erros".</li>
+        <li>O <code>toString()</code> padrão de uma constante é <strong>o nome exatamente como está escrito</strong>: <code>PESSOA_FISICA</code>.</li>
+        <li><strong>Quando usar:</strong> uma quantidade <strong>limitada</strong> de opções. A velocidade limite da aula 77, por exemplo, é um valor só, e continua sendo uma constante.</li>
+      </ul>
+
+      <h3>81 · Enum dentro de classe, atributos e construtor</h3>
+<pre><code>public enum TipoCliente {
+    PESSOA_FISICA(1, "Pessoa Física"),       // chama o construtor
+    PESSOA_JURIDICA(2, "Pessoa Jurídica");   // ← ponto e vírgula antes dos atributos
+
+    private int valor;                        // atributos vêm DEPOIS das constantes
+    private String nomeRelatorio;
+
+    TipoCliente(int valor, String nomeRelatorio) {   // construtor (sempre private)
+        this.valor = valor;
+        this.nomeRelatorio = nomeRelatorio;
+    }
+
+    public int getValor() { return valor; }
+    public String getNomeRelatorio() { return nomeRelatorio; }
+}
+
+Cliente cliente1 = new Cliente("Tsubasa", TipoCliente.PESSOA_FISICA, TipoPagamento.DEBITO);
+Cliente cliente2 = new Cliente("Akira", TipoCliente.PESSOA_JURIDICA, TipoPagamento.CREDITO);
+// Cliente{nome='Tsubasa', tipoCliente=Pessoa Física, tipoClienteInt=1, tipoPagamento=DEBITO}</code></pre>
+      <ul>
+        <li><strong>Enum dentro de classe:</strong> dá para declarar <code>public enum TipoPagamento { DEBITO, CREDITO }</code> dentro de <code>Cliente</code>, com uso <code>Cliente.TipoPagamento.DEBITO</code> ou importando <code>Cliente.TipoPagamento</code>. É possível, mas o William prefere um <strong>arquivo separado</strong>, e na aula 82 ele move o enum para fora.</li>
+        <li><strong>O caso real:</strong> o banco já guarda o tipo como número (1 = pessoa física, 2 = jurídica). O enum mantém esse número <em>e</em> um nome legível, e quem usa só precisa lembrar de <code>PESSOA_FISICA</code>.</li>
+        <li><strong><code>PESSOA_FISICA(1, "Pessoa Física")</code> chama o construtor do enum.</strong> Sem um construtor com esses parâmetros, não compila.</li>
+        <li><strong>O construtor de um enum é sempre privado:</strong> ninguém de fora cria uma constante nova com <code>new</code>. O Java cria cada constante uma vez.</li>
+        <li><strong>Os atributos ficam depois da lista de constantes</strong>, e a lista termina com <code>;</code>. Mover um atributo para antes não compila.</li>
+        <li>Sem setters: o valor de uma constante não deve mudar. O William sugere até <code>private final int valor</code>. <code>static</code> não serve aqui, porque cada constante tem o seu valor, atribuído no construtor.</li>
+        <li>Detalhe da aula: um atributo <strong>sem modificador</strong> de acesso tem visibilidade de <strong>pacote</strong> ("default"). Qualquer classe do mesmo pacote o acessa direto.</li>
+      </ul>
+
+      <h3>82 · Um comportamento por constante</h3>
+<pre><code>public enum TipoPagamento {
+    DEBITO {
+        @Override
+        public double calcularDesconto(double valor) {
+            return valor * 0.1;     // 10%
+        }
+    }, CREDITO {
+        @Override
+        public double calcularDesconto(double valor) {
+            return valor * 0.05;    // 5%
+        }
+    };
+
+    public abstract double calcularDesconto(double valor);   // sem corpo: cada constante implementa
+}
+
+System.out.println(TipoPagamento.DEBITO.calcularDesconto(100));    // 10.0
+System.out.println(TipoPagamento.CREDITO.calcularDesconto(100));   // 5.0</code></pre>
+      <ul>
+        <li><strong>O problema:</strong> o desconto depende da forma de pagamento. O jeito ingênuo é espalhar <code>if (tipo == DEBITO) ... else ...</code> pelo código.</li>
+        <li>Cada constante pode ter um <strong>corpo próprio</strong> entre chaves, "como se fosse uma classe", e <strong>sobrescrever</strong> um método do enum (<code>Ctrl+O</code> mostra o que dá para sobrescrever).</li>
+        <li>Começando com um método comum que retorna 0, a versão certa é torná-lo <strong><code>abstract</code></strong>: <strong>sem corpo</strong>, terminado em <code>;</code>. Assim, <strong>toda constante é obrigada a implementá-lo</strong>. Esquecer em uma dá erro de compilação. Métodos abstratos voltam nas aulas 84–86.</li>
+        <li>O resultado é zero <code>if</code>: <code>tipoPagamento.calcularDesconto(valor)</code> já executa a regra certa. O William adianta que isso é a base do padrão de projeto <em>Strategy</em>.</li>
+      </ul>
+
+      <h3>83 · Buscar a constante por um atributo</h3>
+<pre><code>// valueOf: pelo NOME da constante
+TipoCliente tipoCliente = TipoCliente.valueOf("PESSOA_FISICA");
+System.out.println(tipoCliente.getNomeRelatorio());          // Pessoa Física
+
+// Busca por outro atributo: você mesmo escreve
+public static TipoCliente tipoClientePorNomeRelatorio(String nomeRelatorio) {
+    for (TipoCliente tipoCliente : values()) {                // values(): todas as constantes
+        if (tipoCliente.getNomeRelatorio().equals(nomeRelatorio)) {
+            return tipoCliente;
+        }
+    }
+    return null;                                              // não achou
+}
+
+TipoCliente.tipoClientePorNomeRelatorio("Pessoa Física");     // PESSOA_FISICA
+TipoCliente.tipoClientePorNomeRelatorio("Pessoa Física221");  // null</code></pre>
+      <ul>
+        <li>Todo enum ganha dois métodos estáticos prontos: <strong><code>values()</code></strong>, que devolve um array com todas as constantes na ordem declarada, e <strong><code>valueOf(String)</code></strong>, que busca <strong>pelo nome da constante</strong>.</li>
+        <li><code>valueOf("Pessoa Física")</code> não funciona, porque o nome da constante é <code>PESSOA_FISICA</code>. Para buscar por um atributo (o nome do relatório, o valor 1/2 do banco), escreva um método <code>static</code> que percorre <code>values()</code>.</li>
+        <li>É um <code>static</code> porque você ainda <strong>não tem</strong> uma constante: é justamente ela que está procurando.</li>
+      </ul>
+
+      <h3>Atenção</h3>
+      <ul>
+        <li><strong>A lista de constantes vem primeiro</strong> e termina com <code>;</code> quando há algo depois (atributos, construtor, métodos).</li>
+        <li><strong>Não existe <code>new TipoCliente(...)</code>.</strong> O construtor é privado e as constantes são criadas pelo próprio Java.</li>
+        <li><strong>Extra: <code>valueOf</code> com nome inexistente</strong> não retorna <code>null</code>: lança <code>IllegalArgumentException</code>. Já o método da aula retorna <code>null</code>, então quem chama precisa checar. Mais à frente, <code>Optional</code> é a alternativa ao <code>null</code>.</li>
+        <li><strong>Extra: comparar enum com <code>==</code> é seguro</strong>, porque cada constante existe uma vez só. <code>tipo == TipoCliente.PESSOA_FISICA</code> funciona, diferente de String.</li>
+        <li><strong>Extra: enum no <code>switch</code></strong> (aulas 25–26): <code>case PESSOA_FISICA:</code>, sem o prefixo <code>TipoCliente.</code>.</li>
+        <li><strong>Extra: não salve o <code>ordinal()</code> no banco.</strong> <code>ordinal()</code> é a posição da constante (0, 1, ...), e muda se alguém reordenar ou inserir constantes. Por isso a aula usa um atributo <code>valor</code> explícito. <code>name()</code> devolve o nome, mesmo que o <code>toString()</code> seja sobrescrito.</li>
+        <li><strong>Extra:</strong> um enum não pode estender outra classe (ele já estende <code>java.lang.Enum</code>), mas pode implementar interfaces (aulas 87–89).</li>
+      </ul>
+
+      <h3>Paralelo com PHP</h3>
+      <ul>
+        <li><strong>O PHP 8.1 também tem enums:</strong> <code>enum TipoCliente: int { case PESSOA_FISICA = 1; case PESSOA_JURIDICA = 2; }</code>. Acesso: <code>TipoCliente::PESSOA_FISICA</code>.</li>
+        <li><strong>Métodos prontos:</strong> <code>cases()</code> ≈ <code>values()</code>. <code>TipoCliente::from(1)</code> busca pelo valor e <code>tryFrom(9)</code> devolve <code>null</code> se não achar, como o método da aula 83. Em Java, a busca por atributo você escreve.</li>
+        <li><strong>Mais dados por constante em Java:</strong> o <em>backed enum</em> do PHP tem <strong>um</strong> valor escalar (int ou string). Em Java, cada constante pode ter vários atributos (<code>valor</code> e <code>nomeRelatorio</code>) via construtor.</li>
+        <li><strong>Comportamento por constante:</strong> no PHP você faria <code>match($this) { self::DEBITO =&gt; $v * 0.1, ... }</code> dentro do método. Em Java, cada constante pode ter o <strong>próprio corpo</strong> sobrescrevendo um método <code>abstract</code>, como na aula 82.</li>
+        <li><strong>Laravel:</strong> o <code>$casts = ['tipo' =&gt; TipoCliente::class]</code> converte a coluna do banco no enum. É o mesmo papel do <code>valor</code> 1/2 da aula 81, e em Java o JPA faz isso com <code>@Enumerated</code> ou conversores.</li>
+      </ul>
+    </section>
+
+    <section id="flashcards">
+      <h2>Flashcards</h2>
+      <p style="color:var(--muted);margin-top:-6px">Toque no cartão para virar.</p>
+      <div id="flashcards-app"></div>
+    </section>
+
+    <section id="quiz">
+      <h2>Quiz</h2>
+      <div id="quiz-app"></div>
+    </section>
+
+    <section id="estudo">
+      <h2>Material de estudo</h2>
+
+      <h3>Mapa mental</h3>
+<pre><code>enum
+├── Por quê (80)
+│   ├── String aberta → inconsistência de dados
+│   └── enum = só as opções válidas (checado na compilação)
+├── Básico (80)
+│   ├── public enum TipoCliente { PESSOA_FISICA, PESSOA_JURIDICA }
+│   ├── constantes ≈ public static final do tipo do enum
+│   └── toString padrão = nome da constante
+├── Atributos e construtor (81)
+│   ├── PESSOA_FISICA(1, "Pessoa Física")
+│   ├── lista primeiro, depois ; e os atributos
+│   ├── construtor sempre private · sem new
+│   └── pode ficar dentro de classe (prefira arquivo próprio)
+├── Métodos por constante (82)
+│   ├── DEBITO { @Override calcularDesconto... }
+│   └── public abstract ... → toda constante implementa
+└── Busca (83)
+    ├── values() · valueOf("NOME_DA_CONSTANTE")
+    └── busca por atributo: static + for em values()</code></pre>
+
+      <h3>Prática no seu WSL (20 minutos)</h3>
+<pre><code>cd ~/java-lab
+K=src/academy/devdojo/maratonajava/javacore/Kenum
+mkdir -p $K/dominio $K/test
+
+cat > $K/dominio/TipoCliente.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Kenum.dominio;
+
+public enum TipoCliente {
+    PESSOA_FISICA(1, "Pessoa Física"),
+    PESSOA_JURIDICA(2, "Pessoa Jurídica");
+
+    private final int valor;
+    private final String nomeRelatorio;
+
+    TipoCliente(int valor, String nomeRelatorio) {
+        this.valor = valor;
+        this.nomeRelatorio = nomeRelatorio;
+    }
+
+    public static TipoCliente tipoClientePorNomeRelatorio(String nomeRelatorio) {
+        for (TipoCliente tipoCliente : values()) {
+            if (tipoCliente.getNomeRelatorio().equals(nomeRelatorio)) return tipoCliente;
+        }
+        return null;
+    }
+
+    public int getValor() { return valor; }
+    public String getNomeRelatorio() { return nomeRelatorio; }
+}
+EOF
+
+cat > $K/dominio/TipoPagamento.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Kenum.dominio;
+
+public enum TipoPagamento {
+    DEBITO {
+        @Override
+        public double calcularDesconto(double valor) { return valor * 0.1; }
+    }, CREDITO {
+        @Override
+        public double calcularDesconto(double valor) { return valor * 0.05; }
+    };
+
+    public abstract double calcularDesconto(double valor);
+}
+EOF
+
+cat > $K/test/ClienteTest01.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Kenum.test;
+
+import academy.devdojo.maratonajava.javacore.Kenum.dominio.TipoCliente;
+import academy.devdojo.maratonajava.javacore.Kenum.dominio.TipoPagamento;
+
+public class ClienteTest01 {
+    public static void main(String[] args) {
+        System.out.println(TipoCliente.PESSOA_FISICA);                                     // ?
+        System.out.println(TipoCliente.PESSOA_JURIDICA.getValor());                       // ?
+        System.out.println(TipoPagamento.DEBITO.calcularDesconto(100));                   // ?
+        System.out.println(TipoPagamento.CREDITO.calcularDesconto(100));                  // ?
+        System.out.println(TipoCliente.valueOf("PESSOA_FISICA").getNomeRelatorio());      // ?
+        System.out.println(TipoCliente.tipoClientePorNomeRelatorio("Pessoa Jurídica"));   // ?
+        System.out.println(TipoCliente.tipoClientePorNomeRelatorio("Pessoa Física221"));  // ?
+        System.out.println(TipoCliente.values().length);                                   // ?
+    }
+}
+EOF
+
+javac -d out $(find src -name '*.java')
+java -cp out academy.devdojo.maratonajava.javacore.Kenum.test.ClienteTest01</code></pre>
+      <details>
+        <summary>Ver a saída esperada</summary>
+<pre><code>PESSOA_FISICA
+2
+10.0
+5.0
+Pessoa Física
+PESSOA_JURIDICA
+null
+2</code></pre>
+      </details>
+      <p><strong>Exercícios:</strong></p>
+      <ol>
+        <li>Crie <code>enum DiaSemana</code> com os 7 dias e um método <code>isFimDeSemana()</code> (refaça o exercício da aula 26 sem <code>switch</code>).</li>
+        <li>Acrescente <code>PIX</code> ao <code>TipoPagamento</code> sem implementar <code>calcularDesconto</code> e leia o erro. Depois implemente (15%).</li>
+        <li>Crie <code>tipoClientePorValor(int valor)</code> para o caso "o banco tem 1 ou 2".</li>
+        <li>Teste <code>TipoCliente.valueOf("pessoa_fisica")</code> e leia a exceção.</li>
+      </ol>
+
+      <h3>Glossário</h3>
+      <ul>
+        <li><strong>Enumeração (<code>enum</code>)</strong>: tipo especial de classe com um conjunto fixo de instâncias (as constantes).</li>
+        <li><strong>Constante de enum</strong>: cada valor listado (<code>PESSOA_FISICA</code>), com o tipo do próprio enum.</li>
+        <li><strong>Inconsistência de dados</strong>: o mesmo conceito gravado de formas diferentes ("PF", "pessoa física"...).</li>
+        <li><strong>Corpo específico de constante</strong>: bloco <code>{ }</code> após uma constante para sobrescrever métodos só para ela.</li>
+        <li><strong>Método abstrato</strong>: método sem corpo que obriga a implementação (aulas 84–86).</li>
+        <li><strong><code>values()</code> / <code>valueOf()</code></strong>: todas as constantes / constante pelo nome.</li>
+        <li><strong>Fortemente tipado</strong>: o compilador verifica os tipos e impede valores fora do esperado.</li>
+      </ul>
+
+      <h3>Revisão espaçada</h3>
+      <ul class="revisao">
+        <li><span class="dia">Dia 1</span><span>Todos os flashcards + a prática com previsões.</span></li>
+        <li><span class="dia">Dia 3</span><span>Quiz + exercícios 1 e 2.</span></li>
+        <li><span class="dia">Dia 7</span><span>Exercícios 3 e 4 + reescrever um "if por tipo" seu com método por constante.</span></li>
+        <li><span class="dia">Dia 14</span><span>Flashcards que errou + questões discursivas.</span></li>
+      </ul>
+
+      <h3>Para aprofundar</h3>
+      <ul>
+        <li>O que são <code>EnumSet</code> e <code>EnumMap</code>, e por que são mais eficientes que <code>HashSet</code>/<code>HashMap</code> para enums?</li>
+        <li>Por que o enum é considerado a melhor forma de implementar um Singleton em Java?</li>
+        <li>Como o JPA mapeia enums (<code>@Enumerated(EnumType.STRING)</code> × <code>ORDINAL</code>) e qual evitar?</li>
+        <li>Como o padrão Strategy generaliza o que a aula 82 fez com <code>calcularDesconto</code>?</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    window.AULA = {
+      flashcards: [
+        ["O que é um enum?", "Um tipo especial de classe com um conjunto fixo de opções (constantes)"],
+        ["Que problema o enum resolve em relação a String?", "Inconsistência de dados: com enum só as opções válidas compilam"],
+        ["Como declarar um enum de tipo de cliente?", "public enum TipoCliente { PESSOA_FISICA, PESSOA_JURIDICA }"],
+        ["Qual o tipo de TipoCliente.PESSOA_FISICA?", "TipoCliente"],
+        ["As constantes de enum se parecem com o quê?", "Com constantes public static final do tipo do enum"],
+        ["O que o toString() padrão de uma constante mostra?", "O nome exatamente como escrito (PESSOA_FISICA)"],
+        ["Quando usar enum?", "Quando há uma quantidade limitada e fixa de opções"],
+        ["Enum pode ser declarado dentro de uma classe?", "Sim (Cliente.TipoPagamento), mas o William prefere arquivo próprio"],
+        ["O que PESSOA_FISICA(1, \"Pessoa Física\") faz?", "Cria a constante chamando o construtor do enum"],
+        ["O construtor de um enum pode ser público?", "Não: é sempre private; não existe new de enum"],
+        ["Onde ficam os atributos do enum?", "Depois da lista de constantes, que termina com ;"],
+        ["Por que não usar static nos atributos do enum?", "Cada constante tem seu próprio valor, atribuído no construtor"],
+        ["Enum deve ter setters?", "Não: os valores das constantes não devem mudar (use final)"],
+        ["Como dar um comportamento diferente para cada constante?", "Corpo próprio na constante sobrescrevendo um método: DEBITO { ... }"],
+        ["Por que declarar calcularDesconto como abstract no enum?", "Obriga todas as constantes a implementar"],
+        ["Um método abstract tem corpo?", "Não: termina com ;"],
+        ["O que values() retorna?", "Um array com todas as constantes, na ordem declarada"],
+        ["O que valueOf(\"PESSOA_FISICA\") faz?", "Retorna a constante pelo nome dela"],
+        ["valueOf(\"Pessoa Física\") funciona?", "Não: busca pelo nome da constante (e lança IllegalArgumentException)"],
+        ["Como buscar uma constante por outro atributo?", "Método static que percorre values() e compara o atributo"],
+        ["Por que o método de busca é static?", "Porque você ainda não tem a constante: está procurando por ela"],
+        ["Comparar enums com == é seguro?", "Sim: cada constante existe uma vez só"],
+        ["Por que não gravar ordinal() no banco?", "A posição muda se as constantes forem reordenadas ou inseridas"],
+        ["Equivalente PHP de values() e da busca por valor?", "cases() e from()/tryFrom()"],
+        ["O que Java permite no enum que o backed enum do PHP não permite?", "Vários atributos por constante e corpo de método próprio por constante"]
+      ],
+      quiz: [
+        { tipo: 'vf', pergunta: 'Com um atributo do tipo TipoCliente, o compilador impede passar uma String como "PESSOA_FISICA".', correta: 0,
+          explicacao: 'Verdadeiro: o tipo é TipoCliente. Só as constantes do enum são aceitas.' },
+        { tipo: 'multipla', pergunta: 'Como se passa o tipo pessoa física ao criar um cliente?', opcoes: ['new Cliente("Tsubasa", "PESSOA_FISICA")', 'new Cliente("Tsubasa", TipoCliente.PESSOA_FISICA)', 'new Cliente("Tsubasa", new TipoCliente("PF"))', 'new Cliente("Tsubasa", TipoCliente[0])'], correta: 1,
+          explicacao: 'As constantes são acessadas pelo nome do enum, como constantes estáticas.' },
+        { tipo: 'multipla', pergunta: 'O que System.out.println(TipoCliente.PESSOA_FISICA) imprime sem toString sobrescrito?', opcoes: ['1', 'Pessoa Física', 'PESSOA_FISICA', 'TipoCliente@1b6d3586'], correta: 2,
+          explicacao: 'O toString padrão de uma constante de enum é o próprio nome da constante.' },
+        { tipo: 'vf', pergunta: 'É possível criar uma nova constante em tempo de execução com new TipoCliente(3, "Startup").', correta: 1,
+          explicacao: 'Falso: o construtor de um enum é privado. As constantes são só as declaradas.' },
+        { tipo: 'multipla', pergunta: 'Qual declaração de enum com atributos compila?', opcoes: ['enum T { private int v; A(1), B(2); T(int v){this.v=v;} }', 'enum T { A(1), B(2); private int v; T(int v){this.v=v;} }', 'enum T { A(1), B(2) private int v; }', 'enum T { A, B; public T(int v){} }'], correta: 1,
+          explicacao: 'Primeiro a lista de constantes, terminada em ;, depois atributos e um construtor (não público) compatível com os argumentos.' },
+        { tipo: 'multipla', pergunta: 'TipoPagamento tem public abstract double calcularDesconto(double valor); e as constantes DEBITO e CREDITO. O que acontece se CREDITO não implementar o método?', opcoes: ['CREDITO retorna 0', 'Erro de compilação', 'Usa a implementação de DEBITO', 'Lança exceção ao chamar'], correta: 1,
+          explicacao: 'Método abstrato obriga todas as constantes a implementá-lo.' },
+        { tipo: 'multipla', pergunta: 'TipoPagamento.DEBITO.calcularDesconto(100) com desconto de 10%:', opcoes: ['90.0', '10.0', '0.1', '100.0'], correta: 1,
+          explicacao: 'O método retorna valor * 0.1, ou seja, o valor do desconto (10.0), não o preço final.' },
+        { tipo: 'multipla', pergunta: 'Qual chamada devolve PESSOA_FISICA?', opcoes: ['TipoCliente.valueOf("Pessoa Física")', 'TipoCliente.valueOf("PESSOA_FISICA")', 'TipoCliente.values("PESSOA_FISICA")', 'TipoCliente.get(1)'], correta: 1,
+          explicacao: 'valueOf busca pelo nome exato da constante. Para buscar por outro atributo, escreve-se um método que percorre values().' },
+        { tipo: 'discursiva', pergunta: 'Explique, com o exemplo da aula 81, por que um enum com os atributos valor (1/2) e nomeRelatorio é melhor que guardar só o número ou só uma String.',
+          explicacao: 'Se o banco já guarda 1 e 2, usar int no código obriga todos a decorar que 1 é pessoa física, e nada impede um 7. Usar String abre espaço para variações e erros de digitação. O enum dá um tipo fechado (só PESSOA_FISICA e PESSOA_JURIDICA compilam) e ainda guarda o número que vai para o banco (getValor) e o texto para exibição (getNomeRelatorio). Quem usa só precisa lembrar do nome da constante.' },
+        { tipo: 'discursiva', pergunta: 'Compare o enum da aula 82 (TipoPagamento com calcularDesconto) com um enum do PHP 8.1. Como você faria o mesmo em PHP e o que o Java permite de diferente?',
+          explicacao: 'No PHP: enum TipoPagamento { case DEBITO; case CREDITO; public function calcularDesconto(float $v): float { return match($this) { self::DEBITO => $v * 0.1, self::CREDITO => $v * 0.05 }; } }. A lógica fica centralizada num match. Em Java, cada constante pode ter o próprio corpo sobrescrevendo um método abstract, e o compilador obriga toda constante nova a implementar o cálculo. No PHP, esquecer um case no match só falha na execução (UnhandledMatchError). O Java também permite vários atributos por constante via construtor, enquanto o backed enum do PHP tem um único valor escalar.' }
+      ]
+    };
+  </script>
+  <script src="../js/app.js"></script>
+</body>
+</html>
