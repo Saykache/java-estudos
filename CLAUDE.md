@@ -81,7 +81,7 @@ Plano (títulos no README do professor; a aula 35 não está na playlist, é o v
 `ferramentas/transcricao.py` baixa as legendas pelo navegador (Playwright, janela aberta; headless vem vazio):
 `ferramentas/.venv/bin/python ferramentas/transcricao.py --aulas 20-24` → `transcricoes/NN-*.txt` (fora do git).
 Setup: `ferramentas/instalar.sh` (precisa de sudo).
-Se a legenda vier em outro idioma (o YouTube às vezes erra o reconhecimento; ex.: aula 156 em romeno), use o código do professor e avise na página.
+Se a legenda vier em outro idioma (o YouTube às vezes erra o reconhecimento; ex.: aulas 156 e 221 em romeno), use o código do professor e avise na página.
 Se o vídeo não tiver legenda nenhuma (ex.: aulas 206, 213 e 216), o script falha nas 3 tentativas: peça ao autor um resumo do vídeo e use com o código do professor, avisando na página.
 
 ## Código do professor
