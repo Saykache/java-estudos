@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>154–158 · Visitor, PathMatcher e Zip</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="topo">
+      <a class="voltar" href="../index.html">← Todas as aulas</a>
+      <h1>154–158 · NIO: SimpleFileVisitor, PathMatcher e ZipOutputStream</h1>
+      <p>Percorrer a árvore de diretórios, filtrar caminhos com glob e compactar arquivos num .zip · <a href="https://www.youtube.com/playlist?list=PL62G310vn6nFIsOCC0H-C2infYgwm8SWW" target="_blank" rel="noopener">playlist</a></p>
+    </header>
+
+    <nav class="abas">
+      <a href="#resumo">Resumo</a>
+      <a href="#flashcards">Flashcards</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#estudo">Material de estudo</a>
+    </nav>
+
+    <p class="aviso">Junta as aulas 154 e 155 (SimpleFileVisitor), 156 e 157 (PathMatcher) e 158 (ZipOutputStream), o fim da parte de IO. Continua as <a href="149-153-nio-atributos-directorystream.html">aulas 149–153</a>. Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. <strong>A aula 156 só tem no YouTube uma legenda automática reconhecida como romeno (ilegível)</strong>, então a parte dela foi montada a partir do código do professor (<code>PathMatcherTest01</code>). O código (pacote <code>javacore.Wnio</code>) foi conferido no <a href="https://github.com/devdojobr/maratona-java-virado-no-jiraya" target="_blank" rel="noopener">repositório do professor</a>. Os itens marcados como "extra" não estão nos vídeos.</p>
+
+    <section id="resumo">
+      <h2>Resumo</h2>
+      <p>O <code>DirectoryStream</code> (aula 153) só enxerga um nível. Para <strong>descer em todas as subpastas</strong> existe o <strong><code>Files.walkFileTree</code></strong> com um <strong><code>FileVisitor</code></strong>: o Java percorre a árvore e <strong>chama os seus métodos</strong> (polimorfismo) em cada pasta e arquivo. O <strong><code>PathMatcher</code></strong> filtra caminhos por padrão (<em>glob</em>, como <code>*.java</code>). O <strong><code>ZipOutputStream</code></strong> junta arquivos num <code>.zip</code>. Com isso termina a parte de IO.</p>
+
+      <h3>154 · SimpleFileVisitor e walkFileTree</h3>
+<pre><code>class ListJavaFiles extends SimpleFileVisitor&lt;Path&gt; {     // &lt;Path&gt;: generics (aulas 183+)
+    @Override
+    public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
+        if (file.getFileName().toString().endsWith(".java")) {   // getFileName devolve Path → toString
+            System.out.println(file.getFileName());
+        }
+        return FileVisitResult.CONTINUE;                     // o que o Java deve fazer em seguida
+    }
+}
+
+public class SimpleFileVisitorTest01 {
+    public static void main(String[] args) throws IOException {
+        Path root = Paths.get(".");
+        Files.walkFileTree(root, new ListJavaFiles());       // percorre TUDO a partir de "."
+    }
+}
+// → todos os .java do projeto, desde a primeira aula</code></pre>
+      <ul>
+        <li><strong><code>Files.walkFileTree(inicio, visitor)</code></strong>: o primeiro argumento é de onde começar, e o segundo é o <strong>comportamento</strong> (o que fazer em cada item).</li>
+        <li>O visitor é uma classe que <strong>estende <code>SimpleFileVisitor&lt;Path&gt;</code></strong>. Ela é uma classe (não interface), então você <strong>sobrescreve só o que precisa</strong>. Aqui, <code>visitFile</code>, chamado para <strong>cada arquivo</strong>.</li>
+        <li>Quem chama <code>visitFile</code> é o Java. Você só diz o que fazer, e pode ser imprimir, copiar ou mudar permissões.</li>
+        <li>A classe auxiliar fica no <strong>mesmo arquivo</strong>, sem <code>public</code> (só a classe com o nome do arquivo pode ser pública).</li>
+        <li>O desafio da aula (listar só os <code>.java</code>): <code>file.getFileName().toString().endsWith(".java")</code>. Sem o <code>toString()</code>, o <code>endsWith</code> do <code>Path</code> compara <strong>elementos do caminho</strong>, não texto, e não acha nada.</li>
+      </ul>
+
+      <h3>155 · Os quatro métodos e o FileVisitResult</h3>
+<pre><code>class ListAllFiles extends SimpleFileVisitor&lt;Path&gt; {
+    @Override
+    public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
+        System.out.println("pre visit " + dir.getFileName());     // ao ENTRAR numa pasta
+        return FileVisitResult.SKIP_SUBTREE;                        // na aula: pula o conteúdo dela
+    }
+    @Override
+    public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
+        System.out.println(file.getFileName());                     // cada arquivo
+        return FileVisitResult.CONTINUE;
+    }
+    @Override
+    public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
+        return super.visitFileFailed(file, exc);                    // falhou ao ler (ex.: sem permissão)
+    }
+    @Override
+    public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
+        System.out.println("post visit " + dir.getFileName());    // ao SAIR da pasta (depois dos descendentes)
+        return FileVisitResult.CONTINUE;
+    }
+}
+Files.walkFileTree(Paths.get("pasta"), new ListAllFiles());</code></pre>
+      <ul>
+        <li><strong><code>preVisitDirectory</code></strong>: antes de entrar numa pasta. <strong><code>postVisitDirectory</code></strong>: depois de visitar tudo dentro dela (a saída aparece "de baixo para cima"). <strong><code>visitFileFailed</code></strong>: quando um arquivo não pôde ser lido, bom lugar para um log.</li>
+        <li><strong><code>FileVisitResult</code></strong> (enum), o que o Java faz em seguida:
+          <ul>
+            <li><code>CONTINUE</code>: continua normalmente;</li>
+            <li><code>TERMINATE</code>: para tudo;</li>
+            <li><code>SKIP_SUBTREE</code>: não entra nesta pasta (faz sentido no <code>preVisitDirectory</code>);</li>
+            <li><code>SKIP_SIBLINGS</code>: ignora os "irmãos" que ainda não foram visitados (o resto do mesmo nível).</li>
+          </ul>
+        </li>
+        <li>No <code>postVisitDirectory</code>, <code>SKIP_SUBTREE</code> não tem efeito: a pasta já foi percorrida. A documentação diz que ele só é chamado depois de todos os descendentes. "Na dúvida, leia a documentação."</li>
+        <li><strong>A ordem entre irmãos não é garantida</strong>: depende do sistema de arquivos.</li>
+      </ul>
+
+      <h3>156 · PathMatcher e glob</h3>
+<pre><code>private static void matches(Path path, String glob) {
+    PathMatcher matcher = FileSystems.getDefault().getPathMatcher(glob);
+    System.out.println(glob + ": " + matcher.matches(path));
+}
+
+Path path1 = Paths.get("pasta/subpasta/file.bkp");
+Path path2 = Paths.get("pasta/subpasta/file.txt");
+Path path3 = Paths.get("pasta/subpasta/file.java");
+matches(path1, "glob:*.bkp");                    // false: * não atravessa diretórios
+matches(path1, "glob:**/*.bkp");                 // true:  ** atravessa
+matches(path1, "glob:**/*.{bkp,txt,java}");      // true   { } = qualquer uma das opções
+matches(path2, "glob:**/*.{bkp,txt,java}");      // true
+matches(path3, "glob:**/*.{bkp,txt,java}");      // true
+matches(path1, "glob:**/*.???");                 // true:  ? = exatamente 1 caractere (bkp)
+matches(path2, "glob:**/*.???");                 // true   (txt)
+matches(path3, "glob:**/*.???");                 // false  (java tem 4)
+matches(path3, "glob:**/file.????");             // true</code></pre>
+      <ul>
+        <li><strong><code>FileSystems.getDefault().getPathMatcher("sintaxe:padrão")</code></strong>. A sintaxe é <code>glob:</code> (curingas de arquivo) ou <code>regex:</code> (a regex das aulas 131–136).</li>
+        <li><strong>Glob:</strong>
+          <ul>
+            <li><code>*</code>: qualquer sequência de caracteres <strong>dentro de um nível</strong> (não passa de <code>/</code>);</li>
+            <li><code>**</code>: qualquer sequência, <strong>atravessando diretórios</strong>;</li>
+            <li><code>?</code>: exatamente um caractere;</li>
+            <li><code>{a,b,c}</code>: qualquer uma das alternativas.</li>
+          </ul>
+        </li>
+        <li><strong><code>matches</code> olha o caminho inteiro.</strong> Por isso <code>*.bkp</code> falha em <code>pasta/subpasta/file.bkp</code> e <code>**/*.bkp</code> casa.</li>
+      </ul>
+
+      <h3>157 · Exercício: visitor + PathMatcher</h3>
+<pre><code>class FindAllTestJavaOrClass extends SimpleFileVisitor&lt;Path&gt; {
+    private PathMatcher matcher = FileSystems.getDefault().getPathMatcher("glob:**/*Test*.{java,class}");
+
+    @Override
+    public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+        if (matcher.matches(file)) {
+            System.out.println(file.getFileName());
+        }
+        return FileVisitResult.CONTINUE;
+    }
+}
+Files.walkFileTree(Paths.get("."), new FindAllTestJavaOrClass());
+// → todos os arquivos com "Test" no nome e extensão .java ou .class (fontes e compilados)</code></pre>
+      <ul>
+        <li>Pedido: percorrer o projeto e listar os arquivos que <strong>têm "Test" no nome</strong> e terminam em <strong><code>.java</code> ou <code>.class</code></strong>.</li>
+        <li><code>**/</code> ignora a pasta, <code>*Test*</code> pega qualquer coisa antes e depois de "Test" (inclusive o <code>01</code>, <code>02</code>), e <code>{java,class}</code> são as duas extensões.</li>
+        <li>O matcher vira um <strong>atributo</strong> da classe: é criado uma vez e reaproveitado em cada <code>visitFile</code>.</li>
+        <li>No meio da aula, um padrão mal escrito gerou <strong><code>IllegalArgumentException</code></strong>. O William testou partes do padrão até achar o erro. O conselho dele: "tem dúvida se funciona? Não pergunta, testa".</li>
+      </ul>
+
+      <h3>158 · ZipOutputStream</h3>
+<pre><code>Path arquivoZip = Paths.get("pasta/arquivo.zip");
+Path arquivosParaZipar = Paths.get("pasta/subpasta1/subsubpasta1");
+
+try (ZipOutputStream zipStream = new ZipOutputStream(Files.newOutputStream(arquivoZip));
+     DirectoryStream&lt;Path&gt; directoryStream = Files.newDirectoryStream(arquivosParaZipar)) {
+    for (Path file : directoryStream) {
+        ZipEntry zipEntry = new ZipEntry(file.getFileName().toString());   // 1. prepara a entrada (o nome no zip)
+        zipStream.putNextEntry(zipEntry);                                  // 2. abre o "lugar" no zip
+        Files.copy(file, zipStream);                                       // 3. copia o CONTEÚDO
+        zipStream.closeEntry();                                            // 4. fecha a entrada
+    }
+    System.out.println("Arquivo criado com sucesso");
+} catch (IOException e) {
+    e.printStackTrace();
+}</code></pre>
+      <ul>
+        <li><strong>OutputStream</strong> é "saída" (manda dados para algum lugar) e <strong>InputStream</strong> é "entrada" (lê). Os <em>streams</em> trabalham em <strong>baixo nível, com bytes</strong> (dados binários), ao contrário de <code>Reader</code>/<code>Writer</code>, que trabalham com caracteres.</li>
+        <li><strong><code>Files.newOutputStream(path)</code></strong> cria o arquivo e o <code>OutputStream</code>. O <strong><code>ZipOutputStream</code></strong> embrulha esse stream (encadeamento de novo) e compacta o que passa por ele.</li>
+        <li><strong>Cada arquivo tem 3 etapas:</strong> <code>new ZipEntry(nome)</code> → <code>putNextEntry</code> → escrever o conteúdo (<code>Files.copy(file, zipStream)</code>) → <code>closeEntry</code>.</li>
+        <li>Sem o <code>Files.copy</code>, o zip sai com os <strong>arquivos vazios</strong>: você criou o "esqueleto" das entradas, mas não mandou o conteúdo. Foi o que o William mostrou antes de completar.</li>
+        <li>Os dois recursos (o zip e o <code>DirectoryStream</code>) ficam no mesmo try-with-resources.</li>
+        <li>Programe e teste em pedaços: primeiro ele só imprimiu os arquivos encontrados, depois zipou. Com cerca de 10 linhas o conteúdo de um diretório vira um zip. Subpastas e senha exigem mais trabalho.</li>
+      </ul>
+
+      <h3>Atenção</h3>
+      <ul>
+        <li><strong><code>SimpleFileVisitor</code> é classe:</strong> sobrescreva só o que precisa. Todo método retorna um <code>FileVisitResult</code>.</li>
+        <li><strong><code>file.getFileName().toString().endsWith(".java")</code></strong>: o <code>endsWith</code> de <code>Path</code> (sem <code>toString</code>) compara elementos do caminho, não o texto.</li>
+        <li><strong>No glob, <code>*</code> fica num nível e <code>**</code> atravessa pastas.</strong> <code>matches</code> compara o caminho inteiro.</li>
+        <li><strong>Zip:</strong> <code>putNextEntry</code> + conteúdo + <code>closeEntry</code>. <strong>Extra:</strong> se houver <strong>subpastas</strong> no diretório, o <code>Files.copy(subpasta, zipStream)</code> falha. Filtre com <code>Files.isRegularFile(file)</code> ou use o visitor.</li>
+        <li><strong>Extra: <code>Files.walk(path)</code> e <code>Files.find(path, profundidade, filtro)</code></strong> fazem o mesmo passeio com Streams (aulas 203+), e costumam ser mais curtos que o visitor.</li>
+        <li><strong>Extra:</strong> o nome do <code>ZipEntry</code> pode ter pastas (<code>"docs/a.txt"</code>), e é assim que se preserva a estrutura. Para descompactar existe o <code>ZipInputStream</code> (ou <code>FileSystems.newFileSystem(zip)</code>).</li>
+      </ul>
+
+      <h3>Paralelo com PHP</h3>
+      <ul>
+        <li><strong>Percorrer a árvore:</strong> <code>new RecursiveIteratorIterator(new RecursiveDirectoryIterator($dir))</code> ≈ <code>Files.walkFileTree</code>/<code>Files.walk</code>. O modo <code>SELF_FIRST</code>/<code>CHILD_FIRST</code> lembra o <code>preVisitDirectory</code>/<code>postVisitDirectory</code>. No Laravel: <code>File::allFiles($dir)</code> ou <code>Storage::allFiles()</code>. O Symfony tem o <code>Finder</code> (<code>-&gt;in($dir)-&gt;name('*Test*.php')</code>), que é o "visitor + PathMatcher" dele.</li>
+        <li><strong>Glob:</strong> <code>glob('*.txt')</code> e <code>fnmatch('*.{txt,java}', $nome)</code>. A função <code>glob</code> do PHP só aceita <code>{a,b}</code> com a flag <code>GLOB_BRACE</code> e não tem <code>**</code> nativo (use o iterador recursivo).</li>
+        <li><strong>Zip:</strong> <code>$zip = new ZipArchive; $zip-&gt;open('arquivo.zip', ZipArchive::CREATE); $zip-&gt;addFile($caminho, $nomeNoZip); $zip-&gt;close();</code>. O <code>addFile</code> faz as três etapas do Java (entrada, conteúdo, fechar) de uma vez.</li>
+        <li><strong>Streams de bytes:</strong> o <code>fopen</code>/<code>fwrite</code> em modo <code>'wb'</code>/<code>'rb'</code> do PHP ≈ <code>OutputStream</code>/<code>InputStream</code>. O PHP não separa "caracteres" de "bytes" como o Java faz com Reader/Writer × Stream.</li>
+      </ul>
+    </section>
+
+    <section id="flashcards">
+      <h2>Flashcards</h2>
+      <p style="color:var(--muted);margin-top:-6px">Toque no cartão para virar.</p>
+      <div id="flashcards-app"></div>
+    </section>
+
+    <section id="quiz">
+      <h2>Quiz</h2>
+      <div id="quiz-app"></div>
+    </section>
+
+    <section id="estudo">
+      <h2>Material de estudo</h2>
+
+      <h3>Mapa mental</h3>
+<pre><code>Fim do IO
+├── Percorrer a árvore (154–155)
+│   ├── Files.walkFileTree(inicio, visitor)
+│   ├── class X extends SimpleFileVisitor&lt;Path&gt; (sobrescreve só o que precisa)
+│   ├── preVisitDirectory (entrar) · visitFile · visitFileFailed · postVisitDirectory (sair)
+│   └── FileVisitResult: CONTINUE · TERMINATE · SKIP_SUBTREE · SKIP_SIBLINGS
+├── PathMatcher (156–157)
+│   ├── FileSystems.getDefault().getPathMatcher("glob:..." ou "regex:...")
+│   ├── * (1 nível) · ** (atravessa) · ? (1 caractere) · {a,b}
+│   ├── matches(caminho inteiro)
+│   └── visitor + matcher: "glob:**/*Test*.{java,class}"
+└── Zip (158)
+    ├── new ZipOutputStream(Files.newOutputStream(zip)) + DirectoryStream
+    ├── ZipEntry(nome) → putNextEntry → Files.copy(file, zipStream) → closeEntry
+    └── Stream = bytes (baixo nível) · Output = escreve · Input = lê</code></pre>
+
+      <h3>Prática no seu WSL (25 minutos)</h3>
+<pre><code>cd ~/java-lab
+W=src/academy/devdojo/maratonajava/javacore/Wnio
+mkdir -p $W/test
+
+# árvore de teste
+rm -rf lab-visit
+mkdir -p lab-visit/subpasta1/subsubpasta1 lab-visit/subpasta2
+echo "arquivo 1" &gt; lab-visit/subpasta1/subsubpasta1/sub_arquivo1.txt
+echo "arquivo 2" &gt; lab-visit/subpasta1/subsubpasta1/sub_arquivo2.txt
+echo "class A {}" &gt; lab-visit/subpasta2/ContaTest01.java
+echo "backup"     &gt; lab-visit/subpasta2/dados.bkp
+
+cat > $W/test/VisitorZipTest01.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Wnio.test;
+
+import java.io.IOException;
+import java.nio.file.*;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
+
+class ImprimeArvore extends SimpleFileVisitor&lt;Path&gt; {
+    private int nivel = 0;
+
+    @Override
+    public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
+        System.out.println("  ".repeat(nivel) + "[" + dir.getFileName() + "]");
+        nivel++;
+        return FileVisitResult.CONTINUE;
+    }
+
+    @Override
+    public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
+        System.out.println("  ".repeat(nivel) + file.getFileName() + " (" + attrs.size() + " bytes)");
+        return FileVisitResult.CONTINUE;
+    }
+
+    @Override
+    public FileVisitResult postVisitDirectory(Path dir, IOException exc) {
+        nivel--;
+        return FileVisitResult.CONTINUE;
+    }
+}
+
+public class VisitorZipTest01 {
+    static void matches(Path path, String glob) {
+        PathMatcher matcher = FileSystems.getDefault().getPathMatcher(glob);
+        System.out.println(glob + ": " + matcher.matches(path));
+    }
+
+    public static void main(String[] args) throws IOException {
+        Files.walkFileTree(Paths.get("lab-visit"), new ImprimeArvore());
+
+        Path p1 = Paths.get("pasta/subpasta/file.bkp");
+        Path p3 = Paths.get("pasta/subpasta/file.java");
+        matches(p1, "glob:*.bkp");                 // ?
+        matches(p1, "glob:**/*.bkp");              // ?
+        matches(p3, "glob:**/*.???");              // ?
+        matches(p3, "glob:**/file.????");          // ?
+        matches(p3, "glob:**/*.{bkp,txt,java}");   // ?
+
+        PathMatcher testes = FileSystems.getDefault().getPathMatcher("glob:**/*Test*.{java,class}");
+        Files.walkFileTree(Paths.get("lab-visit"), new SimpleFileVisitor&lt;Path&gt;() {   // classe anônima (aula 191)
+            @Override
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
+                if (testes.matches(file)) System.out.println("teste: " + file.getFileName());
+                return FileVisitResult.CONTINUE;
+            }
+        });
+
+        Path zip = Paths.get("lab-visit/arquivo.zip");
+        try (ZipOutputStream zipStream = new ZipOutputStream(Files.newOutputStream(zip));
+             DirectoryStream&lt;Path&gt; ds = Files.newDirectoryStream(Paths.get("lab-visit/subpasta1/subsubpasta1"))) {
+            for (Path file : ds) {
+                zipStream.putNextEntry(new ZipEntry(file.getFileName().toString()));
+                Files.copy(file, zipStream);
+                zipStream.closeEntry();
+            }
+        }
+        System.out.println("Arquivo criado com sucesso");
+    }
+}
+EOF
+
+javac -d out $(find src -name '*.java')
+java -cp out academy.devdojo.maratonajava.javacore.Wnio.test.VisitorZipTest01
+unzip -l lab-visit/arquivo.zip     # (sudo apt install unzip, se não tiver)</code></pre>
+      <details>
+        <summary>Ver a saída esperada</summary>
+<pre><code>[lab-visit]
+  [subpasta1]
+    [subsubpasta1]
+      sub_arquivo1.txt (10 bytes)
+      sub_arquivo2.txt (10 bytes)
+  [subpasta2]
+    ContaTest01.java (11 bytes)
+    dados.bkp (7 bytes)
+glob:*.bkp: false
+glob:**/*.bkp: true
+glob:**/*.???: false
+glob:**/file.????: true
+glob:**/*.{bkp,txt,java}: true
+teste: ContaTest01.java
+Arquivo criado com sucesso
+(unzip -l: sub_arquivo1.txt e sub_arquivo2.txt, 10 bytes cada)
+(a ordem entre irmãos pode variar)</code></pre>
+      </details>
+      <p><strong>Exercícios:</strong></p>
+      <ol>
+        <li>No <code>ImprimeArvore</code>, retorne <code>SKIP_SUBTREE</code> no <code>preVisitDirectory</code> quando o nome for <code>subpasta1</code>. O que some da saída?</li>
+        <li>Retorne <code>TERMINATE</code> no primeiro arquivo <code>.bkp</code> encontrado e veja onde a busca para.</li>
+        <li>Crie um visitor que some o tamanho de todos os arquivos da árvore (<code>attrs.size()</code>) e imprima o total no fim.</li>
+        <li>Mude o zip para usar o visitor e guardar o caminho relativo no <code>ZipEntry</code> (<code>raiz.relativize(file).toString()</code>, aula 148), preservando as subpastas.</li>
+        <li>Escreva um matcher com <code>regex:</code> que case com arquivos terminados em <code>Test</code> seguido de dois dígitos e <code>.java</code>.</li>
+      </ol>
+
+      <h3>Glossário</h3>
+      <ul>
+        <li><strong><code>walkFileTree</code></strong>: percorre recursivamente uma árvore de diretórios chamando um <code>FileVisitor</code>.</li>
+        <li><strong><code>SimpleFileVisitor</code></strong>: implementação base de <code>FileVisitor</code>; você sobrescreve só o que precisa.</li>
+        <li><strong><code>FileVisitResult</code></strong>: enum que diz ao Java como continuar (<code>CONTINUE</code>, <code>TERMINATE</code>, <code>SKIP_SUBTREE</code>, <code>SKIP_SIBLINGS</code>).</li>
+        <li><strong>Glob</strong>: padrão de nome de arquivo com <code>*</code>, <code>**</code>, <code>?</code> e <code>{a,b}</code>.</li>
+        <li><strong><code>PathMatcher</code></strong>: objeto que testa se um <code>Path</code> casa com um glob ou regex.</li>
+        <li><strong>Stream (IO)</strong>: fluxo de <strong>bytes</strong>; <code>InputStream</code> lê, <code>OutputStream</code> escreve. Não confundir com a Stream API (aulas 203+).</li>
+        <li><strong><code>ZipEntry</code></strong>: uma entrada (arquivo) dentro do zip.</li>
+        <li><strong>Irmãos (siblings)</strong>: itens no mesmo nível do diretório.</li>
+      </ul>
+
+      <h3>Revisão espaçada</h3>
+      <ul class="revisao">
+        <li><span class="dia">Dia 1</span><span>Todos os flashcards + a prática com previsões.</span></li>
+        <li><span class="dia">Dia 3</span><span>Quiz + exercícios 1 a 3.</span></li>
+        <li><span class="dia">Dia 7</span><span>Exercícios 4 e 5 + revisão geral de IO (aulas 137–158): File, Writers/Readers, NIO, atributos, visitor.</span></li>
+        <li><span class="dia">Dia 14</span><span>Flashcards que errou + questões discursivas.</span></li>
+      </ul>
+
+      <h3>Para aprofundar</h3>
+      <ul>
+        <li>Como apagar uma pasta com tudo dentro usando o visitor (<code>visitFile</code> apaga arquivos, <code>postVisitDirectory</code> apaga a pasta vazia)?</li>
+        <li>O que <code>FileVisitOption.FOLLOW_LINKS</code> muda, e qual o risco de loop com links simbólicos?</li>
+        <li>Como ler um zip com <code>ZipInputStream</code> e extrair com segurança (o ataque <em>zip slip</em>)?</li>
+        <li><code>Files.walk</code> × <code>walkFileTree</code>: quando cada um é mais adequado?</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    window.AULA = {
+      flashcards: [
+        ["Como percorrer todas as subpastas de um diretório no NIO?", "Files.walkFileTree(inicio, visitor)"],
+        ["O que o visitor define?", "O comportamento: o que fazer em cada arquivo e pasta visitados"],
+        ["Por que estender SimpleFileVisitor em vez de implementar FileVisitor?", "É uma classe base: você sobrescreve só os métodos que precisa"],
+        ["Qual método é chamado para cada arquivo?", "visitFile(Path file, BasicFileAttributes attrs)"],
+        ["Quando preVisitDirectory é chamado?", "Ao entrar numa pasta, antes do conteúdo"],
+        ["Quando postVisitDirectory é chamado?", "Ao sair da pasta, depois de visitar todos os descendentes"],
+        ["Para que serve visitFileFailed?", "Tratar arquivos que não puderam ser lidos (ex.: sem permissão)"],
+        ["Quais os valores de FileVisitResult?", "CONTINUE, TERMINATE, SKIP_SUBTREE, SKIP_SIBLINGS"],
+        ["O que SKIP_SUBTREE faz?", "Não entra no conteúdo da pasta (use no preVisitDirectory)"],
+        ["O que SKIP_SIBLINGS faz?", "Ignora os itens restantes do mesmo nível"],
+        ["Por que file.getFileName().toString().endsWith(\".java\")?", "Sem toString, o endsWith do Path compara elementos do caminho, não texto"],
+        ["A ordem dos irmãos no walkFileTree é garantida?", "Não; depende do sistema de arquivos"],
+        ["Como criar um PathMatcher?", "FileSystems.getDefault().getPathMatcher(\"glob:...\") (ou \"regex:...\")"],
+        ["No glob, * × **?", "* vale dentro de um nível; ** atravessa diretórios"],
+        ["No glob, ? e {a,b}?", "Exatamente um caractere / qualquer uma das alternativas"],
+        ["\"glob:*.bkp\" casa com pasta/subpasta/file.bkp?", "Não: matches olha o caminho inteiro e * não passa de /; use **/*.bkp"],
+        ["\"glob:**/*.???\" casa com file.java?", "Não: ??? são exatamente 3 caracteres"],
+        ["Padrão para arquivos com Test no nome, .java ou .class?", "glob:**/*Test*.{java,class}"],
+        ["O que um padrão glob inválido causa?", "IllegalArgumentException"],
+        ["O que é um OutputStream?", "Um fluxo de saída de bytes (baixo nível); InputStream é o de entrada"],
+        ["Como criar o stream do arquivo zip?", "new ZipOutputStream(Files.newOutputStream(caminhoDoZip))"],
+        ["Quais os passos para cada arquivo no zip?", "new ZipEntry(nome) → putNextEntry → Files.copy(file, zipStream) → closeEntry"],
+        ["O que acontece sem o Files.copy no zip?", "As entradas são criadas, mas os arquivos ficam vazios"],
+        ["Por que o zip e o DirectoryStream vão no try-with-resources?", "São recursos do SO (Closeable) e precisam ser fechados"],
+        ["Alternativa com Streams ao walkFileTree?", "Files.walk(path) / Files.find(...) — extra"]
+      ],
+      quiz: [
+        { tipo: 'multipla', pergunta: 'Qual a diferença entre DirectoryStream e walkFileTree?', opcoes: ['Nenhuma', 'DirectoryStream lista só o primeiro nível; walkFileTree desce em todas as subpastas', 'walkFileTree só lista pastas', 'DirectoryStream é recursivo e walkFileTree não'], correta: 1,
+          explicacao: 'DirectoryStream é como um ls do diretório. walkFileTree percorre a árvore toda, chamando o visitor em cada item.' },
+        { tipo: 'multipla', pergunta: 'Em qual método do visitor faz sentido retornar SKIP_SUBTREE para não entrar numa pasta?', opcoes: ['visitFile', 'visitFileFailed', 'preVisitDirectory', 'postVisitDirectory'], correta: 2,
+          explicacao: 'preVisitDirectory roda antes de entrar na pasta. No postVisitDirectory ela já foi percorrida, então pular não tem efeito.' },
+        { tipo: 'vf', pergunta: 'postVisitDirectory é chamado depois que todos os arquivos e subpastas daquela pasta foram visitados.', correta: 0,
+          explicacao: 'Verdadeiro. É o "sair da pasta". Por isso a saída aparece de baixo para cima.' },
+        { tipo: 'multipla', pergunta: 'O que o FileVisitResult.TERMINATE faz?', opcoes: ['Pula a pasta atual', 'Encerra todo o percurso', 'Pula os irmãos', 'Lança uma exceção'], correta: 1,
+          explicacao: 'TERMINATE para o walkFileTree imediatamente. SKIP_SUBTREE pula a pasta, e SKIP_SIBLINGS pula o resto do nível.' },
+        { tipo: 'multipla', pergunta: 'Qual glob casa com o Path "pasta/subpasta/file.bkp"?', opcoes: ['glob:*.bkp', 'glob:**/*.bkp', 'glob:file.bkp', 'glob:*/file.bkp'], correta: 1,
+          explicacao: 'matches compara o caminho inteiro. * e */ não atravessam dois níveis de diretório, e ** atravessa.' },
+        { tipo: 'vf', pergunta: '"glob:**/*.???" casa com "pasta/subpasta/file.java".', correta: 1,
+          explicacao: 'Falso. Cada ? é exatamente um caractere: ??? casa com bkp e txt, mas não com java (4 letras). "**/file.????" casaria.' },
+        { tipo: 'multipla', pergunta: 'Na aula 158, o zip foi criado mas os arquivos lá dentro estavam vazios. O que faltava?', opcoes: ['Chamar zipStream.close()', 'Files.copy(file, zipStream) entre putNextEntry e closeEntry', 'Usar ZipInputStream', 'Passar o tamanho no ZipEntry'], correta: 1,
+          explicacao: 'putNextEntry só abre a entrada, o esqueleto. O conteúdo precisa ser escrito no stream, e Files.copy(file, zipStream) faz isso.' },
+        { tipo: 'multipla', pergunta: 'Qual a diferença entre os streams (InputStream/OutputStream) e Reader/Writer?', opcoes: ['Streams trabalham com bytes; Reader/Writer com caracteres', 'Streams são mais lentos', 'Reader/Writer só servem para zip', 'Não há diferença'], correta: 0,
+          explicacao: 'Streams são de baixo nível (bytes, dados binários como um zip). Reader e Writer tratam caracteres (texto).' },
+        { tipo: 'discursiva', pergunta: 'Explique como o walkFileTree usa polimorfismo e para que servem os quatro métodos do visitor, com um exemplo prático de uso.',
+          explicacao: 'walkFileTree recebe um FileVisitor (interface) e, ao percorrer a árvore, chama os métodos dele. Você passa uma subclasse de SimpleFileVisitor<Path> com os métodos sobrescritos, e o Java executa a SUA versão: é polimorfismo. preVisitDirectory: ao entrar numa pasta (pode pular com SKIP_SUBTREE). visitFile: em cada arquivo (onde fica a lógica: imprimir, filtrar com PathMatcher, somar tamanhos). visitFileFailed: quando um arquivo não pode ser lido (logar). postVisitDirectory: ao sair da pasta, depois de todos os descendentes. Exemplo prático: apagar uma pasta com tudo dentro, com Files.delete no visitFile e na pasta no postVisitDirectory, que já está vazia. Cada método retorna um FileVisitResult para controlar o percurso.' },
+        { tipo: 'discursiva', pergunta: 'Compare o zip da aula 158 com o ZipArchive do PHP. O que o Java exige explicitamente que o PHP faz por você?',
+          explicacao: 'PHP: $zip = new ZipArchive; $zip->open("arquivo.zip", ZipArchive::CREATE); foreach ($arquivos as $f) $zip->addFile($f, basename($f)); $zip->close(). O addFile faz tudo de uma vez. No Java, cada arquivo exige três passos explícitos no ZipOutputStream: new ZipEntry(nome) + putNextEntry (abre a entrada), Files.copy(file, zipStream) (escreve os bytes) e closeEntry (fecha). O stream precisa ser encadeado (new ZipOutputStream(Files.newOutputStream(caminho))) e fechado com try-with-resources. A IOException é checked. Esquecer o copy gera arquivos vazios, e um diretório na lista quebra o copy (filtrar com Files.isRegularFile).' }
+      ]
+    };
+  </script>
+  <script src="../js/app.js"></script>
+</body>
+</html>
