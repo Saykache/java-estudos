@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>144–148 · NIO: Path e Files</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="topo">
+      <a class="voltar" href="../index.html">← Todas as aulas</a>
+      <h1>144–148 · NIO: Path, Paths, Files, normalize, resolve e relativize</h1>
+      <p>O substituto do File: criar pastas e arquivos, copiar, normalizar caminhos, juntá-los e calcular o caminho entre dois pontos · <a href="https://www.youtube.com/playlist?list=PL62G310vn6nFIsOCC0H-C2infYgwm8SWW" target="_blank" rel="noopener">playlist</a></p>
+    </header>
+
+    <nav class="abas">
+      <a href="#resumo">Resumo</a>
+      <a href="#flashcards">Flashcards</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#estudo">Material de estudo</a>
+    </nav>
+
+    <p class="aviso">Junta as aulas 144 e 145 (Path, Paths, Files), 146 (normalização), 147 (resolvendo paths) e 148 (relativize). Continua as <a href="137-143-scanner-e-io.html">aulas 137–143</a>. Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. O código (pacote <code>javacore.Wnio</code>) foi conferido no <a href="https://github.com/devdojobr/maratona-java-virado-no-jiraya" target="_blank" rel="noopener">repositório do professor</a>. Na aula 146 o William usa o Ubuntu dentro do Windows, que é o mesmo WSL que você tem. Os itens marcados como "extra" não estão nos vídeos.</p>
+
+    <section id="resumo">
+      <h2>Resumo</h2>
+      <p>O pacote <strong><code>java.nio.file</code></strong> (Java 7, "NIO.2") trouxe <strong>métodos mais efetivos</strong> para arquivos e diretórios, e deve substituir o <code>File</code> com o tempo. A funcionalidade do <code>File</code> foi <strong>dividida em três</strong>:</p>
+<pre><code>Path   (interface)  → o caminho em si (substitui o objeto File); implementação depende do SO
+Paths  (classe)     → fábrica: Paths.get(...) devolve um Path
+Files  (classe final, métodos static) → as operações: criar, copiar, apagar, existe?...
+       (ex-métodos do File, agora como "caixa utilitária")
+
+File ↔ Path:  file.toPath()  ·  path.toFile()      (interoperabilidade com código legado)</code></pre>
+
+      <h3>144 · Path e Paths.get</h3>
+<pre><code>Path p1 = Paths.get("C:\\Users\\William\\Documents\\devdojo\\maratona-java\\file.txt");
+Path p2 = Paths.get("C:\\Users\\William\\Documents\\devdojo\\maratona-java", "file.txt");
+Path p3 = Paths.get("C:", "Users\\William\\Documents\\devdojo\\maratona-java", "file.txt");
+Path p4 = Paths.get("C:", "Users", "William", "Documents", "devdojo", "maratona-java", "file.txt");
+System.out.println(p1.getFileName());   // file.txt (nos quatro casos)</code></pre>
+      <ul>
+        <li><strong><code>Path</code> é uma interface.</strong> Quem cria a implementação certa para o sistema operacional é <strong><code>Paths.get(...)</code></strong>.</li>
+        <li><code>Paths.get</code> recebe <strong>varargs</strong> (aulas 52–53): o caminho inteiro de uma vez ou em pedaços. Ele monta o caminho com o separador do SO.</li>
+        <li><code>getFileName()</code> devolve só o último elemento (<code>file.txt</code>). Também existem <code>getParent()</code>, <code>getRoot()</code> e <code>getNameCount()</code>.</li>
+        <li>No Windows a barra invertida precisa de escape (<code>\\</code>). No Linux e no WSL: <code>Paths.get("/home/marcos/file.txt")</code>.</li>
+      </ul>
+
+      <h3>145 · Files: criar diretórios, arquivos e copiar</h3>
+<pre><code>Path pastaPath = Paths.get("pasta");                  // relativo: onde o programa roda
+if (Files.notExists(pastaPath)) {
+    Path pastaDirectory = Files.createDirectory(pastaPath);   // já existe → FileAlreadyExistsException
+}
+Path subPastaPath = Paths.get("pasta/subpasta/subsubpasta");
+Path subPastaDirectory = Files.createDirectories(subPastaPath);   // cria os pais; não reclama se existir
+Path filePath = Paths.get(subPastaPath.toString(), "file.txt");
+
+if (Files.notExists(filePath)) {
+    Path filePathCreated = Files.createFile(filePath);            // já existe → exceção
+}
+
+Path source = filePath;
+Path target = Paths.get(filePath.getParent().toString(), "file_renamed.txt");   // mesma pasta
+Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);   // sem a opção → exceção se existir</code></pre>
+      <ul>
+        <li><strong>Diferença de comportamento em relação ao <code>File</code>:</strong> os métodos de <code>Files</code> <strong>devolvem o <code>Path</code></strong> criado, e não um <code>boolean</code>. Quando algo dá errado, <strong>lançam exceção</strong> (<code>IOException</code> e filhas, checked). O <code>File</code> só devolvia <code>false</code>.</li>
+        <li>Por isso a <strong>programação defensiva</strong>: <code>Files.exists</code>/<code>Files.notExists</code> antes de criar.</li>
+        <li><strong><code>createDirectory</code></strong> cria <strong>um</strong> nível e lança exceção se o pai não existir. <strong><code>createDirectories</code></strong> cria <strong>toda a árvore</strong> e não lança exceção se ela já existir (é o <code>mkdirs</code> do NIO).</li>
+        <li><strong><code>createFile(path)</code></strong> cria o arquivo e também lança exceção se ele já existir.</li>
+        <li><strong><code>Files.copy(origem, destino, opções)</code>:</strong> o destino é um <code>Path</code> completo, com nome. O William errou ao montar o destino a partir do caminho do <strong>arquivo</strong> (<code>.../file.txt/file_renamed.txt</code>) e corrigiu com <code>getParent()</code>. Com <strong><code>StandardCopyOption.REPLACE_EXISTING</code></strong>, o destino é sobrescrito. Sem a opção, dá exceção se ele já existir.</li>
+      </ul>
+
+      <h3>146 · normalize: tirar . e ..</h3>
+<pre><code>String diretorioProjeto = "home/william/dev";
+String arquivoTxt = "../../arquivo.txt";            // "volta dois diretórios"
+Path path1 = Paths.get(diretorioProjeto, arquivoTxt);
+System.out.println(path1);               // home/william/dev/../../arquivo.txt
+System.out.println(path1.normalize());   // home/arquivo.txt
+
+Path path2 = Paths.get("/home/./william/./dev/");
+System.out.println(path2);               // /home/./william/./dev
+System.out.println(path2.normalize());   // /home/william/dev</code></pre>
+      <ul>
+        <li>No terminal: <code>..</code> = diretório <strong>pai</strong> (<code>cd ..</code>) e <code>.</code> = diretório <strong>atual</strong> (<code>./arquivo.txt</code>). O William mostra isso no Ubuntu com <code>cd</code>, <code>pwd</code> e o <code>vim</code>.</li>
+        <li>Um caminho montado a partir de pedaços (de um script ou de uma configuração) pode vir cheio de <code>..</code> e <code>.</code>. Ele <strong>funciona</strong>, mas é confuso. <strong><code>normalize()</code></strong> remove essas partes "redundantes" e devolve o caminho limpo.</li>
+        <li><code>normalize</code> é só <strong>manipulação de texto</strong>: não verifica se o arquivo existe (para isso existe <code>Files.exists</code>).</li>
+      </ul>
+
+      <h3>147 · resolve: juntar caminhos</h3>
+<pre><code>Path dir = Paths.get("home/william");
+Path arquivo = Paths.get("dev/arquivo.txt");
+System.out.println(dir.resolve(arquivo));       // home/william/dev/arquivo.txt
+
+Path absoluto = Paths.get("/home/william");     // começa com / → absoluto (a partir da raiz)
+Path relativo = Paths.get("dev");               // sem / → relativo (a partir de onde o programa roda)
+Path file = Paths.get("file.txt");
+System.out.println("1 " + absoluto.resolve(relativo));   // 1 /home/william/dev
+System.out.println("2 " + absoluto.resolve(file));       // 2 /home/william/file.txt
+System.out.println("3 " + relativo.resolve(absoluto));   // 3 /home/william       ← absoluto "vence"
+System.out.println("4 " + relativo.resolve(file));       // 4 dev/file.txt
+System.out.println("5 " + file.resolve(absoluto));       // 5 /home/william
+System.out.println("6 " + file.resolve(relativo));       // 6 file.txt/dev        ← não é inteligente!</code></pre>
+      <ul>
+        <li><strong>Absoluto × relativo:</strong> com <code>/</code> no começo, o caminho parte da <strong>raiz</strong>. Sem ela, parte do diretório atual. No terminal: <code>cd home/william</code> falha dentro de <code>/home</code>, e <code>cd /home/william</code> funciona de qualquer lugar.</li>
+        <li><strong><code>a.resolve(b)</code></strong> junta <code>b</code> ao final de <code>a</code>. Regras:
+          <ul>
+            <li>se <strong><code>b</code> é absoluto</strong>, devolve o próprio <code>b</code> (casos 3 e 5);</li>
+            <li>se <code>b</code> é relativo, cola no fim de <code>a</code> (1, 2, 4).</li>
+          </ul>
+        </li>
+        <li><strong>O resolve não é inteligente:</strong> ele não sabe que <code>file.txt</code> é um arquivo e cola <code>dev</code> depois dele (caso 6). Quem garante que a combinação faz sentido é você.</li>
+        <li>Na prática, o William costuma já ter o caminho inteiro, mas é bom conhecer as ferramentas.</li>
+      </ul>
+
+      <h3>148 · relativize: o caminho de A até B</h3>
+<pre><code>Path dir = Paths.get("/home/william");
+Path clazz = Paths.get("/home/william/devdojofoda/OlaMundo.java");
+System.out.println(dir.relativize(clazz));      // devdojofoda/OlaMundo.java
+
+Path absoluto1 = Paths.get("/home/william");
+Path absoluto2 = Paths.get("/usr/local");
+Path absoluto3 = Paths.get("/home/william/devdojofoda/OlaMundo.java");
+Path relativo1 = Paths.get("temp");
+Path relativo2 = Paths.get("temp/temp.2021921");
+System.out.println("1 " + absoluto1.relativize(absoluto3));   // 1 devdojofoda/OlaMundo.java
+System.out.println("2 " + absoluto3.relativize(absoluto1));   // 2 ../..
+System.out.println("3 " + absoluto1.relativize(absoluto2));   // 3 ../../usr/local
+System.out.println("4 " + relativo1.relativize(relativo2));   // 4 temp.2021921
+System.out.println("5 " + absoluto1.relativize(relativo1));   // IllegalArgumentException</code></pre>
+      <ul>
+        <li><strong><code>a.relativize(b)</code></strong> responde: <strong>estando em <code>a</code>, qual caminho leva até <code>b</code>?</strong> É o inverso do <code>resolve</code>: <code>a.resolve(a.relativize(b))</code> volta a <code>b</code>.</li>
+        <li>Para subir, ele usa <code>..</code>. De <code>/home/william</code> até <code>/usr/local</code>: volta dois níveis (até a raiz) e desce para <code>usr/local</code> (<code>cd ../../usr/local</code> no terminal).</li>
+        <li><strong>Os dois precisam ser do mesmo tipo:</strong> absoluto com absoluto, ou relativo com relativo. Misturar lança <strong><code>IllegalArgumentException</code></strong>, porque o Java não sabe onde o relativo está.</li>
+      </ul>
+
+      <h3>Atenção</h3>
+      <ul>
+        <li><strong><code>Files</code> lança exceção onde o <code>File</code> devolvia <code>false</code>:</strong> <code>createDirectory</code>, <code>createFile</code> e <code>copy</code> (sem <code>REPLACE_EXISTING</code>) lançam <code>FileAlreadyExistsException</code>. Um pai inexistente dá <code>NoSuchFileException</code>.</li>
+        <li><strong><code>Files.exists</code> e <code>Files.notExists</code> não são opostos exatos:</strong> sem permissão para verificar, os dois dão <code>false</code> (extra).</li>
+        <li><strong><code>normalize</code>, <code>resolve</code> e <code>relativize</code> só mexem no texto do caminho</strong>: não acessam o disco nem verificam se algo existe.</li>
+        <li><strong><code>resolve</code> com absoluto devolve o absoluto. <code>relativize</code> exige os dois do mesmo tipo.</strong></li>
+        <li><strong>Extra: prefira <code>resolve</code> a concatenar Strings:</strong> <code>subPastaPath.resolve("file.txt")</code> em vez de <code>Paths.get(subPastaPath.toString(), "file.txt")</code>. E <code>filePath.resolveSibling("file_renamed.txt")</code> troca só o nome, na mesma pasta.</li>
+        <li><strong>Extra: <code>Path.of(...)</code></strong> (Java 11+) é o substituto recomendado de <code>Paths.get(...)</code>.</li>
+        <li><strong>Extra: o <code>Files</code> também lê e escreve</strong>: <code>Files.writeString(path, texto)</code>, <code>Files.readString(path)</code>, <code>Files.readAllLines(path)</code>, <code>Files.move</code>, <code>Files.delete</code>/<code>deleteIfExists</code>. <code>Path</code> é imutável, então os métodos devolvem um novo.</li>
+      </ul>
+
+      <h3>Paralelo com PHP</h3>
+      <ul>
+        <li><strong>Estilo:</strong> o PHP usa funções soltas com string (<code>mkdir</code>, <code>copy</code>, <code>file_exists</code>), mais perto do <code>Files</code> (métodos estáticos) do que do <code>File</code>. O que o Java acrescenta é o tipo <code>Path</code> no lugar da string.</li>
+        <li><strong>Equivalências:</strong>
+          <ul>
+            <li><code>Files.createDirectories</code> ≈ <code>mkdir($dir, 0777, true)</code> (o <code>true</code> é o "recursivo").</li>
+            <li><code>Files.createFile</code> ≈ <code>touch</code>, e <code>Files.copy(..., REPLACE_EXISTING)</code> ≈ <code>copy()</code>, que no PHP sobrescreve por padrão.</li>
+            <li><code>Files.exists</code> ≈ <code>file_exists</code>, <code>getFileName</code> ≈ <code>basename</code>, <code>getParent</code> ≈ <code>dirname</code>.</li>
+          </ul>
+        </li>
+        <li><strong>Erros:</strong> as funções do PHP devolvem <code>false</code> e emitem um <em>warning</em>, como o <code>File</code> antigo. O <code>Files</code> lança exceção. No Laravel, o <code>Storage</code>/<code>File</code> facade tem <code>makeDirectory($path, recursive: true)</code>, <code>copy</code>, <code>move</code> e <code>exists</code>.</li>
+        <li><strong>normalize:</strong> o <code>realpath()</code> do PHP também resolve <code>.</code> e <code>..</code>, mas <strong>acessa o disco</strong> (devolve <code>false</code> se o arquivo não existe). O <code>normalize</code> do Java só mexe no texto. Em Java, o equivalente ao <code>realpath</code> é <code>path.toRealPath()</code> (extra).</li>
+        <li><strong>resolve/relativize:</strong> no PHP você concatena com <code>DIRECTORY_SEPARATOR</code> ou usa um pacote como o <code>symfony/filesystem</code> (<code>Path::join</code>, <code>makeRelative</code>). O Java traz isso pronto.</li>
+      </ul>
+    </section>
+
+    <section id="flashcards">
+      <h2>Flashcards</h2>
+      <p style="color:var(--muted);margin-top:-6px">Toque no cartão para virar.</p>
+      <div id="flashcards-app"></div>
+    </section>
+
+    <section id="quiz">
+      <h2>Quiz</h2>
+      <div id="quiz-app"></div>
+    </section>
+
+    <section id="estudo">
+      <h2>Material de estudo</h2>
+
+      <h3>Mapa mental</h3>
+<pre><code>NIO.2 (java.nio.file, Java 7)
+├── Path (interface): o caminho · Paths.get(...) cria · file.toPath() / path.toFile()
+├── Paths.get (144)
+│   ├── varargs: inteiro ou em pedaços
+│   └── getFileName · getParent · getRoot
+├── Files (145): métodos static, lançam exceção
+│   ├── exists / notExists (programação defensiva)
+│   ├── createDirectory (1 nível) · createDirectories (árvore, sem erro se existir)
+│   ├── createFile (erro se existir)
+│   └── copy(origem, destino, REPLACE_EXISTING)
+├── normalize (146): remove . e ..  → home/william/dev/../../arquivo.txt = home/arquivo.txt
+├── resolve (147): a.resolve(b) = a/b · b absoluto → b · "file.txt/dev" (não é inteligente)
+└── relativize (148): caminho de a até b · ../.. para subir · absoluto × relativo → exceção</code></pre>
+
+      <h3>Prática no seu WSL (20 minutos)</h3>
+<pre><code>cd ~/java-lab
+W=src/academy/devdojo/maratonajava/javacore/Wnio
+mkdir -p $W/test
+
+cat > $W/test/NioTest01.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Wnio.test;
+
+import java.io.IOException;
+import java.nio.file.*;
+
+public class NioTest01 {
+    public static void main(String[] args) throws IOException {
+        // 144
+        Path p = Paths.get("/home", "william", "dev", "file.txt");
+        System.out.println(p);                                   // ?
+        System.out.println(p.getFileName() + " | " + p.getParent());   // ?
+
+        // 145
+        Path pasta = Paths.get("lab-nio");
+        if (Files.notExists(pasta)) Files.createDirectory(pasta);
+        Path sub = Files.createDirectories(Paths.get("lab-nio/subpasta/subsubpasta"));
+        Files.createDirectories(sub);                            // de novo: sem erro
+        Path file = sub.resolve("file.txt");
+        if (Files.notExists(file)) Files.createFile(file);
+        try {
+            Files.createFile(file);                              // de novo: ?
+        } catch (FileAlreadyExistsException e) {
+            System.out.println("já existe: " + e.getMessage());
+        }
+        Path copia = file.resolveSibling("file_renamed.txt");
+        Files.copy(file, copia, StandardCopyOption.REPLACE_EXISTING);
+        System.out.println(Files.exists(copia));                 // ?
+
+        // 146
+        System.out.println(Paths.get("home/william/dev", "../../arquivo.txt").normalize()); // ?
+        System.out.println(Paths.get("/home/./william/./dev/").normalize());              // ?
+
+        // 147
+        Path absoluto = Paths.get("/home/william");
+        Path relativo = Paths.get("dev");
+        Path arq = Paths.get("file.txt");
+        System.out.println(absoluto.resolve(relativo));          // ?
+        System.out.println(relativo.resolve(absoluto));          // ?
+        System.out.println(arq.resolve(relativo));               // ?
+
+        // 148
+        Path a3 = Paths.get("/home/william/devdojofoda/OlaMundo.java");
+        System.out.println(absoluto.relativize(a3));             // ?
+        System.out.println(a3.relativize(absoluto));             // ?
+        System.out.println(absoluto.relativize(Paths.get("/usr/local")));   // ?
+        System.out.println(absoluto.resolve(absoluto.relativize(a3)));      // ? (volta ao a3)
+        try {
+            absoluto.relativize(relativo);
+        } catch (IllegalArgumentException e) {
+            System.out.println("IllegalArgumentException");
+        }
+    }
+}
+EOF
+
+javac -d out $(find src -name '*.java')
+rm -rf lab-nio
+java -cp out academy.devdojo.maratonajava.javacore.Wnio.test.NioTest01
+find lab-nio</code></pre>
+      <details>
+        <summary>Ver a saída esperada</summary>
+<pre><code>/home/william/dev/file.txt
+file.txt | /home/william/dev
+já existe: lab-nio/subpasta/subsubpasta/file.txt
+true
+home/arquivo.txt
+/home/william/dev
+/home/william/dev
+/home/william
+file.txt/dev
+devdojofoda/OlaMundo.java
+../..
+../../usr/local
+/home/william/devdojofoda/OlaMundo.java
+IllegalArgumentException
+
+(find lab-nio)
+lab-nio
+lab-nio/subpasta
+lab-nio/subpasta/subsubpasta
+lab-nio/subpasta/subsubpasta/file.txt
+lab-nio/subpasta/subsubpasta/file_renamed.txt
+(a ordem do find pode variar)</code></pre>
+      </details>
+      <p><strong>Exercícios:</strong></p>
+      <ol>
+        <li>Troque <code>Files.createDirectories</code> por <code>Files.createDirectory</code> na subpasta (com <code>rm -rf lab-nio</code> antes) e leia a exceção.</li>
+        <li>Tire o <code>REPLACE_EXISTING</code> do <code>copy</code> e rode duas vezes. Qual exceção aparece na segunda?</li>
+        <li>Escreva um texto no arquivo com <code>Files.writeString(file, "O DevDojo é lindo\n")</code> e leia de volta com <code>Files.readAllLines(file)</code>. Compare com o <code>BufferedWriter</code>/<code>BufferedReader</code> da aula 141–142.</li>
+        <li>Monte com <code>resolve</code> o caminho <code>/home/SEU_USUARIO/java-lab/src</code> a partir de <code>Paths.get(System.getProperty("user.home"))</code>.</li>
+        <li>Dado <code>Paths.get("/var/www/app/public")</code> e <code>Paths.get("/var/www/app/storage/logs/laravel.log")</code>, calcule o caminho relativo entre eles e confira no terminal com <code>cd</code>.</li>
+      </ol>
+
+      <h3>Glossário</h3>
+      <ul>
+        <li><strong>NIO.2</strong>: a API <code>java.nio.file</code> (Java 7) para caminhos e arquivos.</li>
+        <li><strong><code>Path</code></strong>: interface que representa um caminho; imutável.</li>
+        <li><strong><code>Paths</code></strong>: classe fábrica de <code>Path</code> (<code>Paths.get</code>).</li>
+        <li><strong><code>Files</code></strong>: classe final com métodos estáticos que operam sobre <code>Path</code>s.</li>
+        <li><strong>Caminho absoluto</strong>: começa na raiz (<code>/</code>); vale de qualquer lugar.</li>
+        <li><strong>Caminho relativo</strong>: parte do diretório atual.</li>
+        <li><strong><code>.</code> / <code>..</code></strong>: diretório atual / diretório pai.</li>
+        <li><strong>Normalizar</strong>: remover <code>.</code> e <code>..</code> redundantes do caminho.</li>
+        <li><strong>Resolver</strong>: juntar um caminho a outro (<code>a.resolve(b)</code>).</li>
+        <li><strong>Relativizar</strong>: calcular o caminho que leva de <code>a</code> até <code>b</code>.</li>
+      </ul>
+
+      <h3>Revisão espaçada</h3>
+      <ul class="revisao">
+        <li><span class="dia">Dia 1</span><span>Todos os flashcards + a prática com previsões.</span></li>
+        <li><span class="dia">Dia 3</span><span>Quiz + exercícios 1 a 3.</span></li>
+        <li><span class="dia">Dia 7</span><span>Exercícios 4 e 5 + refazer os 6 casos de resolve e os 5 de relativize sem olhar.</span></li>
+        <li><span class="dia">Dia 14</span><span>Flashcards que errou + questões discursivas.</span></li>
+      </ul>
+
+      <h3>Para aprofundar</h3>
+      <ul>
+        <li>O que é <em>path traversal</em> (<code>../../etc/passwd</code>) e como <code>normalize</code> + <code>startsWith</code> ajudam a bloquear uploads maliciosos?</li>
+        <li>Qual a diferença entre <code>normalize()</code>, <code>toAbsolutePath()</code> e <code>toRealPath()</code>?</li>
+        <li>O que é o <code>FileSystem</code> (<code>FileSystems.getDefault()</code>) e como abrir um .zip como se fosse um sistema de arquivos?</li>
+        <li>Quais <code>StandardCopyOption</code>/<code>StandardOpenOption</code> existem (<code>ATOMIC_MOVE</code>, <code>APPEND</code>...)?</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    window.AULA = {
+      flashcards: [
+        ["Quais as três peças do NIO.2 que substituem o File?", "Path (o caminho), Paths (fábrica) e Files (operações estáticas)"],
+        ["Path é classe ou interface?", "Interface; a implementação depende do sistema operacional"],
+        ["Como obter um Path?", "Paths.get(\"...\") (ou Path.of no Java 11+)"],
+        ["Paths.get aceita o caminho em pedaços?", "Sim: é varargs, Paths.get(\"/home\", \"william\", \"file.txt\")"],
+        ["Como converter entre File e Path?", "file.toPath() e path.toFile()"],
+        ["O que getFileName() devolve?", "O último elemento do caminho (ex.: file.txt)"],
+        ["createDirectory × createDirectories?", "Cria um nível (erro se o pai não existe ou se já existe) × cria a árvore toda, sem erro se existir"],
+        ["O que Files.createFile faz se o arquivo já existe?", "Lança FileAlreadyExistsException"],
+        ["Diferença de comportamento entre Files e File ao falhar?", "Files lança exceção (IOException); File devolvia false"],
+        ["Como evitar a exceção de \"já existe\"?", "Checar antes com Files.notExists / Files.exists"],
+        ["Como copiar sobrescrevendo o destino?", "Files.copy(origem, destino, StandardCopyOption.REPLACE_EXISTING)"],
+        ["Como pegar a pasta de um arquivo?", "path.getParent()"],
+        ["O que significam . e .. num caminho?", "Diretório atual e diretório pai"],
+        ["O que normalize() faz?", "Remove . e .. redundantes: home/william/dev/../../arquivo.txt → home/arquivo.txt"],
+        ["normalize verifica se o arquivo existe?", "Não: só mexe no texto do caminho"],
+        ["O que diferencia caminho absoluto de relativo?", "O absoluto começa na raiz (/); o relativo parte do diretório atual"],
+        ["O que a.resolve(b) faz?", "Junta b ao final de a"],
+        ["a.resolve(b) quando b é absoluto?", "Devolve o próprio b"],
+        ["Paths.get(\"file.txt\").resolve(\"dev\")?", "file.txt/dev: o resolve não sabe o que é arquivo"],
+        ["O que a.relativize(b) responde?", "Qual o caminho para ir de a até b"],
+        ["/home/william relativize /usr/local?", "../../usr/local"],
+        ["/home/william/x/Y.java relativize /home/william?", "../.."],
+        ["O que acontece ao relativizar absoluto com relativo?", "IllegalArgumentException: precisam ser do mesmo tipo"],
+        ["Como trocar só o nome do arquivo, na mesma pasta?", "path.resolveSibling(\"novo.txt\") — extra"],
+        ["Como ler/escrever um arquivo inteiro com NIO?", "Files.readString / readAllLines e Files.writeString — extra"]
+      ],
+      quiz: [
+        { tipo: 'multipla', pergunta: 'Qual afirmação sobre Path, Paths e Files está correta?', opcoes: ['Path é uma classe concreta com construtor público', 'Paths.get cria Paths; Files guarda o conteúdo do arquivo', 'Path representa o caminho, Paths.get cria o Path e Files tem as operações estáticas', 'Files substitui Path e Paths'], correta: 2,
+          explicacao: 'A funcionalidade do File foi dividida: Path (interface, o caminho), Paths (fábrica) e Files (métodos estáticos que operam sobre Paths).' },
+        { tipo: 'vf', pergunta: 'Files.createDirectory("pasta") devolve false quando a pasta já existe, como o mkdir() do File.', correta: 1,
+          explicacao: 'Falso. Lança FileAlreadyExistsException. Os métodos de Files devolvem o Path criado e sinalizam erro com exceção. Por isso o Files.notExists antes.' },
+        { tipo: 'multipla', pergunta: 'Para criar "pasta/subpasta/subsubpasta" de uma vez, sem erro se já existir:', opcoes: ['Files.createDirectory(path)', 'Files.createDirectories(path)', 'Files.createFile(path)', 'new File(path).mkdir()'], correta: 1,
+          explicacao: 'createDirectories cria os diretórios pais que faltam e não reclama se tudo já existe. createDirectory cria só um nível.' },
+        { tipo: 'multipla', pergunta: 'Qual o resultado de Paths.get("home/william/dev", "../../arquivo.txt").normalize()?', opcoes: ['home/william/dev/arquivo.txt', 'home/arquivo.txt', 'arquivo.txt', 'home/william/arquivo.txt'], correta: 1,
+          explicacao: 'Cada .. volta um nível: dev → william → home. Sobra home/arquivo.txt.' },
+        { tipo: 'multipla', pergunta: 'Paths.get("dev").resolve(Paths.get("/home/william")) resulta em:', opcoes: ['dev/home/william', '/home/william/dev', '/home/william', 'IllegalArgumentException'], correta: 2,
+          explicacao: 'Quando o argumento do resolve é absoluto, ele é devolvido como está.' },
+        { tipo: 'vf', pergunta: 'Paths.get("file.txt").resolve("dev") lança exceção, porque não dá para colocar uma pasta dentro de um arquivo.', correta: 1,
+          explicacao: 'Falso. Devolve file.txt/dev: resolve só junta textos e não sabe o que é arquivo ou pasta.' },
+        { tipo: 'multipla', pergunta: 'Paths.get("/home/william").relativize(Paths.get("/usr/local")) resulta em:', opcoes: ['/usr/local', '../usr/local', '../../usr/local', 'usr/local'], correta: 2,
+          explicacao: 'De /home/william, sobe dois níveis até a raiz (../..) e desce para usr/local.' },
+        { tipo: 'multipla', pergunta: 'O que acontece em Paths.get("/home/william").relativize(Paths.get("temp"))?', opcoes: ['Devolve temp', 'Devolve ../../temp', 'Lança IllegalArgumentException', 'Devolve /home/william/temp'], correta: 2,
+          explicacao: 'relativize exige os dois caminhos do mesmo tipo (absoluto com absoluto, ou relativo com relativo). O Java não sabe onde o relativo está.' },
+        { tipo: 'discursiva', pergunta: 'Explique a diferença entre resolve e relativize, com um exemplo em que um desfaz o outro.',
+          explicacao: 'resolve junta caminhos: a.resolve(b) coloca b no fim de a (se b for absoluto, devolve b). relativize faz o inverso: a.relativize(c) calcula o caminho que leva de a até c, usando .. para subir. Exemplo: a = /home/william e c = /home/william/devdojofoda/OlaMundo.java. a.relativize(c) = devdojofoda/OlaMundo.java, e a.resolve(devdojofoda/OlaMundo.java) = c de volta. Nenhum dos dois acessa o disco: são operações sobre o texto do caminho. relativize exige os dois do mesmo tipo, e resolve não é inteligente (file.txt/dev).' },
+        { tipo: 'discursiva', pergunta: 'No PHP você faz @mkdir($dir, 0777, true); copy($a, $b); e confere o retorno. Compare com o Java NIO, citando a abordagem de erros de cada um.',
+          explicacao: 'Java: Files.createDirectories(dir) (o recursivo do PHP) e Files.copy(a, b, StandardCopyOption.REPLACE_EXISTING), porque o copy do PHP sobrescreve por padrão e o do Java não. No PHP, as funções devolvem false e emitem um warning (muitas vezes silenciado com @), e esquecer de conferir o retorno deixa o erro passar. O NIO lança exceções checked (FileAlreadyExistsException, NoSuchFileException, IOException): o compilador obriga a tratar ou declarar, e nada falha em silêncio. O File antigo era mais parecido com o PHP (devolvia boolean). Por isso o NIO pede programação defensiva com Files.exists/notExists antes de criar.' }
+      ]
+    };
+  </script>
+  <script src="../js/app.js"></script>
+</body>
+</html>
