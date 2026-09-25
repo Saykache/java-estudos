@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>60–63 · Blocos de inicialização e static</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="topo">
+      <a class="voltar" href="../index.html">← Todas as aulas</a>
+      <h1>60–63 · Blocos de inicialização e static</h1>
+      <p>Bloco de instância, atributos e métodos estáticos, bloco estático e a ordem de criação dos objetos · <a href="https://www.youtube.com/playlist?list=PL62G310vn6nFIsOCC0H-C2infYgwm8SWW" target="_blank" rel="noopener">playlist</a></p>
+    </header>
+
+    <nav class="abas">
+      <a href="#resumo">Resumo</a>
+      <a href="#flashcards">Flashcards</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#estudo">Material de estudo</a>
+    </nav>
+
+    <p class="aviso">Junta as aulas 60 (blocos de inicialização), 61 (modificador <code>static</code>), 62 (métodos estáticos) e 63 (bloco de inicialização estático). Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. Os nomes dos pacotes (<code>Eblocosinicializacao</code>, <code>Fmodificadorestatico</code>) seguem o padrão do curso, reconstruídos do áudio. O contador de instâncias, a diferença do <code>static</code> em PHP-FPM e os itens marcados como "extra" não estão nos vídeos.</p>
+
+    <section id="resumo">
+      <h2>Resumo</h2>
+      <p>Até aqui, cada objeto tinha a <strong>sua própria cópia</strong> de cada atributo. Estas aulas mostram duas coisas novas. A primeira: onde colocar código de inicialização comum a <strong>todos os construtores</strong> (o bloco de inicialização). A segunda: como fazer algo pertencer à <strong>classe</strong> e não a cada objeto (o modificador <code>static</code>). Com isso, o <code>public static void main(String[] args)</code> finalmente faz sentido por inteiro.</p>
+
+      <h3>60 · Bloco de inicialização de instância</h3>
+<pre><code>public class Anime {
+    private String nome;
+    private int[] episodios;
+
+    {   // bloco de inicialização: roda a CADA new, ANTES do construtor
+        System.out.println("Dentro do bloco de inicialização");
+        episodios = new int[100];
+        for (int i = 0; i &lt; episodios.length; i++) {
+            episodios[i] = i + 1;          // episódios de 1 a 100
+        }
+    }
+
+    public Anime() {
+    }
+
+    public Anime(String nome) {            // não precisa repetir o laço aqui
+        this.nome = nome;
+    }
+}</code></pre>
+      <ul>
+        <li><strong>O problema:</strong> preencher os 100 episódios (pense em One Piece) no construtor vazio funciona, mas o construtor <code>Anime(String nome)</code> deixava <code>episodios</code> como <code>null</code>. Seria preciso <strong>duplicar o código em todos os construtores</strong>.</li>
+        <li><strong>A solução:</strong> um par de chaves solto na classe, <code>{ ... }</code>, é o <strong>bloco de inicialização de instância</strong>. Ele roda <strong>toda vez que um objeto é criado</strong>, <strong>antes do construtor</strong>, não importa qual construtor foi chamado.</li>
+        <li>Pode ficar em qualquer lugar da classe, mas o costume é <strong>depois dos atributos e antes dos construtores</strong>.</li>
+        <li>No IntelliJ, <code>Alt+Enter</code> sobre um array oferece "iterate" e gera o foreach.</li>
+        <li>O William recomenda o bloco quando uma inicialização precisa valer para todos os construtores, ou quando ela pode lançar exceção (tema futuro).</li>
+      </ul>
+      <p><strong>A ordem de criação de um objeto (até aqui):</strong></p>
+<pre><code>1. Aloca o espaço do objeto na memória
+2. Cada atributo recebe o valor padrão (null, 0, false) ou o valor escrito na declaração
+3. Executa o bloco de inicialização de instância
+4. Executa o construtor</code></pre>
+
+      <h3>61 · Atributo <code>static</code>: pertence à classe</h3>
+<pre><code>public class Carro {
+    private String nome;
+    private double velocidadeMaxima;
+    public static double velocidadeLimite = 250;   // UMA cópia, da classe
+
+    public Carro(String nome, double velocidadeMaxima) {
+        this.nome = nome;
+        this.velocidadeMaxima = velocidadeMaxima;
+    }
+}
+
+Carro c1 = new Carro("BMW", 280);
+Carro c2 = new Carro("Mercedes", 275);
+Carro c3 = new Carro("Audi", 290);
+Carro.velocidadeLimite = 180;   // vale para os TRÊS (e para os que forem criados depois)</code></pre>
+      <ul>
+        <li><strong>O cenário:</strong> o "acordo de cavalheiros" das montadoras alemãs limita eletronicamente os carros a 250 km/h. Com <code>velocidadeLimite</code> como atributo comum, cada carro tem sua cópia, e <code>c1.setVelocidadeLimite(180)</code> muda <strong>só a BMW</strong>. O acordo quebra.</li>
+        <li>Com <strong><code>static</code></strong>, o atributo passa a pertencer à <strong>classe</strong>, como um metadado dela. Existe <strong>um valor só</strong>, compartilhado por todos os objetos. Mudar por um aparece em todos.</li>
+        <li><strong>Acesse pelo nome da classe:</strong> <code>Carro.velocidadeLimite</code>. Por <code>c1.velocidadeLimite</code> ou <code>this.velocidadeLimite</code> até compila, mas engana quem lê, que pensa estar mexendo só num objeto. O IntelliJ avisa.</li>
+        <li><strong>Não precisa de objeto nenhum:</strong> <code>System.out.println(Carro.velocidadeLimite)</code> funciona sem nenhum <code>new Carro</code>.</li>
+        <li><strong>A ordem das palavras:</strong> <code>public static</code>. <code>static public</code> compila, mas a convenção é o modificador de acesso primeiro.</li>
+      </ul>
+
+      <h3>62 · Métodos <code>static</code></h3>
+<pre><code>private static double velocidadeLimite = 250;
+
+public static void setVelocidadeLimite(double velocidadeLimite) {
+    Carro.velocidadeLimite = velocidadeLimite;    // NÃO dá para usar this aqui
+}
+
+public static double getVelocidadeLimite() {
+    return velocidadeLimite;
+}
+
+// CarroTeste01 — antes de criar qualquer carro
+Carro.setVelocidadeLimite(180);</code></pre>
+      <ul>
+        <li>Com o atributo <code>private</code>, o acesso passa por getter e setter <strong>estáticos</strong>, chamados pelo nome da classe.</li>
+        <li><strong>Dentro de um método <code>static</code> não existe <code>this</code>.</strong> O <code>this</code> é o objeto atual, e um método estático pode ser chamado <strong>sem nenhum objeto na memória</strong>. Para desempatar o parâmetro do atributo, use <strong>o nome da classe</strong>: <code>Carro.velocidadeLimite = velocidadeLimite</code>.</li>
+        <li><strong>Métodos estáticos não acessam atributos de instância.</strong> Se <code>imprime()</code> fosse <code>static</code>, <code>nome</code> e <code>velocidadeMaxima</code> dariam erro (<em>non-static field cannot be referenced from a static context</em>). De qual carro seria o nome, se talvez nem exista carro?</li>
+        <li><strong>O contrário pode:</strong> métodos de instância acessam os membros estáticos, porque a classe sempre existe antes do objeto.</li>
+        <li><strong>Quando tornar um método <code>static</code>:</strong> quando ele <strong>não usa nenhum atributo de instância</strong>. Os métodos da <code>Calculadora</code> (aulas 44–47) poderiam ser todos estáticos.</li>
+        <li><strong>Agora o <code>main</code> faz sentido:</strong> <code>public static void main(String[] args)</code> é público, estático (a JVM chama sem criar objeto), não retorna nada, se chama <code>main</code> e recebe um array de String. Por ser estático, um atributo não estático da classe de teste não pode ser usado dentro dele.</li>
+      </ul>
+
+      <h3>63 · Bloco de inicialização <code>static</code></h3>
+<pre><code>public class Anime {
+    private String nome;
+    private static int[] episodios;      // um array só para todos os animes
+
+    static {    // roda UMA VEZ, quando a JVM carrega a classe
+        System.out.println("Dentro do bloco de inicialização estático");
+        episodios = new int[100];
+        for (int i = 0; i &lt; episodios.length; i++) {
+            episodios[i] = i + 1;
+        }
+    }
+
+    {           // de instância: roda a cada new
+        System.out.println("Dentro do bloco de inicialização não estático");
+    }
+}
+
+new Anime(); new Anime(); new Anime();
+// estático: 1 vez · não estático: 3 vezes</code></pre>
+      <ul>
+        <li>Criar 3 animes rodava o bloco de instância 3 vezes, recriando o mesmo array de 100 episódios. É <strong>processamento desperdiçado</strong>, já que o valor é igual para todos.</li>
+        <li>Com o atributo <code>static</code> e a palavra <code>static</code> antes das chaves, o bloco roda <strong>uma única vez</strong>, <strong>quando a JVM carrega a classe</strong>, antes mesmo de existir qualquer objeto. Dentro dele, os atributos estáticos se acessam pelo nome da classe (<code>Anime.episodios</code>), sem <code>this</code>.</li>
+        <li>Vários blocos estáticos rodam <strong>na ordem em que aparecem</strong>, uma vez cada. Depois, a cada objeto, rodam os blocos de instância.</li>
+        <li>Como no método estático, o bloco estático não enxerga atributos de instância (<code>nome</code>).</li>
+        <li>Segundo o William, você vai usar <strong>pouco</strong> o bloco estático, mas <strong>muito</strong> os métodos estáticos.</li>
+      </ul>
+      <p><strong>A ordem completa:</strong></p>
+<pre><code>0. Quando a classe é carregada (1 vez): atributos static + blocos static, na ordem do código
+1. Aloca o espaço do objeto                       ┐
+2. Atributos de instância: padrão / valor escrito  │ a cada new
+3. Blocos de inicialização de instância            │
+4. Construtor                                      ┘</code></pre>
+
+      <h3>Atenção</h3>
+      <ul>
+        <li><strong><code>this</code> em contexto estático não compila.</strong> Vale para métodos e blocos <code>static</code>, incluindo o <code>main</code>.</li>
+        <li><strong>Atributo de instância em contexto estático não compila.</strong> Dentro do <code>main</code>, um <code>int x</code> declarado na classe (sem <code>static</code>) não pode ser usado.</li>
+        <li><strong>Acessar static por uma referência compila e engana:</strong> <code>c1.velocidadeLimite = 180</code> muda para todos os carros, não só para o <code>c1</code>.</li>
+        <li><strong>Extra: o exemplo clássico de static</strong> é contar quantos objetos já foram criados: <code>private static int total;</code> e, no construtor, <code>total++</code>. Cada <code>new</code> incrementa o mesmo contador.</li>
+        <li><strong>Extra: você já usa métodos estáticos.</strong> <code>Math.max(a, b)</code>, <code>Integer.parseInt("10")</code> e <code>Arrays.toString(arr)</code> são todos chamados pelo nome da classe, sem <code>new</code>.</li>
+        <li><strong>Extra: estado estático é estado global.</strong> Um <code>static</code> que muda de valor é compartilhado por todo o programa, inclusive entre requisições e threads num servidor. Prefira <code>static</code> para métodos utilitários e constantes (<code>static final</code>, aula 77), e evite para dados que mudam.</li>
+        <li><strong>Extra: ordem entre atributo e bloco.</strong> Valores escritos na declaração e blocos de instância rodam na <strong>ordem em que aparecem no código</strong>, sempre antes do construtor.</li>
+      </ul>
+
+      <h3>Paralelo com PHP</h3>
+      <ul>
+        <li><strong>A palavra é a mesma</strong>, mas a sintaxe de acesso muda: <code>Carro::$velocidadeLimite</code> e <code>self::</code>/<code>static::</code> no PHP, contra <code>Carro.velocidadeLimite</code> em Java (sem <code>$</code>, com ponto).</li>
+        <li><strong><code>$this</code> também não existe em métodos estáticos do PHP.</strong> A regra é a mesma.</li>
+        <li><strong>Blocos de inicialização não existem no PHP.</strong> Nem o de instância (no PHP tudo vai no <code>__construct</code>) nem o estático (você chamaria um <code>init()</code> estático manualmente).</li>
+        <li><strong>A diferença que mais importa, o tempo de vida:</strong> no PHP-FPM, cada requisição começa do zero, e um <code>static</code> "morre" no fim dela. Numa aplicação Java (Spring, por exemplo), a JVM fica no ar por dias: um atributo <code>static</code> é compartilhado por <strong>todas as requisições de todos os usuários</strong>. Guardar dados de usuário num <code>static</code> em Java é bug grave. (O Laravel Octane se aproxima desse modelo, e lá o mesmo cuidado vale.)</li>
+        <li><strong>Facades não são static de verdade:</strong> <code>Cache::get()</code> parece método estático, mas é um proxy (<code>__callStatic</code>) para um objeto do container. Em Java, <code>Math.max()</code> é estático de fato.</li>
+      </ul>
+    </section>
+
+    <section id="flashcards">
+      <h2>Flashcards</h2>
+      <p style="color:var(--muted);margin-top:-6px">Toque no cartão para virar.</p>
+      <div id="flashcards-app"></div>
+    </section>
+
+    <section id="quiz">
+      <h2>Quiz</h2>
+      <div id="quiz-app"></div>
+    </section>
+
+    <section id="estudo">
+      <h2>Material de estudo</h2>
+
+      <h3>Mapa mental</h3>
+<pre><code>Blocos de inicialização e static
+├── Bloco de instância (60)
+│   ├── { ... } solto na classe
+│   ├── roda a cada new, antes de qualquer construtor
+│   └── evita duplicar código entre construtores
+├── Atributo static (61)
+│   ├── pertence à classe: um valor, compartilhado
+│   ├── acesse por Classe.atributo (não por referência/this)
+│   ├── funciona sem nenhum objeto
+│   └── public static (acesso primeiro)
+├── Método static (62)
+│   ├── sem this · sem acesso a atributos de instância
+│   ├── instância → static pode; static → instância não
+│   ├── use quando não depende de atributos de instância
+│   └── agora o main faz sentido
+├── Bloco static (63)
+│   ├── static { ... } → 1 vez, ao carregar a classe
+│   └── vários: na ordem do código
+└── Ordem
+    ├── 0. static (1 vez)
+    └── 1. memória 2. atributos 3. blocos de instância 4. construtor</code></pre>
+
+      <h3>Prática no seu WSL (20 minutos)</h3>
+<pre><code>cd ~/java-lab
+F=src/academy/devdojo/maratonajava/javacore/Fmodificadorestatico
+mkdir -p $F/dominio $F/test
+
+cat > $F/dominio/Carro.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Fmodificadorestatico.dominio;
+
+public class Carro {
+    private String nome;
+    private static double velocidadeLimite = 250;
+    private static int total;
+
+    static {
+        System.out.println("static: classe Carro carregada");
+    }
+
+    {
+        System.out.println("instância: bloco antes do construtor");
+    }
+
+    public Carro(String nome) {
+        System.out.println("construtor: " + nome);
+        this.nome = nome;
+        total++;
+    }
+
+    public void imprime() {
+        System.out.println(nome + " limite " + velocidadeLimite);
+    }
+
+    public static void setVelocidadeLimite(double velocidadeLimite) {
+        Carro.velocidadeLimite = velocidadeLimite;
+    }
+
+    public static int getTotal() {
+        return total;
+    }
+}
+EOF
+
+cat > $F/test/CarroTeste01.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Fmodificadorestatico.test;
+
+import academy.devdojo.maratonajava.javacore.Fmodificadorestatico.dominio.Carro;
+
+public class CarroTeste01 {
+    public static void main(String[] args) {
+        System.out.println("início do main");
+        Carro.setVelocidadeLimite(180);          // ?
+        Carro c1 = new Carro("BMW");            // ?
+        Carro c2 = new Carro("Audi");           // ?
+        c1.imprime();
+        c2.imprime();
+        System.out.println("total: " + Carro.getTotal());
+    }
+}
+EOF
+
+javac -d out $(find src -name '*.java')
+java -cp out academy.devdojo.maratonajava.javacore.Fmodificadorestatico.test.CarroTeste01</code></pre>
+      <details>
+        <summary>Ver a saída esperada</summary>
+<pre><code>início do main
+static: classe Carro carregada
+instância: bloco antes do construtor
+construtor: BMW
+instância: bloco antes do construtor
+construtor: Audi
+BMW limite 180.0
+Audi limite 180.0
+total: 2</code></pre>
+        <p>O bloco estático só roda quando a classe <code>Carro</code> é usada pela primeira vez (na chamada <code>Carro.setVelocidadeLimite</code>), depois do "início do main".</p>
+      </details>
+      <p><strong>Exercícios:</strong></p>
+      <ol>
+        <li>Refaça a aula 60: <code>Anime</code> com o array de 100 episódios preenchido num bloco de instância e dois construtores.</li>
+        <li>Torne <code>imprime()</code> <code>static</code> e leia o erro. Depois tente usar <code>this</code> no <code>setVelocidadeLimite</code>.</li>
+        <li>Transforme os métodos da <code>Calculadora</code> em <code>static</code> e chame-os como <code>Calculadora.somaDoisNumeros(...)</code>.</li>
+        <li>Coloque três blocos <code>static</code> e dois de instância numa classe, crie 3 objetos e preveja a saída antes de rodar.</li>
+      </ol>
+
+      <h3>Glossário</h3>
+      <ul>
+        <li><strong>Bloco de inicialização de instância</strong>: <code>{ ... }</code> na classe. Roda a cada criação de objeto, antes do construtor.</li>
+        <li><strong>Bloco de inicialização estático</strong>: <code>static { ... }</code>. Roda uma vez, quando a classe é carregada.</li>
+        <li><strong>Atributo de instância</strong>: cada objeto tem o seu.</li>
+        <li><strong>Atributo estático (de classe)</strong>: um só, compartilhado por todos os objetos.</li>
+        <li><strong>Método estático</strong>: chamado pela classe. Não tem <code>this</code> nem acessa atributos de instância.</li>
+        <li><strong>Contexto estático</strong>: métodos e blocos <code>static</code>, onde não há objeto atual.</li>
+        <li><strong>Carregamento de classe</strong>: momento em que a JVM lê a classe, na primeira vez que ela é usada, e executa a parte estática.</li>
+      </ul>
+
+      <h3>Revisão espaçada</h3>
+      <ul class="revisao">
+        <li><span class="dia">Dia 1</span><span>Todos os flashcards + a prática com a ordem de execução.</span></li>
+        <li><span class="dia">Dia 3</span><span>Quiz + exercícios 1 e 2.</span></li>
+        <li><span class="dia">Dia 7</span><span>Exercícios 3 e 4 + escrever de memória a ordem completa de criação.</span></li>
+        <li><span class="dia">Dia 14</span><span>Flashcards que errou + questões discursivas.</span></li>
+      </ul>
+
+      <h3>Para aprofundar</h3>
+      <ul>
+        <li>O que são <code>static final</code> (constantes) e por que usam nomes em MAIÚSCULAS? (aula 77)</li>
+        <li>O que são classes aninhadas estáticas (<em>static nested classes</em>)?</li>
+        <li>Por que métodos estáticos não podem ser sobrescritos (<em>method hiding</em>)?</li>
+        <li>Por que o padrão Singleton usa um atributo <code>static</code>, e quais os problemas dele?</li>
+        <li>Como o Spring evita a necessidade de <code>static</code> com injeção de dependência?</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    window.AULA = {
+      flashcards: [
+        ["O que é um bloco de inicialização de instância?", "Um { ... } solto na classe que roda a cada new, antes do construtor"],
+        ["Que problema o bloco de instância resolve?", "Evita duplicar inicialização em todos os construtores"],
+        ["O bloco de instância roda antes ou depois do construtor?", "Antes, qualquer que seja o construtor chamado"],
+        ["Qual a ordem de criação de um objeto (sem static)?", "Memória → atributos (padrão/declarado) → blocos de instância → construtor"],
+        ["O que o modificador static faz num atributo?", "O atributo passa a pertencer à classe: um valor compartilhado por todos os objetos"],
+        ["c1 muda um atributo static. E c2?", "c2 vê o mesmo valor: é uma cópia só"],
+        ["Como acessar um atributo static corretamente?", "Pelo nome da classe: Carro.velocidadeLimite"],
+        ["Precisa existir objeto para usar um atributo static?", "Não"],
+        ["public static ou static public?", "public static (acesso primeiro); o outro compila, mas foge da convenção"],
+        ["Pode usar this em método static?", "Não: pode não existir objeto"],
+        ["Como diferenciar parâmetro e atributo static com o mesmo nome?", "Classe.atributo = parametro (Carro.velocidadeLimite = velocidadeLimite)"],
+        ["Método static pode acessar atributo de instância?", "Não: non-static field cannot be referenced from a static context"],
+        ["Método de instância pode acessar atributo static?", "Sim: a classe sempre existe antes do objeto"],
+        ["Quando tornar um método static?", "Quando ele não usa nenhum atributo de instância"],
+        ["Por que o main é static?", "A JVM o chama sem criar nenhum objeto da classe"],
+        ["O que significa cada palavra de public static void main(String[] args)?", "Público, da classe, sem retorno, nome main, recebe array de String"],
+        ["O que é um bloco static?", "static { ... }: roda uma vez, quando a JVM carrega a classe"],
+        ["Criar 3 objetos executa o bloco static quantas vezes?", "Uma"],
+        ["E o bloco de instância, com 3 objetos?", "Três vezes"],
+        ["Vários blocos static: em que ordem rodam?", "Na ordem em que aparecem no código"],
+        ["O que roda primeiro: bloco static ou de instância?", "O static (ao carregar a classe), depois os de instância a cada objeto"],
+        ["Dê exemplos de métodos static da API do Java.", "Math.max, Integer.parseInt, Arrays.toString"],
+        ["Qual o risco de um atributo static que muda de valor num servidor?", "É estado global: compartilhado por todas as requisições e usuários"],
+        ["Como se acessa um static no PHP e no Java?", "PHP: Carro::$limite. Java: Carro.limite"],
+        ["Por que static é mais perigoso em Java que no PHP-FPM?", "No PHP cada requisição recomeça; a JVM mantém o static vivo para todos"]
+      ],
+      quiz: [
+        { tipo: 'vf', pergunta: 'O bloco de inicialização de instância é executado antes do construtor, toda vez que um objeto é criado.', correta: 0,
+          explicacao: 'Verdadeiro: ele roda a cada new, antes de qualquer construtor.' },
+        { tipo: 'multipla', pergunta: 'Qual a ordem correta na criação de um objeto (sem considerar static)?', opcoes: ['Construtor → atributos → bloco', 'Bloco → memória → atributos → construtor', 'Memória → atributos → bloco de instância → construtor', 'Atributos → construtor → bloco'], correta: 2,
+          explicacao: 'Primeiro o espaço, depois os atributos (padrão ou valor declarado), então o bloco de instância e por fim o construtor.' },
+        { tipo: 'multipla', pergunta: 'Com public static double velocidadeLimite = 250; e três carros criados, o que acontece após Carro.velocidadeLimite = 180;?', opcoes: ['Só o último carro muda', 'Nenhum muda', 'Todos os carros passam a ver 180', 'Erro de compilação'], correta: 2,
+          explicacao: 'O atributo estático é um só, da classe, e todos os objetos o compartilham.' },
+        { tipo: 'vf', pergunta: 'Dentro de um método static, é possível usar this para acessar os atributos do objeto.', correta: 1,
+          explicacao: 'Falso: método estático pode ser chamado sem nenhum objeto, então não existe this.' },
+        { tipo: 'multipla', pergunta: 'Qual linha NÃO compila dentro de public static void imprime() da classe Carro (nome é de instância, velocidadeLimite é static)?', opcoes: ['System.out.println(velocidadeLimite);', 'System.out.println(Carro.velocidadeLimite);', 'System.out.println(nome);', 'System.out.println(Math.max(1, 2));'], correta: 2,
+          explicacao: 'nome é atributo de instância: de qual carro seria? Contexto estático só acessa membros estáticos.' },
+        { tipo: 'multipla', pergunta: 'Qual é o melhor candidato a método static?', opcoes: ['getNome() de Pessoa', 'imprime() que mostra os atributos do carro', 'somaDoisNumeros(int a, int b) da Calculadora, que não usa atributos', 'setIdade(int idade) de Pessoa'], correta: 2,
+          explicacao: 'Métodos que não dependem de atributos de instância podem (e costumam) ser estáticos.' },
+        { tipo: 'multipla', pergunta: 'Uma classe tem um bloco static e um bloco de instância. Ao criar 3 objetos, quantas vezes cada um roda?', opcoes: ['3 e 3', '1 e 3', '1 e 1', '3 e 1'], correta: 1,
+          explicacao: 'O static roda uma vez, ao carregar a classe. O de instância roda a cada objeto.' },
+        { tipo: 'vf', pergunta: 'c1.velocidadeLimite = 180; (com velocidadeLimite static e acessível) altera o valor apenas para o objeto c1.', correta: 1,
+          explicacao: 'Falso: compila, mas altera o valor da classe, para todos os objetos. Por isso o certo é acessar pelo nome da classe.' },
+        { tipo: 'discursiva', pergunta: 'Explique, com o exemplo do "acordo de cavalheiros" dos carros alemães, por que velocidadeLimite deve ser static e como ela deve ser acessada.',
+          explicacao: 'O limite de 250 km/h é uma regra da categoria inteira, não de um carro. Como atributo de instância, cada carro teria sua cópia, e mudar o limite da BMW não mudaria o da Audi. O acordo quebraria. Com static, existe um único valor na classe Carro, compartilhado por todos os objetos, inclusive os criados depois. Acessa-se por Carro.velocidadeLimite (ou getter/setter estáticos), nunca por this ou por uma referência, para deixar claro que a mudança afeta todos.' },
+        { tipo: 'discursiva', pergunta: 'Por que um atributo static que guarda "o usuário logado" seria um bug grave numa aplicação Java, mesmo que algo parecido funcione num script PHP?',
+          explicacao: 'No PHP-FPM, cada requisição roda num processo que recomeça do zero, então um static vive só durante aquela requisição. Numa aplicação Java, a JVM fica no ar continuamente e atende todas as requisições. Um atributo static é compartilhado por todas elas e por todas as threads, e o usuário de uma requisição apareceria para outra. static deve ser usado para métodos utilitários e constantes, não para estado que muda por usuário ou requisição.' }
+      ]
+    };
+  </script>
+  <script src="../js/app.js"></script>
+</body>
+</html>
