@@ -30,7 +30,7 @@ Aulas que são partes do mesmo tema viram uma página só: `aulas/NN-MM-slug.htm
 commit `Aulas NN-MM - Título`. Exercícios e resoluções ficam junto da teoria. Só gerar a página com as transcrições
 do bloco inteiro (o autor pode mandar em partes). Aulas avulsas continuam `NN-slug.html`.
 
-Feitas: 02 · 03–07 · 08 · 09 · 10–14 · 15–19 · 20–24 · 25–26 · 27–31 · 32–34 · 35 · 36–38 · 39–43 · 44–47 · 48–51 · 52–53 · 54–57 · 58–59 · 60–63 · 64–70 · 71–75 · 76 · 77–79 · 80–83 · 84–86 · 87–89 · 90–94 · 95–99 · 100–105 · 106–107 · 108–111 · 112–118 · 119–124 · 125–130 · 131–136 · 137–143 · 144–148 · 149–153 · 154–158.
+Feitas: 02 · 03–07 · 08 · 09 · 10–14 · 15–19 · 20–24 · 25–26 · 27–31 · 32–34 · 35 · 36–38 · 39–43 · 44–47 · 48–51 · 52–53 · 54–57 · 58–59 · 60–63 · 64–70 · 71–75 · 76 · 77–79 · 80–83 · 84–86 · 87–89 · 90–94 · 95–99 · 100–105 · 106–107 · 108–111 · 112–118 · 119–124 · 125–130 · 131–136 · 137–143 · 144–148 · 149–153 · 154–158 · 159–165.
 
 Plano (títulos no README do professor; a aula 35 não está na playlist, é o vídeo cl47iLWalUw — o script aceita a URL direta):
 - 10–14 Tipos primitivos (convenções, declaração/memória, casting, Strings, exercício)
@@ -68,8 +68,7 @@ Plano (títulos no README do professor; a aula 35 não está na playlist, é o v
 - 144–148 NIO: Path, Paths, Files, normalize, resolve, relativize
 - 149–153 NIO: BasicFileAttributes, Dos/PosixFileAttributes, DirectoryStream
 - 154–158 NIO: SimpleFileVisitor, PathMatcher, ZipOutputStream
-- 159–160 Serialization
-- 161–165 Coleções: equals, hashCode, Big-O
+- 159–165 Serialization + Coleções: equals, hashCode, Big-O
 - 166–174 Coleções: List, sorting (Comparable/Comparator), binarySearch, conversão, Iterator
 - 175–182 Coleções: Set/TreeSet, Map/HashMap/TreeMap, Queue/PriorityQueue
 - 183–188 Generics

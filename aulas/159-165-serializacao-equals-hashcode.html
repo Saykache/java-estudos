@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>159–165 · Serialização, equals e hashCode</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="topo">
+      <a class="voltar" href="../index.html">← Todas as aulas</a>
+      <h1>159–165 · Serialização, equals, hashCode e Big-O</h1>
+      <p>Gravar objetos em arquivo (Serializable, transient, serialVersionUID), igualdade lógica com equals, hashCode e a complexidade das coleções · <a href="https://www.youtube.com/playlist?list=PL62G310vn6nFIsOCC0H-C2infYgwm8SWW" target="_blank" rel="noopener">playlist</a></p>
+    </header>
+
+    <nav class="abas">
+      <a href="#resumo">Resumo</a>
+      <a href="#flashcards">Flashcards</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#estudo">Material de estudo</a>
+    </nav>
+
+    <p class="aviso">Junta as aulas 159 e 160 (Serialization) com as primeiras de Coleções: 161 e 162 (equals), 163 e 164 (hashCode) e 165 (complexidade Big-O). Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. O código (pacotes <code>javacore.Xserializacao</code> e <code>javacore.Ycolecoes</code>, aluno "Suane", <code>Smartphone</code> "1ABC1") foi conferido no <a href="https://github.com/devdojobr/maratona-java-virado-no-jiraya" target="_blank" rel="noopener">repositório do professor</a>. As aulas 163 e 165 são só de explicação (desenho e tabela), sem código novo. Os itens marcados como "extra" não estão nos vídeos.</p>
+
+    <section id="resumo">
+      <h2>Resumo</h2>
+      <p><strong>Serialização</strong> é transformar um objeto da memória num <strong>array de bytes</strong> para gravá-lo (num arquivo, por exemplo) e depois recriá-lo. Muitos frameworks fazem isso por baixo dos panos. Depois começam as <strong>Coleções</strong>: "praticamente tudo na sua vida de desenvolvedor retorna mais de um objeto". Antes das listas, é preciso ensinar ao Java quando <strong>dois objetos são logicamente iguais</strong> (<code>equals</code>) e dar a eles um <strong>número de endereçamento</strong> (<code>hashCode</code>). A aula 165 fecha com a teoria: <strong>ordenado × sorted</strong> e a <strong>complexidade Big-O</strong>.</p>
+
+      <h3>159 · Serializable, ObjectOutputStream e ObjectInputStream</h3>
+<pre><code>public class Aluno implements Serializable {       // interface de MARCAÇÃO: não tem métodos
+    private Long id;
+    private String nome;
+    private String password;
+    public Aluno(Long id, String nome, String password) {
+        System.out.println("Dentro do construtor");
+        ...
+    }
+}
+
+private static void serializar(Aluno aluno) {
+    Path path = Paths.get("pasta/aluno.ser");
+    try (ObjectOutputStream oos = new ObjectOutputStream(Files.newOutputStream(path))) {
+        oos.writeObject(aluno);                       // objeto → bytes no arquivo
+    } catch (IOException e) {
+        e.printStackTrace();
+    }
+}
+
+private static void deserializar() {
+    Path path = Paths.get("pasta/aluno.ser");
+    try (ObjectInputStream ois = new ObjectInputStream(Files.newInputStream(path))) {
+        Aluno aluno = (Aluno) ois.readObject();       // bytes → objeto (devolve Object: cast)
+        System.out.println(aluno);
+    } catch (IOException | ClassNotFoundException e) {
+        e.printStackTrace();
+    }
+}</code></pre>
+      <ul>
+        <li>É trabalho de <strong>baixo nível</strong> (bytes), então usa as classes <strong>Stream</strong>: <code>ObjectOutputStream</code> para escrever (<em>output</em>) e <code>ObjectInputStream</code> para ler (<em>input</em>), <strong>encadeadas</strong> com o stream do arquivo (<code>Files.newOutputStream</code>/<code>newInputStream</code>).</li>
+        <li>Sem <code>implements Serializable</code>, o <code>writeObject</code> lança <strong><code>NotSerializableException</code></strong>. <code>Serializable</code> é uma <strong>interface de marcação</strong>: não tem métodos e só serve para o objeto passar no teste "é um".</li>
+        <li>O arquivo <code>.ser</code> aberto num editor parece "código de máquina": só a JVM entende.</li>
+        <li><code>readObject()</code> devolve <code>Object</code>, então precisa de cast, e lança também <code>ClassNotFoundException</code> (a classe pode não existir no classpath). Daí o multi-catch.</li>
+        <li><strong>Na desserialização, o construtor NÃO é executado.</strong> "Dentro do construtor" só aparece no <code>new</code>. O objeto é reconstruído a partir dos bytes. Isso complica com herança: a primeira superclasse <strong>não</strong> serializável tem o construtor executado (extra).</li>
+      </ul>
+
+      <h3>160 · transient, serialVersionUID, static e writeObject/readObject</h3>
+<pre><code>public class Aluno implements Serializable {
+    private static final long serialVersionUID = 739959230178355186L;   // a "versão" da classe
+    private Long id;
+    private String nome;
+    private transient String password;                     // NÃO é serializado → volta null
+    private static final String NOME_ESCOLA = "DevDojo Viradão no Jiraya";  // static: é da classe
+    private transient Turma turma;                         // Turma NÃO é Serializable
+
+    private void writeObject(ObjectOutputStream oos) {     // private, assinatura exata
+        try {
+            oos.defaultWriteObject();                      // 1º: o padrão (id, nome)
+            oos.writeUTF(turma.getNome());                 // 2º: o que você quer a mais
+        } catch (IOException e) { e.printStackTrace(); }
+    }
+
+    private void readObject(ObjectInputStream ois) {
+        try {
+            ois.defaultReadObject();                       // lê na MESMA ordem
+            String nomeTurma = ois.readUTF();
+            turma = new Turma(nomeTurma);                  // reconstrói o objeto
+        } catch (IOException | ClassNotFoundException e) { e.printStackTrace(); }
+    }
+}
+// Aluno{id=1, nome='Suane', password='null', NOME_ESCOLA='DevDojo Viradão no Jiraya',
+//       Turma='Turma{nome='Maratona Java Virado no Jiraya em Breve Ricos'}'}</code></pre>
+      <ul>
+        <li><strong><code>transient</code></strong>: o atributo é <strong>ignorado</strong> na serialização (senha, dados sensíveis). Ao ler, ele volta com o valor padrão (<code>null</code>, <code>0</code>).</li>
+        <li><strong><code>serialVersionUID</code></strong>: se você não declarar, o Java <strong>gera um</strong> (uma espécie de hash da classe). Qualquer mudança na classe (como pôr <code>transient</code>) muda esse número, e ler um arquivo antigo dá <strong><code>InvalidClassException</code></strong> (versão incompatível). Declarando um fixo, mudanças compatíveis continuam funcionando. A IDE gera o número.</li>
+        <li><strong>Atributos <code>static</code> não são serializados</strong>: pertencem à classe, não ao objeto. O <code>NOME_ESCOLA</code> aparece porque vem da classe carregada, não do arquivo.</li>
+        <li><strong>Associação com classe não serializável</strong> (<code>Turma</code>, que pode ser de uma biblioteca que você não pode alterar): marque como <code>transient</code> e escreva você mesmo nos métodos <strong><code>private void writeObject(ObjectOutputStream)</code></strong> e <strong><code>private void readObject(ObjectInputStream)</code></strong>. O Java os chama automaticamente: é uma "sobrescrita sem ser sobrescrita", com assinatura exata e sem <code>@Override</code>.</li>
+        <li><strong>A ordem importa:</strong> leia na <strong>mesma ordem</strong> em que escreveu (primeiro o <code>default...</code>, depois cada atributo extra).</li>
+        <li>O <code>@Serial</code> (Java 14) apareceu na aula 160 e foi removido na 161, porque o projeto usa <em>language level</em> 8. Ele só documenta esses membros especiais.</li>
+      </ul>
+
+      <h3>161 · equals: igualdade lógica</h3>
+<pre><code>String nome = "William Suane";
+String nome2 = "William Suane";
+System.out.println(nome == nome2);            // true: mesmo objeto do pool (aula 108)
+String nome3 = new String("William Suane");
+System.out.println(nome == nome3);            // false: objetos diferentes
+System.out.println(nome.equals(nome3));       // true: String sobrescreve equals e compara o conteúdo
+
+Smartphone s1 = new Smartphone("1ABC1", "iPhone");
+Smartphone s2 = new Smartphone("1ABC1", "iPhone");
+System.out.println(s1.equals(s2));            // false! o equals herdado de Object é: this == obj</code></pre>
+      <ul>
+        <li><strong><code>==</code> compara referências</strong>: as duas variáveis apontam para o <strong>mesmo objeto</strong>?</li>
+        <li>Todo objeto herda <strong><code>equals</code> de <code>Object</code></strong>, que por padrão faz <strong><code>this == obj</code></strong>, ou seja, o mesmo que <code>==</code>. A <code>String</code> sobrescreve e compara os caracteres. O <code>Smartphone</code>, sem sobrescrever, dá <code>false</code> mesmo com os mesmos dados.</li>
+        <li>Desenhando: duas variáveis (<code>s1</code>, <code>s2</code>) e <strong>dois objetos</strong> na memória. Com <code>s2 = s1</code>, as duas apontam para o mesmo, e aí dá <code>true</code>.</li>
+        <li>Para nós, dois smartphones são <strong>o mesmo</strong> se o <strong>número de série</strong> for igual. Essa regra de negócio você ensina sobrescrevendo <code>equals</code>.</li>
+      </ul>
+
+      <h3>162 · Sobrescrevendo equals (e o contrato)</h3>
+<pre><code>// Reflexivo: x.equals(x) tem que ser true para tudo que for diferente de null
+// Simétrico: para x e y diferentes de null, se x.equals(y) == true, então y.equals(x) == true
+// Transitivo: se x.equals(y) e y.equals(z) são true, então x.equals(z) == true
+// Consistente: x.equals(y) retorna sempre o mesmo resultado se nada mudou
+// Para x diferente de null, x.equals(null) tem que retornar false
+@Override
+public boolean equals(Object obj) {
+    if (obj == null) return false;                           // nada é igual a null
+    if (this == obj) return true;                            // mesmo objeto: atalho
+    if (this.getClass() != obj.getClass()) return false;     // classes diferentes: não compara
+    Smartphone smartphone = (Smartphone) obj;                // aqui já é seguro
+    return serialNumber != null && serialNumber.equals(smartphone.serialNumber);
+}
+
+Smartphone s1 = new Smartphone("1ABC1", "iPhone");
+Smartphone s2 = new Smartphone("1ABC1", "Pixel");
+System.out.println(s1.equals(s2));    // true: só o serialNumber decide</code></pre>
+      <ul>
+        <li>A assinatura é <code>equals(<strong>Object</strong> obj)</code>. <code>equals(Smartphone)</code> seria <strong>sobrecarga</strong> (aulas 54–57), e as coleções continuariam chamando o de <code>Object</code>. O <code>@Override</code> pega esse erro.</li>
+        <li><strong>O roteiro:</strong> <code>null</code> → mesma referência → mesma classe → cast → comparar os atributos que definem a identidade.</li>
+        <li><strong>Quais atributos comparar é regra de negócio.</strong> Aqui é só <code>serialNumber</code>, então um iPhone e um Pixel com o mesmo serial são "iguais". Se a marca também importar, ela entra no <code>equals</code>.</li>
+        <li><code>serialNumber != null &amp;&amp;</code> evita <code>NullPointerException</code>. E o <code>equals</code> da String devolve <code>false</code> se o outro serial for <code>null</code>.</li>
+      </ul>
+
+      <h3>163 · O que é hash</h3>
+<pre><code>Nome   letras (a=1, b=2...)         soma = "hash"
+Alex   1 + 12 + 5 + 24               42
+Bob    2 + 15 + 2                    19
+Dirk   4 + 9 + 18 + 11               42   ← COLISÃO com Alex
+
+Tabela hash ("baldes"):
+[19] → Bob
+[42] → Alex, Dirk   ← mesmo hash: aí o Java usa o equals para achar o certo</code></pre>
+      <ul>
+        <li>Buscar um nome num array de 70 milhões de posições exige olhar <strong>uma por uma</strong>. Com um <strong>hash</strong>, que é um número calculado a partir do valor, você vai <strong>direto ao "balde"</strong> daquele número: tão rápido com 10 elementos quanto com 70 milhões.</li>
+        <li>O exemplo da soma de letras é didático (existem "teses de doutorado" sobre boas funções de hash). A ideia é: <strong>mesmo valor → mesmo hash</strong>.</li>
+        <li><strong>Colisão:</strong> valores diferentes podem ter o mesmo hash (Alex e Dirk = 42). Dentro do balde, o Java usa o <strong><code>equals</code></strong> para achar o elemento certo. Quanto menos colisões, melhor o desempenho.</li>
+        <li>Por isso <strong>quem sobrescreve <code>equals</code> sobrescreve <code>hashCode</code></strong> (e vice-versa). As coleções com "Hash" no nome (<code>HashSet</code>, <code>HashMap</code>) dependem dos dois.</li>
+      </ul>
+
+      <h3>164 · Sobrescrevendo hashCode (e o contrato)</h3>
+<pre><code>// se x.equals(y) == true, então y.hashCode() == x.hashCode()
+// y.hashCode() == x.hashCode() NÃO obriga y.equals(x) a ser true (colisão)
+// se y.hashCode() != x.hashCode(), então x.equals(y) tem que ser false
+@Override
+public int hashCode() {
+    return serialNumber == null ? 0 : this.serialNumber.hashCode();   // o hashCode da String
+}</code></pre>
+      <ul>
+        <li>O <code>hashCode</code> de <code>Object</code> é <code>native</code>: implementado fora do Java (em C/C++) e em geral ligado à identidade do objeto. Ou seja, dois <code>Smartphone</code> "iguais" teriam hashes diferentes.</li>
+        <li><strong>Regra de ouro: <code>equals</code> e <code>hashCode</code> em sintonia.</strong> Use <strong>os mesmos atributos</strong> nos dois. Se o <code>equals</code> usa <code>serialNumber</code>, o <code>hashCode</code> também usa. Ter dois atributos num e um no outro quebra a regra.</li>
+        <li>Não precisa inventar o algoritmo: aproveite o <code>hashCode</code> da <code>String</code> (feito pelos arquitetos do Java). Trate o <code>null</code> com o ternário (0).</li>
+        <li>O ideal é um hash o mais <strong>único</strong> possível entre os objetos. Repetidos não quebram nada, só pioram o desempenho.</li>
+      </ul>
+
+      <h3>165 · Coleções: ordenado × sorted e Big-O</h3>
+<pre><code>             Collection (interface)                 Map (NÃO é Collection)
+         ┌────────┼────────┐                  ┌──────────┼──────────┐
+       List      Set      Queue            HashMap  LinkedHashMap  TreeMap
+   ArrayList  HashSet   PriorityQueue
+   LinkedList LinkedHashSet
+   Vector     TreeSet
+Collections (com s) = classe utilitária (sort, shuffle...)
+
+Big-O (do melhor ao pior):  O(1) · O(log n) · O(n) · O(n log n) · O(n²) · O(2ⁿ) · O(n!)
+ArrayList.get(i) → O(1)         ArrayList.contains(x) → O(n) (equals em cada um)
+HashSet.contains(x) → O(1)      (usa hashCode, mas não aceita repetidos)</code></pre>
+      <ul>
+        <li><strong>Ordenado (<em>ordered</em>):</strong> a coleção <strong>lembra a ordem</strong> em que você inseriu, como um array (posições 0, 1, 2...). <strong>Sorted (o William chama de "sortido"):</strong> a coleção <strong>se reorganiza</strong> por uma regra (ordem alfabética, por exemplo) a cada inserção.</li>
+        <li>As coleções são <strong>altamente coesas</strong> (cada uma tem um propósito) e você trabalha <strong>orientado a interface</strong> (<code>List&lt;String&gt; l = new ArrayList&lt;&gt;()</code>, aula 94).</li>
+        <li>"Coleção" em sentido geral × <strong><code>Collection</code></strong>, a interface: um <code>Map</code> é uma estrutura de dados, mas <strong>não é uma <code>Collection</code></strong> (não passa no teste "é um"). E <strong><code>Collections</code></strong> (com s) é a classe utilitária.</li>
+        <li><strong>Big-O</strong> descreve como o tempo de uma operação cresce com o número de elementos (geralmente no <strong>pior caso</strong>). Vale para qualquer linguagem: em arrays, <strong>acessar por índice é O(1)</strong>, mas buscar e inserir no meio não é bom.</li>
+        <li>Escolha pela <strong>operação mais frequente</strong>: muito <code>contains</code>? <code>HashSet</code> (O(1)) é melhor que <code>ArrayList</code> (O(n)), mas o <code>Set</code> não guarda repetidos (10 nomes com 2 iguais viram 9). Consulte a tabela de complexidade de cada coleção (o site <em>Big-O Cheat Sheet</em>, por exemplo).</li>
+      </ul>
+
+      <h3>Atenção</h3>
+      <ul>
+        <li><strong>Desserializar não chama o construtor.</strong> Validações e inicializações do construtor não rodam.</li>
+        <li><strong><code>transient</code> × <code>static</code>:</strong> nenhum dos dois vai para o arquivo. <code>transient</code> volta com o valor padrão, e <code>static</code> vem da classe.</li>
+        <li><strong>Sempre declare o <code>serialVersionUID</code></strong> em classes <code>Serializable</code> que você persiste.</li>
+        <li><strong>Extra: segurança.</strong> Desserializar dados de fonte não confiável é uma falha grave conhecida (execução de código). Hoje, para trocar dados, prefere-se <strong>JSON</strong> (Jackson, Gson).</li>
+        <li><strong>equals sem hashCode quebra o <code>HashSet</code>/<code>HashMap</code>:</strong> dois objetos "iguais" caem em baldes diferentes e o set fica com "duplicados" (veja na prática).</li>
+        <li><strong>Extra: <code>Objects.equals(a, b)</code> e <code>Objects.hash(a, b, c)</code></strong> tratam o <code>null</code> e simplificam os dois métodos. A IDE também gera ambos (Alt+Insert). A partir do Java 16, os <code>record</code>s já vêm com <code>equals</code>/<code>hashCode</code> prontos.</li>
+        <li><strong>Extra: <code>instanceof</code> × <code>getClass()</code> no <code>equals</code>:</strong> <code>getClass()</code> (como na aula) não considera uma subclasse igual à classe mãe, o que respeita a simetria. <code>instanceof</code> aceita subclasses e pode quebrar a simetria.</li>
+      </ul>
+
+      <h3>Paralelo com PHP</h3>
+      <ul>
+        <li><strong>Serialização:</strong> <code>serialize($obj)</code>/<code>unserialize($str)</code> ≈ <code>writeObject</code>/<code>readObject</code>, só que em texto. O <code>transient</code> + <code>writeObject</code>/<code>readObject</code> do Java equivale ao <code>__serialize()</code>/<code>__unserialize()</code> (ou <code>__sleep</code>/<code>__wakeup</code>) do PHP, onde você escolhe o que entra. O mesmo alerta vale: <strong>nunca</strong> use <code>unserialize</code> com dados do usuário (injeção de objetos).</li>
+        <li><strong>Laravel:</strong> os <em>jobs</em> na fila são serializados (<code>SerializesModels</code> guarda só o id do model e o recarrega ao desserializar, que é a mesma ideia do <code>writeObject</code>/<code>readObject</code> da aula 160). O <code>$hidden</code> do Model é o "transient" para JSON.</li>
+        <li><strong>Igualdade:</strong> no PHP, <code>==</code> entre objetos compara <strong>atributos</strong> (mesma classe e mesmos valores) e <code>===</code> compara a <strong>identidade</strong> (a mesma instância). No Java, <code>==</code> é o <code>===</code> do PHP, e o "<code>==</code> do PHP" você implementa no <code>equals</code>, escolhendo os atributos. O Eloquent tem <code>$model-&gt;is($outro)</code>, que compara chave e tabela, bem parecido com o <code>equals</code> por <code>serialNumber</code>.</li>
+        <li><strong>hashCode:</strong> o array do PHP já é uma tabela hash por dentro, com chaves int/string. Objetos como chave exigem <code>SplObjectStorage</code> ou <code>spl_object_id</code> (identidade). O PHP não tem um contrato <code>equals</code>/<code>hashCode</code> para os seus objetos. É isso que o Java usa para as coleções (aulas 166+).</li>
+        <li><strong>Big-O:</strong> <code>in_array</code> é O(n) e <code>isset($arr[$chave])</code>/<code>array_key_exists</code> é O(1). Por isso o truque de usar os valores como chaves (<code>array_flip</code>) para buscas rápidas, que é o <code>HashSet</code> do PHP.</li>
+      </ul>
+    </section>
+
+    <section id="flashcards">
+      <h2>Flashcards</h2>
+      <p style="color:var(--muted);margin-top:-6px">Toque no cartão para virar.</p>
+      <div id="flashcards-app"></div>
+    </section>
+
+    <section id="quiz">
+      <h2>Quiz</h2>
+      <div id="quiz-app"></div>
+    </section>
+
+    <section id="estudo">
+      <h2>Material de estudo</h2>
+
+      <h3>Mapa mental</h3>
+<pre><code>Serialização + fundamentos de Coleções
+├── Serialização (159–160)
+│   ├── implements Serializable (marcação) · senão NotSerializableException
+│   ├── ObjectOutputStream.writeObject · ObjectInputStream.readObject (cast + ClassNotFoundException)
+│   ├── construtor NÃO roda ao desserializar
+│   ├── transient (fica de fora → null) · static (é da classe)
+│   ├── serialVersionUID fixo → evita InvalidClassException
+│   └── private writeObject/readObject: defaultWrite/Read + extras na mesma ordem
+├── equals (161–162)
+│   ├── == referência · Object.equals = this == obj · String sobrescreve
+│   ├── contrato: reflexivo, simétrico, transitivo, consistente, x.equals(null) = false
+│   └── roteiro: null → this == obj → getClass → cast → atributos da identidade
+├── hashCode (163–164)
+│   ├── hash = número para ir direto ao "balde" · colisão → equals decide
+│   ├── equals true → hashCode igual · hashCode igual ≠ equals true
+│   └── mesmos atributos nos dois (sintonia)
+└── Coleções (165)
+    ├── ordered (lembra a inserção) × sorted (reordena por regra)
+    ├── Collection (List, Set, Queue) · Map não é Collection · Collections utilitária
+    └── Big-O: get do ArrayList O(1) · contains O(n) · HashSet.contains O(1)</code></pre>
+
+      <h3>Prática no seu WSL (25 minutos)</h3>
+<pre><code>cd ~/java-lab
+X=src/academy/devdojo/maratonajava/javacore/Xserializacao
+Y=src/academy/devdojo/maratonajava/javacore/Ycolecoes
+mkdir -p $X/dominio $X/test $Y/dominio $Y/test lab-ser
+
+cat > $X/dominio/Turma.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Xserializacao.dominio;
+
+public class Turma {                    // NÃO é Serializable
+    private String nome;
+    public Turma(String nome) { this.nome = nome; }
+    public String getNome() { return nome; }
+    @Override
+    public String toString() { return "Turma{nome='" + nome + "'}"; }
+}
+EOF
+
+cat > $X/dominio/Aluno.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Xserializacao.dominio;
+
+import java.io.*;
+
+public class Aluno implements Serializable {
+    private static final long serialVersionUID = 739959230178355186L;
+    private Long id;
+    private String nome;
+    private transient String password;
+    private static final String NOME_ESCOLA = "DevDojo Viradão no Jiraya";
+    private transient Turma turma;
+
+    public Aluno(Long id, String nome, String password) {
+        System.out.println("Dentro do construtor");
+        this.id = id;
+        this.nome = nome;
+        this.password = password;
+    }
+
+    private void writeObject(ObjectOutputStream oos) throws IOException {
+        oos.defaultWriteObject();
+        oos.writeUTF(turma.getNome());
+    }
+
+    private void readObject(ObjectInputStream ois) throws IOException, ClassNotFoundException {
+        ois.defaultReadObject();
+        turma = new Turma(ois.readUTF());
+    }
+
+    public void setTurma(Turma turma) { this.turma = turma; }
+
+    @Override
+    public String toString() {
+        return "Aluno{id=" + id + ", nome='" + nome + "', password='" + password
+                + "', NOME_ESCOLA='" + NOME_ESCOLA + "', turma=" + turma + "}";
+    }
+}
+EOF
+
+cat > $X/test/SerializacaoTest01.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Xserializacao.test;
+
+import academy.devdojo.maratonajava.javacore.Xserializacao.dominio.Aluno;
+import academy.devdojo.maratonajava.javacore.Xserializacao.dominio.Turma;
+
+import java.io.*;
+import java.nio.file.*;
+
+public class SerializacaoTest01 {
+    public static void main(String[] args) throws IOException, ClassNotFoundException {
+        Path path = Paths.get("lab-ser/aluno.ser");
+        Aluno aluno = new Aluno(1L, "Suane", "123412121");      // ? (o que imprime aqui)
+        aluno.setTurma(new Turma("Maratona Java Virado no Jiraya em Breve Ricos"));
+        try (ObjectOutputStream oos = new ObjectOutputStream(Files.newOutputStream(path))) {
+            oos.writeObject(aluno);
+        }
+        System.out.println("--- lendo do arquivo ---");
+        try (ObjectInputStream ois = new ObjectInputStream(Files.newInputStream(path))) {
+            System.out.println((Aluno) ois.readObject());      // ? (construtor roda de novo?)
+        }
+    }
+}
+EOF
+
+cat > $Y/dominio/Smartphone.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Ycolecoes.dominio;
+
+public class Smartphone {
+    private String serialNumber;
+    private String marca;
+
+    public Smartphone(String serialNumber, String marca) {
+        this.serialNumber = serialNumber;
+        this.marca = marca;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == null) return false;
+        if (this == obj) return true;
+        if (this.getClass() != obj.getClass()) return false;
+        Smartphone smartphone = (Smartphone) obj;
+        return serialNumber != null &amp;&amp; serialNumber.equals(smartphone.serialNumber);
+    }
+
+    @Override
+    public int hashCode() {
+        return serialNumber == null ? 0 : this.serialNumber.hashCode();
+    }
+}
+EOF
+
+cat > $Y/test/EqualsTest01.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Ycolecoes.test;
+
+import academy.devdojo.maratonajava.javacore.Ycolecoes.dominio.Smartphone;
+
+import java.util.HashSet;
+import java.util.Set;
+
+public class EqualsTest01 {
+    public static void main(String[] args) {
+        String nome = "William Suane";
+        String nome3 = new String("William Suane");
+        System.out.println(nome == nome3);                       // ?
+        System.out.println(nome.equals(nome3));                  // ?
+
+        Smartphone s1 = new Smartphone("1ABC1", "iPhone");
+        Smartphone s2 = new Smartphone("1ABC1", "Pixel");
+        System.out.println(s1 == s2);                            // ?
+        System.out.println(s1.equals(s2));                       // ?
+        System.out.println(s1.equals(null));                     // ?
+        System.out.println(s1.hashCode() == s2.hashCode());      // ?
+        System.out.println(s1.hashCode());                       // ?
+
+        Set&lt;Smartphone&gt; set = new HashSet&lt;&gt;();
+        set.add(s1);
+        set.add(s2);
+        System.out.println(set.size());                          // ? (extra)
+        System.out.println("Aa".hashCode() + " " + "BB".hashCode());   // ? (extra: colisão)
+    }
+}
+EOF
+
+javac -d out $(find src -name '*.java')
+java -cp out academy.devdojo.maratonajava.javacore.Xserializacao.test.SerializacaoTest01
+java -cp out academy.devdojo.maratonajava.javacore.Ycolecoes.test.EqualsTest01</code></pre>
+      <details>
+        <summary>Ver a saída esperada</summary>
+<pre><code>Dentro do construtor
+--- lendo do arquivo ---
+Aluno{id=1, nome='Suane', password='null', NOME_ESCOLA='DevDojo Viradão no Jiraya', turma=Turma{nome='Maratona Java Virado no Jiraya em Breve Ricos'}}
+
+false
+true
+false
+true
+false
+true
+47254496
+1
+2112 2112</code></pre>
+      </details>
+      <p><strong>Exercícios:</strong></p>
+      <ol>
+        <li>Tire o <code>implements Serializable</code> do <code>Aluno</code> e leia a exceção.</li>
+        <li>Serialize, mude o <code>serialVersionUID</code> para <code>1L</code>, recompile e rode só a leitura. Qual exceção aparece?</li>
+        <li>Comente o <code>hashCode()</code> do <code>Smartphone</code> e rode de novo. Quanto dá o <code>set.size()</code>, e por quê?</li>
+        <li>Mude a regra: dois smartphones são iguais se o serial <strong>e</strong> a marca forem iguais. Atualize <code>equals</code> e <code>hashCode</code> juntos (use <code>Objects.hash(serialNumber, marca)</code>).</li>
+        <li>Crie um <code>Smartphone</code> com <code>serialNumber</code> <code>null</code> e teste <code>equals</code> e <code>hashCode</code>. Explodiu? Por quê?</li>
+      </ol>
+
+      <h3>Glossário</h3>
+      <ul>
+        <li><strong>Serialização / desserialização</strong>: objeto → bytes (para gravar ou enviar) / bytes → objeto.</li>
+        <li><strong>Interface de marcação</strong>: interface sem métodos que só "marca" a classe (<code>Serializable</code>).</li>
+        <li><strong><code>transient</code></strong>: atributo ignorado na serialização.</li>
+        <li><strong><code>serialVersionUID</code></strong>: número de versão da classe serializável; precisa bater para desserializar.</li>
+        <li><strong>Igualdade de referência × lógica</strong>: mesmo objeto (<code>==</code>) × mesmo significado pela regra de negócio (<code>equals</code>).</li>
+        <li><strong>Hash</strong>: número calculado a partir do valor, usado para endereçar direto numa tabela.</li>
+        <li><strong>Colisão</strong>: valores diferentes com o mesmo hash.</li>
+        <li><strong>Ordered × sorted</strong>: mantém a ordem de inserção × reordena por um critério.</li>
+        <li><strong>Big-O</strong>: notação de como o custo de uma operação cresce com o número de elementos.</li>
+        <li><strong><code>native</code></strong>: método implementado fora do Java (C/C++), como o <code>hashCode</code> de <code>Object</code>.</li>
+      </ul>
+
+      <h3>Revisão espaçada</h3>
+      <ul class="revisao">
+        <li><span class="dia">Dia 1</span><span>Todos os flashcards + a prática com previsões.</span></li>
+        <li><span class="dia">Dia 3</span><span>Quiz + exercícios 1 a 3.</span></li>
+        <li><span class="dia">Dia 7</span><span>Exercícios 4 e 5 + escrever de memória o <code>equals</code>/<code>hashCode</code> do Smartphone.</span></li>
+        <li><span class="dia">Dia 14</span><span>Flashcards que errou + questões discursivas.</span></li>
+      </ul>
+
+      <h3>Para aprofundar</h3>
+      <ul>
+        <li>Por que o hash da String usa o número 31 (<code>s[0]*31^(n-1) + ...</code>)?</li>
+        <li>O que acontece se você usar como chave de <code>HashMap</code> um objeto e depois alterar o atributo usado no <code>hashCode</code>?</li>
+        <li>Como <code>Externalizable</code> difere de <code>Serializable</code>?</li>
+        <li>Como o Jackson transforma objetos em JSON, e por que isso substituiu a serialização nativa na maioria dos sistemas?</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    window.AULA = {
+      flashcards: [
+        ["O que é serialização?", "Transformar um objeto em bytes para gravar/enviar e depois recriá-lo"],
+        ["O que uma classe precisa para ser serializada?", "implements Serializable (interface de marcação, sem métodos)"],
+        ["Quais classes escrevem e leem objetos serializados?", "ObjectOutputStream.writeObject e ObjectInputStream.readObject"],
+        ["Quais exceções o readObject pode lançar?", "IOException e ClassNotFoundException"],
+        ["O construtor roda na desserialização?", "Não: o objeto é reconstruído a partir dos bytes"],
+        ["O que transient faz?", "O atributo não é serializado; volta com o valor padrão (null, 0)"],
+        ["Atributos static são serializados?", "Não: pertencem à classe, não ao objeto"],
+        ["Para que serve o serialVersionUID?", "Versão da classe; se não bater na leitura dá InvalidClassException"],
+        ["Como serializar um atributo de classe não serializável?", "Marcar transient e escrever/ler à mão em private writeObject/readObject"],
+        ["Qual a regra de ordem em writeObject/readObject?", "Ler na mesma ordem em que escreveu (default primeiro, depois os extras)"],
+        ["O que == compara em objetos?", "As referências: se é o mesmo objeto"],
+        ["O que o equals de Object faz por padrão?", "this == obj (compara referências)"],
+        ["Por que \"a\".equals(new String(\"a\")) é true?", "String sobrescreve equals e compara o conteúdo"],
+        ["Quais as propriedades do contrato do equals?", "Reflexivo, simétrico, transitivo, consistente e x.equals(null) == false"],
+        ["Qual o roteiro de um equals?", "null → this == obj → getClass → cast → comparar atributos"],
+        ["Por que o parâmetro do equals é Object?", "Para sobrescrever; equals(Smartphone) seria sobrecarga"],
+        ["O que é um hash?", "Um número calculado a partir do valor para ir direto à posição (balde)"],
+        ["O que é colisão de hash?", "Valores diferentes com o mesmo hash; o equals decide dentro do balde"],
+        ["Se x.equals(y), o que vale para os hashCodes?", "x.hashCode() == y.hashCode(), obrigatoriamente"],
+        ["hashCodes iguais implicam equals true?", "Não (colisão)"],
+        ["Qual a regra de sintonia entre equals e hashCode?", "Usar os mesmos atributos nos dois"],
+        ["O que acontece com equals sem hashCode num HashSet?", "Objetos \"iguais\" caem em baldes diferentes e o set aceita os dois"],
+        ["Ordered × sorted?", "Lembra a ordem de inserção × se reorganiza por uma regra"],
+        ["Map é uma Collection?", "Não: é estrutura de dados, mas não implementa Collection"],
+        ["Big-O de ArrayList.get(i) e de ArrayList.contains(x)?", "O(1) e O(n)"]
+      ],
+      quiz: [
+        { tipo: 'multipla', pergunta: 'O que acontece ao chamar oos.writeObject(aluno) se Aluno NÃO implementa Serializable?', opcoes: ['Grava normalmente', 'Não compila', 'Lança NotSerializableException', 'Grava só os atributos públicos'], correta: 2,
+          explicacao: 'Compila, porque writeObject recebe Object, mas em execução o Java verifica se a classe é Serializable e lança NotSerializableException.' },
+        { tipo: 'vf', pergunta: 'Ao desserializar um objeto com readObject(), o construtor da classe é executado.', correta: 1,
+          explicacao: 'Falso. O objeto é reconstruído a partir dos bytes. "Dentro do construtor" só aparece no new.' },
+        { tipo: 'multipla', pergunta: 'O atributo password foi marcado como transient. Qual o valor dele depois de serializar e desserializar?', opcoes: ['O valor original', 'null', 'Uma String vazia', 'Lança exceção'], correta: 1,
+          explicacao: 'transient fica fora do arquivo. Ao ler, o atributo recebe o valor padrão do tipo (null para objetos).' },
+        { tipo: 'multipla', pergunta: 'Você alterou a classe Aluno (sem serialVersionUID declarado) e tentou ler um .ser antigo. O que acontece?', opcoes: ['Lê normalmente', 'InvalidClassException: versões incompatíveis', 'NotSerializableException', 'ClassCastException'], correta: 1,
+          explicacao: 'Sem um serialVersionUID fixo, o Java gera um a partir da classe. Mudou a classe, mudou o número, e a leitura falha.' },
+        { tipo: 'multipla', pergunta: 'Sem sobrescrever equals, new Smartphone("1ABC1","iPhone").equals(new Smartphone("1ABC1","iPhone")) dá:', opcoes: ['true, porque os dados são iguais', 'false, porque o equals de Object compara referências', 'Não compila', 'Lança exceção'], correta: 1,
+          explicacao: 'O equals herdado de Object é this == obj. São dois objetos distintos, então false.' },
+        { tipo: 'multipla', pergunta: 'Qual assinatura sobrescreve corretamente o equals?', opcoes: ['public boolean equals(Smartphone s)', 'public boolean equals(Object obj)', 'public boolean equal(Object obj)', 'public static boolean equals(Object a, Object b)'], correta: 1,
+          explicacao: 'Tem que ser equals(Object). Com Smartphone seria sobrecarga, e as coleções continuariam usando o de Object. Use @Override para o compilador conferir.' },
+        { tipo: 'vf', pergunta: 'Se dois objetos têm o mesmo hashCode, então equals entre eles obrigatoriamente retorna true.', correta: 1,
+          explicacao: 'Falso. Pode haver colisão ("Aa" e "BB" têm hash 2112). A regra é o contrário: equals true obriga hashCode igual.' },
+        { tipo: 'multipla', pergunta: 'Qual operação é O(1) no ArrayList?', opcoes: ['contains(x)', 'get(indice)', 'remove(x) do começo', 'indexOf(x)'], correta: 1,
+          explicacao: 'Acesso por índice é direto (é um array por dentro). contains e indexOf percorrem com equals: O(n).' },
+        { tipo: 'discursiva', pergunta: 'Explique por que equals e hashCode precisam andar juntos, usando o que acontece num HashSet quando só o equals é sobrescrito.',
+          explicacao: 'Coleções hash (HashSet, HashMap) usam primeiro o hashCode para escolher o balde e só depois o equals para comparar dentro dele. Se só o equals é sobrescrito, dois Smartphone com o mesmo serial são iguais pelo equals, mas o hashCode de Object (ligado à identidade) dá números diferentes. Eles caem em baldes diferentes, o equals nunca chega a ser chamado, e o set guarda os dois: tamanho 2 com "duplicados". O contrato exige: se equals é true, os hashCodes são iguais. Por isso os dois usam os mesmos atributos (serialNumber). hashCodes iguais com equals false (colisão) são permitidos, só custam desempenho.' },
+        { tipo: 'discursiva', pergunta: 'Compare a igualdade de objetos em PHP (== e ===) com a do Java (== e equals). O que você precisa fazer no Java que o PHP faz automaticamente?',
+          explicacao: 'No PHP, === entre objetos compara identidade (a mesma instância), como o == do Java. O == do PHP compara atributo por atributo automaticamente (mesma classe e mesmos valores). No Java não existe esse automático: o equals herdado de Object só compara referências. Para ter igualdade lógica você sobrescreve equals, escolhendo quais atributos definem a identidade (regra de negócio, como só o serialNumber), e sobrescreve hashCode com os mesmos atributos para as coleções hash funcionarem. Isso dá mais controle que o PHP: dois smartphones de marcas diferentes podem ser "iguais" pelo serial. O Eloquent faz algo parecido com $model->is($outro), que compara chave e tabela.' }
+      ]
+    };
+  </script>
+  <script src="../js/app.js"></script>
+</body>
+</html>
