@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>119–124 · java.time</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="topo">
+      <a class="voltar" href="../index.html">← Todas as aulas</a>
+      <h1>119–124 · java.time: LocalDate, LocalTime, LocalDateTime, Instant, Duration e Period</h1>
+      <p>A API de datas do Java 8: imutável, meses de 1 a 12, formato ISO 8601 e intervalos de tempo · <a href="https://www.youtube.com/playlist?list=PL62G310vn6nFIsOCC0H-C2infYgwm8SWW" target="_blank" rel="noopener">playlist</a></p>
+    </header>
+
+    <nav class="abas">
+      <a href="#resumo">Resumo</a>
+      <a href="#flashcards">Flashcards</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#estudo">Material de estudo</a>
+    </nav>
+
+    <p class="aviso">Junta as aulas 119 (LocalDate), 120 (LocalTime), 121 (LocalDateTime), 122 (Instant), 123 (Duration) e 124 (Period). Continua as <a href="112-118-datas-legadas-e-locale.html">aulas 112–118</a>. Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. O código (pacote <code>javacore.Rdatas</code>) foi conferido no <a href="https://github.com/devdojobr/maratona-java-virado-no-jiraya" target="_blank" rel="noopener">repositório do professor</a>. Os itens marcados como "extra" não estão nos vídeos.</p>
+
+    <section id="resumo">
+      <h2>Resumo</h2>
+      <p>Com o Java 8 veio o pacote <strong><code>java.time</code></strong>, inspirado na biblioteca <strong>Joda-Time</strong>, que todo mundo usava por causa dos problemas de <code>Date</code> e <code>Calendar</code>. As classes novas são <strong>imutáveis</strong>, criadas por <strong>métodos de fábrica</strong> (<code>now</code>, <code>of</code>, <code>parse</code>, nunca <code>new</code>), têm <strong>meses de 1 a 12</strong> e imprimem no formato <strong>ISO 8601</strong>, o mesmo do banco de dados. Conselho do William: <strong>do Java 8 em diante, use <code>java.time</code></strong>. <code>Date</code> e <code>Calendar</code> só quando o sistema legado obrigar.</p>
+<pre><code>LocalDate       2022-01-27                 só data (aniversário)
+LocalTime       23:32:12                   só hora
+LocalDateTime   2022-08-06T23:45           data + hora, sem fuso
+Instant         2021-02-16T13:30:00Z       ponto na linha do tempo, em UTC (Z = Zulu)
+Duration        PT17520H8M                 quantidade de tempo em segundos/nanos (horas, minutos)
+Period          P2Y7D                      quantidade de tempo em datas (anos, meses, dias)</code></pre>
+
+      <h3>119 · LocalDate</h3>
+<pre><code>System.out.println(Month.JANUARY.getValue());                 // 1 (não é mais 0!)
+LocalDate date = LocalDate.of(2022, Month.JANUARY, 27);
+LocalDate agora = LocalDate.now();
+agora = agora.plusWeeks(4);                   // imutável: sem atribuir, o resultado se perde
+System.out.println(date.getYear());           // 2022
+System.out.println(date.getMonth());          // JANUARY
+System.out.println(date.getMonthValue());     // 1
+System.out.println(date.getDayOfWeek());      // THURSDAY
+System.out.println(date.getDayOfMonth());     // 27
+System.out.println(date.lengthOfMonth());     // 31
+System.out.println(date.isLeapYear());        // false (ano bissexto?)
+System.out.println(date.get(ChronoField.YEAR));          // 2022
+System.out.println(date.get(ChronoField.DAY_OF_MONTH));  // 27
+System.out.println(date);                     // 2022-01-27 (ISO 8601, como no banco)
+System.out.println(LocalDate.MAX);            // +999999999-12-31
+System.out.println(LocalDate.MIN);            // -999999999-01-01</code></pre>
+      <ul>
+        <li><strong>Só data, sem hora:</strong> para uma data de nascimento, a hora só traria dor de cabeça.</li>
+        <li><strong>Criação:</strong> <code>LocalDate.of(ano, mês, dia)</code> ou <code>LocalDate.now()</code>. A classe é <code>final</code> e o construtor é <code>private</code>, então <code>new LocalDate()</code> não compila.</li>
+        <li><strong>O mês agora começa em 1.</strong> Dá para passar <code>1</code>, mas prefira <code>Month.JANUARY</code> (enum, aulas 80–83).</li>
+        <li><strong>Métodos prontos:</strong> <code>getYear</code>, <code>getMonth</code>/<code>getMonthValue</code>, <code>getDayOfWeek</code>, <code>getDayOfMonth</code>, <code>lengthOfMonth</code> (útil em relatório: o mês tem 28, 29, 30 ou 31 dias?), <code>isLeapYear</code>. Para qualquer outro campo existe <code>get(ChronoField.XXX)</code>.</li>
+        <li><strong>Imutável:</strong> <code>agora.plusWeeks(4)</code> sozinho não muda <code>agora</code> (o IntelliJ avisa: "resultado ignorado"). É preciso <code>agora = agora.plusWeeks(4)</code>. Existem <code>plusDays</code>, <code>plusMonths</code>, <code>plusYears</code>, <code>minus...</code>. A imutabilidade evita inconsistência quando várias threads acessam o mesmo objeto.</li>
+        <li>Não há mais o limite de 1970: vai de <code>LocalDate.MIN</code> a <code>MAX</code>, quase um bilhão de anos para cada lado.</li>
+      </ul>
+
+      <h3>120 · LocalTime</h3>
+<pre><code>LocalTime time = LocalTime.of(23, 32, 12);    // LocalTime.of(24, ...) → DateTimeException
+LocalTime timeNow = LocalTime.now();          // 18:07:23.123456789 (até nanossegundos)
+System.out.println(time);                     // 23:32:12
+System.out.println(time.getHour());           // 23
+System.out.println(time.getMinute());         // 32
+System.out.println(time.getSecond());         // 12
+System.out.println(time.get(ChronoField.CLOCK_HOUR_OF_AMPM));   // 11 (11 da noite)
+System.out.println(LocalTime.MIN);            // 00:00
+System.out.println(LocalTime.MAX);            // 23:59:59.999999999</code></pre>
+      <ul>
+        <li>Segue o <strong>mesmo padrão</strong> do <code>LocalDate</code>: <code>of</code>, <code>now</code>, getters e <code>ChronoField</code>.</li>
+        <li>Hora vai de <strong>0 a 23</strong>. Um valor inválido lança <code>DateTimeException</code>.</li>
+        <li>Ao testar <code>ChronoField</code>, confira o que cada campo significa: <code>AMPM_OF_DAY</code> dá 0/1 (AM/PM), <code>CLOCK_HOUR_OF_AMPM</code> dá a hora de 1 a 12.</li>
+        <li><strong><code>MIN</code> e <code>MAX</code> em relatórios:</strong> "todos os registros de 15/02/2022" vão de <code>00:00</code> (<code>LocalTime.MIN</code>) a <code>23:59:59.999999999</code> (<code>LocalTime.MAX</code>).</li>
+      </ul>
+
+      <h3>121 · LocalDateTime</h3>
+<pre><code>LocalDateTime localDateTime = LocalDateTime.now();   // 2022-02-16T18:07:23.123456789
+LocalDate date = LocalDate.parse("2022-08-06");      // String ISO → objeto
+LocalTime time = LocalTime.parse("23:45:00");
+System.out.println(time);                            // 23:45 (segundos zerados não aparecem)
+LocalDateTime ldt1 = date.atTime(time);              // data + hora
+LocalDateTime ldt2 = time.atDate(date);              // hora + data: mesmo resultado
+System.out.println(ldt1);                            // 2022-08-06T23:45
+System.out.println(ldt2);                            // 2022-08-06T23:45</code></pre>
+      <ul>
+        <li>É a <strong>junção</strong> de <code>LocalDate</code> e <code>LocalTime</code>, com os métodos de ambos. O <code>T</code> separa a data da hora (ISO 8601).</li>
+        <li><strong><code>parse(String)</code></strong> lê o formato ISO (<code>"2022-08-06"</code>, <code>"23:45:00"</code>). Formatos personalizados vêm com o <code>DateTimeFormatter</code> (aula 129).</li>
+        <li><strong>O parse daqui lança <code>DateTimeParseException</code>, que é unchecked</strong>. É diferente do <code>ParseException</code> (checked) do <code>DateFormat</code>: não obriga <code>try/catch</code>, mas continua explodindo com texto inválido.</li>
+        <li><strong>Combinar:</strong> <code>date.atTime(time)</code> ou <code>time.atDate(date)</code>. O <code>atTime</code> também é sobrecarregado: <code>atTime(9, 45)</code>, <code>atTime(9, 45, 30)</code>.</li>
+      </ul>
+
+      <h3>122 · Instant</h3>
+<pre><code>Instant now = Instant.now();
+System.out.println(now);                        // 2022-02-16T13:30:00.123456Z  (Z = UTC)
+System.out.println(LocalDateTime.now());        // 2022-02-16T14:30:00.123456   (sem fuso: hora local)
+System.out.println(now.getEpochSecond());       // segundos desde 1970 (long)
+System.out.println(now.getNano());              // nanos dentro do segundo: 0 a 999.999.999
+System.out.println(Instant.ofEpochSecond(3));                    // 1970-01-01T00:00:03Z
+System.out.println(Instant.ofEpochSecond(3, 0));                 // 1970-01-01T00:00:03Z
+System.out.println(Instant.ofEpochSecond(3, 1_000_000_000));     // 1970-01-01T00:00:04Z
+System.out.println(Instant.ofEpochSecond(3, -1_000_000_000));    // 1970-01-01T00:00:02Z</code></pre>
+      <ul>
+        <li><strong>Um ponto instantâneo na linha do tempo</strong>, contado desde 1970 como o <code>Date</code>, mas com precisão de <strong>nanossegundos</strong>. Também é imutável.</li>
+        <li><strong>O <code>Z</code> no fim é "Zulu time"</strong>, o horário neutro do mundo (na prática, o mesmo que <strong>UTC</strong>). É o mesmo instante para qualquer pessoa em qualquer lugar.</li>
+        <li><strong>Por que isso importa no banco:</strong> "14h" gravado sem fuso é ambíguo. Na Holanda são 14h, em São Paulo 10h, em Manaus 9h. Salve em <strong>UTC</strong> e converta para o fuso do usuário na hora de mostrar (São Paulo = UTC−3).</li>
+        <li>Nanossegundos desde 1970 não cabem num <code>long</code>. Por isso são <strong>dois campos</strong>: <code>getEpochSecond()</code> (long) e <code>getNano()</code> (int, até 999.999.999). Um bilhão de nanos "vira" um segundo, como mostram os <code>ofEpochSecond(3, ±1_000_000_000)</code>.</li>
+        <li><strong>Quando usar:</strong> para humanos (dia, mês, ano), <code>LocalDate</code>/<code>LocalDateTime</code>. Para a máquina (timestamp de evento, log, medir tempo), <code>Instant</code>.</li>
+      </ul>
+
+      <h3>123 · Duration: tempo em segundos e nanos</h3>
+<pre><code>LocalDateTime now = LocalDateTime.now();
+LocalDateTime nowAfterTwoYears = LocalDateTime.now().plusYears(2).plusMinutes(8);
+LocalTime timeNow = LocalTime.now();
+LocalTime timeMinus7Hours = LocalTime.now().minusHours(7);
+Duration d1 = Duration.between(now, nowAfterTwoYears);   // PT17520H8M (aprox.)
+Duration d2 = Duration.between(timeNow, timeMinus7Hours); // PT-7H (aprox.): negativa!
+Duration d3 = Duration.between(Instant.now(), Instant.now().plusSeconds(1000)); // PT16M40S
+Duration d4 = Duration.ofDays(20);                       // PT480H
+Duration d5 = Duration.ofMinutes(3);                     // PT3M
+Duration d6 = Duration.of(3, ChronoUnit.HOURS);          // PT3H
+// Duration.between(LocalDate.now(), LocalDate.now().plusDays(2))  → UnsupportedTemporalTypeException: Seconds</code></pre>
+      <ul>
+        <li><strong>Quantidade de tempo</strong> baseada em <strong>segundos e nanossegundos</strong>: quantas horas, minutos e segundos há entre dois momentos. Não tem <code>now()</code>.</li>
+        <li><strong><code>Duration.between(inicio, fim)</code></strong> aceita <code>LocalDateTime</code>, <code>LocalTime</code> e <code>Instant</code>. Com <strong><code>LocalDate</code> dá erro em tempo de execução</strong>, porque ela não tem segundos. Para datas existe o <code>Period</code>.</li>
+        <li><strong>O formato ISO 8601 da duração:</strong> <code>P</code> (<em>period</em>) abre, <code>T</code> (<em>time</em>) separa a parte de horas, e depois vêm <code>H</code>, <code>M</code>, <code>S</code>. <code>PT17520H8M</code> = 17.520 horas e 8 minutos (os 730 dias de dois anos).</li>
+        <li><strong>Fábricas:</strong> <code>ofDays</code>, <code>ofHours</code>, <code>ofMinutes</code>, <code>ofSeconds</code>... Dias viram horas: <code>ofDays(20)</code> imprime <code>PT480H</code>.</li>
+        <li><strong><code>Duration.of(qtd, ChronoUnit.X)</code></strong> tem que ser usado com cuidado: unidades de <strong>duração estimada</strong> (<code>WEEKS</code>, <code>MONTHS</code>, <code>YEARS</code>...) lançam <code>UnsupportedTemporalTypeException</code>. <code>HOURS</code>, <code>MINUTES</code>, <code>SECONDS</code> e <code>DAYS</code> funcionam.</li>
+        <li>Se o fim vier antes do início, a duração fica <strong>negativa</strong> (<code>PT-7H</code>).</li>
+      </ul>
+
+      <h3>124 · Period: tempo em anos, meses e dias</h3>
+<pre><code>LocalDate now = LocalDate.now();
+LocalDate nowAfterTwoYears = LocalDate.now().plusYears(2).plusDays(7);
+Period p1 = Period.between(now, nowAfterTwoYears);   // P2Y7D  (só aceita LocalDate)
+Period p2 = Period.ofDays(10);                       // P10D
+Period p3 = Period.ofWeeks(58);                      // P406D  (semanas viram dias)
+Period p4 = Period.ofMonths(3);                      // P3M
+Period p5 = Period.ofYears(3);                       // P3Y
+System.out.println(p3.getMonths());                  // 0  (não converte 406 dias em meses!)
+System.out.println(Period.between(LocalDate.now(),
+        LocalDate.now().plusDays(p3.getDays())).getMonths());   // 1  (de P1Y1M...D, e não 13)</code></pre>
+      <ul>
+        <li><strong>Quantidade de tempo baseada em datas</strong>: anos, meses e dias. <code>Period.between</code> aceita <strong>só <code>LocalDate</code></strong>.</li>
+        <li><strong>Fábricas:</strong> <code>ofDays</code>, <code>ofWeeks</code> (vira dias: 58 semanas = <code>P406D</code>), <code>ofMonths</code>, <code>ofYears</code>.</li>
+        <li><strong>A pegadinha: não há normalização automática.</strong> <code>Period.ofWeeks(58)</code> guarda 406 dias, 0 meses e 0 anos, então <code>getMonths()</code> dá <code>0</code>. O <code>Period.between</code> dá <code>P1Y1M...D</code>, e o <code>getMonths()</code> devolve só o <strong>componente</strong> de meses (1), não o total (13). A documentação avisa: 15 meses ≠ 1 ano e 3 meses.</li>
+        <li>Para "quantos meses no total entre duas datas" existe o <strong><code>ChronoUnit</code></strong>, assunto da aula 125.</li>
+      </ul>
+
+      <h3>Atenção</h3>
+      <ul>
+        <li><strong>Tudo em <code>java.time</code> é imutável:</strong> <code>data.plusDays(1);</code> sozinho não faz nada. Escreva <code>data = data.plusDays(1);</code>.</li>
+        <li><strong>Sem <code>new</code>:</strong> use <code>now()</code>, <code>of(...)</code> e <code>parse(...)</code>.</li>
+        <li><strong>Duration × Period:</strong> Duration = horas, minutos e segundos (não aceita <code>LocalDate</code>). Period = anos, meses e dias (só aceita <code>LocalDate</code>).</li>
+        <li><strong><code>LocalDateTime</code> não tem fuso.</strong> "2022-08-06T23:45" não diz de onde é. Para gravar um momento absoluto, use <code>Instant</code> (UTC) ou <code>ZonedDateTime</code> (aula 128).</li>
+        <li><strong>Extra: compare com <code>isBefore</code>, <code>isAfter</code> e <code>isEqual</code></strong> (ou <code>equals</code>). <code>==</code> compara referências.</li>
+        <li><strong>Extra: <code>with</code> troca um campo</strong>, como <code>data.withDayOfMonth(1)</code> (primeiro dia do mês). Também é imutável.</li>
+        <li><strong>Extra: conversões úteis de Duration:</strong> <code>toMinutes()</code>, <code>toHours()</code>, <code>toDays()</code>, <code>toMillis()</code>. E para medir tempo de execução: <code>Duration.between(inicio, Instant.now()).toMillis()</code>.</li>
+      </ul>
+
+      <h3>Paralelo com PHP</h3>
+      <ul>
+        <li><strong>Joda-Time ↔ Carbon:</strong> o <code>java.time</code> está para o Java como o Carbon está para o Laravel. <code>LocalDate.now().plusWeeks(4)</code> ≈ <code>now()-&gt;addWeeks(4)</code>.</li>
+        <li><strong>Imutabilidade:</strong> <code>Carbon</code>/<code>DateTime</code> são <strong>mutáveis</strong> (<code>$d-&gt;addDay()</code> altera <code>$d</code>, uma fonte clássica de bugs). O equivalente ao <code>java.time</code> é <code>CarbonImmutable</code>/<code>DateTimeImmutable</code>. No Laravel dá para tornar esse o padrão com <code>Date::use(CarbonImmutable::class)</code>.</li>
+        <li><strong>O PHP não tem um tipo "só data" nem "só hora"</strong>: tudo é data e hora (<code>Carbon::today()</code> é meia-noite). Em Java, <code>LocalDate</code> e <code>LocalTime</code> são tipos próprios.</li>
+        <li><strong>Intervalos:</strong> o <code>DateInterval</code> do PHP junta Duration e Period num tipo só, e usa <strong>o mesmo ISO 8601</strong>: <code>new DateInterval('P2Y7D')</code>, <code>'PT3H'</code>. <code>$a-&gt;diff($b)</code> ≈ <code>Period.between</code> e <code>Duration.between</code>. <code>diffInDays()</code> do Carbon ≈ <code>ChronoUnit.DAYS.between</code> (aula 125).</li>
+        <li><strong>UTC no banco:</strong> é o mesmo conselho do Laravel: <code>'timezone' =&gt; 'UTC'</code> em <code>config/app.php</code> e converter na exibição. O <code>Instant</code> é o "timestamp em UTC" do Java.</li>
+      </ul>
+    </section>
+
+    <section id="flashcards">
+      <h2>Flashcards</h2>
+      <p style="color:var(--muted);margin-top:-6px">Toque no cartão para virar.</p>
+      <div id="flashcards-app"></div>
+    </section>
+
+    <section id="quiz">
+      <h2>Quiz</h2>
+      <div id="quiz-app"></div>
+    </section>
+
+    <section id="estudo">
+      <h2>Material de estudo</h2>
+
+      <h3>Mapa mental</h3>
+<pre><code>java.time (Java 8, inspirado na Joda-Time)
+├── Regras gerais
+│   ├── imutável → sempre reatribuir (x = x.plusDays(1))
+│   ├── sem new: now() · of(...) · parse("ISO")
+│   └── toString em ISO 8601 · mês de 1 a 12 (Month.JANUARY)
+├── LocalDate (119): só data
+│   ├── getYear · getMonth(Value) · getDayOfWeek · lengthOfMonth · isLeapYear
+│   ├── get(ChronoField.X) · plusWeeks / minusDays...
+│   └── MIN / MAX (±999.999.999 anos)
+├── LocalTime (120): só hora (0–23)
+│   ├── getHour · getMinute · getSecond · CLOCK_HOUR_OF_AMPM
+│   └── MIN 00:00 · MAX 23:59:59.999999999 (relatórios)
+├── LocalDateTime (121): data + hora, sem fuso
+│   ├── parse → DateTimeParseException (unchecked)
+│   └── date.atTime(time) · time.atDate(date)
+├── Instant (122): ponto na linha do tempo, UTC (Z)
+│   ├── getEpochSecond (long) + getNano (0–999.999.999)
+│   └── salvar em UTC, converter na exibição
+├── Duration (123): segundos/nanos → PT..H..M..S
+│   ├── between(LocalDateTime | LocalTime | Instant) · LocalDate ✗
+│   └── ofDays(20) = PT480H · of(3, ChronoUnit.HOURS)
+└── Period (124): anos/meses/dias → P..Y..M..D
+    ├── between(LocalDate, LocalDate) só
+    ├── ofWeeks(58) = P406D (vira dias)
+    └── getMonths() é o componente, não o total → ChronoUnit (125)</code></pre>
+
+      <h3>Prática no seu WSL (20 minutos)</h3>
+      <p>Datas fixas, para a saída ser previsível.</p>
+<pre><code>cd ~/java-lab
+R=src/academy/devdojo/maratonajava/javacore/Rdatas
+mkdir -p $R/test
+
+cat > $R/test/JavaTimeTest01.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Rdatas.test;
+
+import java.time.*;
+import java.time.temporal.ChronoField;
+import java.time.temporal.ChronoUnit;
+
+public class JavaTimeTest01 {
+    public static void main(String[] args) {
+        LocalDate date = LocalDate.of(2022, Month.JANUARY, 27);
+        date.plusDays(10);
+        System.out.println(date);                                  // ?
+        LocalDate depois = date.plusWeeks(4);
+        System.out.println(depois);                                // ?
+        System.out.println(date.getDayOfWeek());                   // ?
+        System.out.println(date.lengthOfMonth());                  // ?
+        System.out.println(LocalDate.of(2024, 2, 1).isLeapYear()); // ?
+
+        LocalTime time = LocalTime.of(23, 32, 12);
+        System.out.println(time.get(ChronoField.CLOCK_HOUR_OF_AMPM)); // ?
+        System.out.println(LocalTime.parse("23:45:00"));           // ?
+
+        LocalDateTime ldt = LocalDate.parse("2022-08-06").atTime(9, 45);
+        System.out.println(ldt);                                   // ?
+        System.out.println(ldt.getDayOfWeek());                    // ?
+
+        System.out.println(Instant.ofEpochSecond(3, 1_000_000_000));   // ?
+        System.out.println(Instant.ofEpochSecond(3, -1_000_000_000));  // ?
+
+        LocalDateTime inicio = LocalDateTime.of(2022, 1, 27, 10, 0);
+        System.out.println(Duration.between(inicio, inicio.plusYears(2).plusMinutes(8)));   // ?
+        System.out.println(Duration.ofDays(20));                   // ?
+        System.out.println(Duration.of(3, ChronoUnit.HOURS).toMinutes());   // ?
+
+        Period p3 = Period.ofWeeks(58);
+        System.out.println(p3);                                    // ?
+        System.out.println(p3.getMonths());                        // ?
+        Period p = Period.between(date, date.plusDays(p3.getDays()));
+        System.out.println(p);                                     // ?
+        System.out.println(p.getMonths());                         // ?
+        System.out.println(p.toTotalMonths());                     // ? (extra)
+
+        try {
+            Duration.between(date, date.plusDays(2));
+        } catch (Exception e) {
+            System.out.println(e.getClass().getSimpleName());      // ?
+        }
+    }
+}
+EOF
+
+javac -d out $(find src -name '*.java')
+java -cp out academy.devdojo.maratonajava.javacore.Rdatas.test.JavaTimeTest01</code></pre>
+      <details>
+        <summary>Ver a saída esperada</summary>
+<pre><code>2022-01-27
+2022-02-24
+THURSDAY
+31
+true
+11
+23:45
+2022-08-06T09:45
+SATURDAY
+1970-01-01T00:00:04Z
+1970-01-01T00:00:02Z
+PT17520H8M
+PT480H
+180
+P406D
+0
+P1Y1M10D
+1
+13
+UnsupportedTemporalTypeException</code></pre>
+      </details>
+      <p><strong>Exercícios:</strong></p>
+      <ol>
+        <li>Com <code>LocalDate</code>, calcule a data do seu próximo aniversário e o dia da semana em que ele cai.</li>
+        <li>Monte o intervalo de um relatório de hoje: <code>LocalDate.now().atTime(LocalTime.MIN)</code> até <code>atTime(LocalTime.MAX)</code>, e imprima os dois.</li>
+        <li>Meça quanto tempo leva um laço de 1 milhão de <code>StringBuilder.append</code> (aulas 108–111) usando <code>Instant.now()</code> antes e depois e <code>Duration.between(...).toMillis()</code>.</li>
+        <li>Calcule sua idade exata com <code>Period.between(dataNascimento, LocalDate.now())</code> e imprima "X anos, Y meses e Z dias".</li>
+        <li>Tente <code>LocalDate.parse("06/08/2022")</code> e <code>Duration.of(1, ChronoUnit.MONTHS)</code>. Leia as duas exceções e diga se são checked ou unchecked.</li>
+      </ol>
+
+      <h3>Glossário</h3>
+      <ul>
+        <li><strong><code>java.time</code></strong>: a API de datas do Java 8, imutável e inspirada na Joda-Time.</li>
+        <li><strong>ISO 8601</strong>: padrão internacional de datas (<code>2022-01-27</code>, <code>2022-08-06T23:45</code>) e durações (<code>P2Y7D</code>, <code>PT3H</code>).</li>
+        <li><strong>Método de fábrica</strong>: método estático que cria o objeto no lugar do <code>new</code> (<code>of</code>, <code>now</code>, <code>parse</code>).</li>
+        <li><strong><code>ChronoField</code></strong>: enum com os campos de data e hora (<code>YEAR</code>, <code>DAY_OF_MONTH</code>...) para usar com <code>get</code>.</li>
+        <li><strong>UTC / Zulu time</strong>: o horário de referência mundial, sem fuso; o <code>Z</code> do <code>Instant</code>.</li>
+        <li><strong>Epoch second</strong>: segundos desde 01/01/1970 00:00 UTC.</li>
+        <li><strong><code>Duration</code></strong>: quantidade de tempo em segundos e nanos (horas, minutos).</li>
+        <li><strong><code>Period</code></strong>: quantidade de tempo em anos, meses e dias.</li>
+        <li><strong>Normalização</strong>: converter unidades menores em maiores (12 meses → 1 ano); o <code>Period</code> não faz sozinho.</li>
+      </ul>
+
+      <h3>Revisão espaçada</h3>
+      <ul class="revisao">
+        <li><span class="dia">Dia 1</span><span>Todos os flashcards + a prática com previsões.</span></li>
+        <li><span class="dia">Dia 3</span><span>Quiz + exercícios 1 a 3.</span></li>
+        <li><span class="dia">Dia 7</span><span>Exercícios 4 e 5 + a tabela das 6 classes (o que guarda, exemplo de toString) de memória.</span></li>
+        <li><span class="dia">Dia 14</span><span>Flashcards que errou + questões discursivas + revisar as aulas 112–118 comparando com o legado.</span></li>
+      </ul>
+
+      <h3>Para aprofundar</h3>
+      <ul>
+        <li>Por que <code>LocalDate.now()</code> depende do fuso da JVM, e como passar um <code>ZoneId</code> ou um <code>Clock</code> (útil em testes)?</li>
+        <li>Como o JDBC 4.2 / JPA mapeiam <code>LocalDate</code>, <code>LocalDateTime</code> e <code>Instant</code> para colunas <code>DATE</code>, <code>TIMESTAMP</code> e <code>TIMESTAMP WITH TIME ZONE</code>?</li>
+        <li>O que acontece com <code>LocalDate.of(2024, 1, 31).plusMonths(1)</code>? E <code>.plusMonths(1).plusMonths(1)</code> × <code>.plusMonths(2)</code>?</li>
+        <li>Quem é Stephen Colebourne e qual a relação entre Joda-Time e a JSR-310?</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    window.AULA = {
+      flashcards: [
+        ["Em que versão veio o java.time e em que se inspirou?", "Java 8, inspirado na biblioteca Joda-Time"],
+        ["As classes do java.time são mutáveis?", "Não: imutáveis; plusDays etc. devolvem um objeto novo"],
+        ["Como se criam objetos do java.time?", "Com métodos de fábrica: now(), of(...), parse(...); sem new"],
+        ["Em que número começa o mês no java.time?", "1 (Month.JANUARY.getValue() == 1)"],
+        ["O que o LocalDate guarda?", "Só a data (ano, mês, dia), sem hora"],
+        ["Como saber se o mês tem 28, 29, 30 ou 31 dias?", "date.lengthOfMonth()"],
+        ["Como saber se o ano é bissexto?", "date.isLeapYear()"],
+        ["Como pegar um campo qualquer de uma data?", "date.get(ChronoField.XXX), ex.: ChronoField.DAY_OF_MONTH"],
+        ["O que imprime LocalDate.of(2022, Month.JANUARY, 27)?", "2022-01-27 (ISO 8601)"],
+        ["agora.plusWeeks(4); sozinho altera agora?", "Não: precisa de agora = agora.plusWeeks(4)"],
+        ["LocalTime.of(24, 0) funciona?", "Não: horas vão de 0 a 23 (DateTimeException)"],
+        ["Para que LocalTime.MIN e MAX em relatórios?", "Início (00:00) e fim (23:59:59.999999999) do dia"],
+        ["Como juntar LocalDate e LocalTime?", "date.atTime(time) ou time.atDate(date)"],
+        ["Que exceção o parse do java.time lança? É checked?", "DateTimeParseException, unchecked"],
+        ["O que é um Instant?", "Um ponto na linha do tempo, em UTC, com precisão de nanossegundos"],
+        ["O que significa o Z em 2022-02-16T13:30:00Z?", "Zulu time: UTC, o horário neutro do mundo"],
+        ["Por que salvar datas em UTC no banco?", "\"14h\" sem fuso é ambíguo; UTC converte para qualquer fuso na exibição"],
+        ["Por que o Instant tem getEpochSecond e getNano?", "Nanos desde 1970 não cabem num long; divide em segundos (long) + nanos (0–999.999.999)"],
+        ["O que é Duration?", "Quantidade de tempo em segundos/nanos (horas, minutos, segundos)"],
+        ["Duration.between aceita LocalDate?", "Não: UnsupportedTemporalTypeException (LocalDate não tem segundos)"],
+        ["O que significa PT480H?", "Period + Time: 480 horas (Duration.ofDays(20))"],
+        ["O que é Period?", "Quantidade de tempo em anos, meses e dias; between só com LocalDate"],
+        ["Period.ofWeeks(58) imprime o quê?", "P406D (semanas viram dias)"],
+        ["Period.ofWeeks(58).getMonths()?", "0: o Period não normaliza dias em meses"],
+        ["Como saber o total de meses entre duas datas?", "ChronoUnit.MONTHS.between(a, b) (aula 125) ou period.toTotalMonths()"]
+      ],
+      quiz: [
+        { tipo: 'multipla', pergunta: 'Qual linha cria corretamente a data 27/01/2022?', opcoes: ['new LocalDate(2022, 1, 27)', 'LocalDate.of(2022, Month.JANUARY, 27)', 'LocalDate.of(2022, 0, 27)', 'LocalDate.now(2022, 1, 27)'], correta: 1,
+          explicacao: 'java.time usa métodos de fábrica (o construtor é privado), e janeiro é 1 (ou Month.JANUARY). Com 0 lança DateTimeException.' },
+        { tipo: 'multipla', pergunta: 'LocalDate d = LocalDate.of(2022, 1, 27); d.plusDays(10); System.out.println(d); imprime:', opcoes: ['2022-02-06', '2022-01-27', '2022-01-37', 'Não compila'], correta: 1,
+          explicacao: 'LocalDate é imutável. plusDays devolve um objeto novo, que foi descartado.' },
+        { tipo: 'vf', pergunta: 'LocalDate.parse("2022-08-06") exige try/catch porque lança uma exceção checked.', correta: 1,
+          explicacao: 'Falso. Lança DateTimeParseException, unchecked. É diferente do ParseException (checked) do DateFormat/SimpleDateFormat.' },
+        { tipo: 'multipla', pergunta: 'Qual classe usar para gravar o momento exato de um pagamento, independente do fuso do usuário?', opcoes: ['LocalDate', 'LocalTime', 'LocalDateTime', 'Instant'], correta: 3,
+          explicacao: 'Instant é um ponto na linha do tempo em UTC (Z). LocalDateTime não tem fuso, então "14h" fica ambíguo.' },
+        { tipo: 'multipla', pergunta: 'O que imprime Instant.ofEpochSecond(3, 1_000_000_000)?', opcoes: ['1970-01-01T00:00:03Z', '1970-01-01T00:00:04Z', '1970-01-01T00:00:03.1Z', 'Lança exceção: nanos acima de 999.999.999'], correta: 1,
+          explicacao: 'Um bilhão de nanos é um segundo, e o ajuste é normalizado: 3 s + 1 s = 4 s.' },
+        { tipo: 'multipla', pergunta: 'Qual chamada lança exceção em tempo de execução?', opcoes: ['Duration.between(LocalTime.now(), LocalTime.now().plusHours(1))', 'Duration.between(LocalDate.now(), LocalDate.now().plusDays(1))', 'Period.between(LocalDate.now(), LocalDate.now().plusDays(1))', 'Duration.ofDays(20)'], correta: 1,
+          explicacao: 'Duration trabalha com segundos, e LocalDate não tem: UnsupportedTemporalTypeException. Para datas, use Period.' },
+        { tipo: 'multipla', pergunta: 'O que System.out.println(Duration.ofDays(20)) imprime?', opcoes: ['P20D', 'PT20D', 'PT480H', '20 days'], correta: 2,
+          explicacao: 'Duration representa tempo em segundos e expressa dias como horas no ISO 8601: PT480H.' },
+        { tipo: 'vf', pergunta: 'Period.ofWeeks(58).getMonths() devolve 13.', correta: 1,
+          explicacao: 'Falso. Devolve 0. O Period guarda P406D (só dias) e não normaliza para meses. Para totais, use ChronoUnit (aula 125) ou toTotalMonths num período com meses.' },
+        { tipo: 'discursiva', pergunta: 'Explique a diferença entre Duration e Period, com um exemplo de uso real de cada uma.',
+          explicacao: 'Duration é uma quantidade de tempo baseada em segundos e nanossegundos (horas, minutos, segundos), usada com LocalTime, LocalDateTime e Instant. Exemplo: medir quanto tempo uma requisição levou, ou a duração de uma sessão (PT16M40S). Não aceita LocalDate. Period é baseado em datas (anos, meses, dias), usado só com LocalDate. Exemplo: idade de uma pessoa ou tempo de contrato (P2Y7D). O Period não normaliza (406 dias não viram 1 ano e 1 mês sozinhos), e getMonths devolve só o componente de meses.' },
+        { tipo: 'discursiva', pergunta: 'Em Laravel você faz $vencimento = $data->addDays(30); e depois usa $data achando que ela não mudou. Explique o bug e como o java.time evita isso.',
+          explicacao: 'Carbon (e DateTime) são mutáveis. addDays(30) altera $data e devolve o mesmo objeto, então $data e $vencimento passam a ser a mesma data, 30 dias à frente. No java.time as classes são imutáveis: data.plusDays(30) devolve um objeto novo e data continua intacta. O risco em Java é o oposto: esquecer de atribuir o resultado (data.plusDays(30); sozinho não faz nada). No Laravel, a correção é usar CarbonImmutable (ou copy()) e, se quiser, torná-lo o padrão com Date::use(CarbonImmutable::class).' }
+      ]
+    };
+  </script>
+  <script src="../js/app.js"></script>
+</body>
+</html>
