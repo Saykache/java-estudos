@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>77–79 · Modificador final</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="topo">
+      <a class="voltar" href="../index.html">← Todas as aulas</a>
+      <h1>77–79 · Modificador final</h1>
+      <p>Constantes, referências finais, classes que não podem ser estendidas e métodos que não podem ser sobrescritos · <a href="https://www.youtube.com/playlist?list=PL62G310vn6nFIsOCC0H-C2infYgwm8SWW" target="_blank" rel="noopener">playlist</a></p>
+    </header>
+
+    <nav class="abas">
+      <a href="#resumo">Resumo</a>
+      <a href="#flashcards">Flashcards</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#estudo">Material de estudo</a>
+    </nav>
+
+    <p class="aviso">Junta as aulas 77 (final em tipo primitivo), 78 (final em tipo referência) e 79 (final em classes e métodos). Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. O código (pacote <code>javacore.Jmodificadorfinal</code>, comprador "Kuririn", Ferrari "Enzo") foi conferido no <a href="https://github.com/devdojobr/maratona-java-virado-no-jiraya" target="_blank" rel="noopener">repositório do professor</a>. A convenção de nomes para <code>final</code> de instância, o <code>final</code> em variáveis locais e os itens marcados como "extra" não estão nos vídeos.</p>
+
+    <section id="resumo">
+      <h2>Resumo</h2>
+      <p><code>final</code> quer dizer "definitivo", e muda de sentido conforme onde é aplicado. Numa <strong>variável</strong>, o valor não pode ser trocado depois de atribuído (constante). Numa <strong>referência</strong>, ela não pode apontar para outro objeto, embora o objeto possa mudar por dentro. Numa <strong>classe</strong>, ninguém pode estendê-la. Num <strong>método</strong>, ninguém pode sobrescrevê-lo. Os dois últimos casos são sobre <strong>herança</strong>.</p>
+      <p>De passagem, a aula 77 tira o <code>extends Object</code> que a aula 76 tinha escrito: ele é implícito e não precisa aparecer.</p>
+
+      <h3>77 · Constantes (final em primitivo)</h3>
+<pre><code>package academy.devdojo.maratonajava.javacore.Jmodificadorfinal.dominio;
+
+public class Carro {
+    private String nome;
+    public static final double VELOCIDADE_LIMITE = 250;   // constante
+}
+
+// CarroTest01
+System.out.println(Carro.VELOCIDADE_LIMITE);   // 250.0
+// Carro.VELOCIDADE_LIMITE = 180;              // NÃO compila: é final</code></pre>
+      <ul>
+        <li>A velocidade limite da aula 61 era <code>static</code>, e por isso ainda podia ser trocada (para 180). Com <strong><code>final</code></strong> ela vira uma <strong>constante</strong>: depois do valor atribuído, só mudando o código e compilando de novo.</li>
+        <li><strong><code>final</code> não aceita o valor padrão.</strong> Um atributo <code>final</code> sem valor não compila. O Java obriga você a dizer qual é o valor.</li>
+        <li><strong>Convenção de nome:</strong> constantes em <strong>MAIÚSCULAS</strong>, com palavras separadas por <em>underline</em>: <code>VELOCIDADE_LIMITE</code>. Batendo o olho, em qualquer lugar do código, você sabe que é uma constante.</li>
+        <li><strong>O combo mais comum é <code>public static final</code></strong>: pertence à classe, é visível para todos e não muda. Acesse pelo nome da classe (<code>Carro.VELOCIDADE_LIMITE</code>). Por uma referência "funciona", mas não é o certo, e o IntelliJ nem sugere.</li>
+        <li><strong>Onde inicializar:</strong>
+          <ul>
+            <li>num <code>static final</code>, na declaração ou num <strong>bloco <code>static</code></strong>, porque ele sempre roda quando a classe é carregada;</li>
+            <li>num <code>final</code> de instância (sem <code>static</code>), na declaração, num <strong>bloco de instância</strong> ou <strong>no construtor</strong>.</li>
+          </ul>
+          A regra é que ele tenha valor <strong>antes de ser usado</strong>.</li>
+      </ul>
+
+      <h3>78 · final em referência: não troca o objeto, mas o objeto muda</h3>
+<pre><code>public class Carro {
+    private String nome;
+    public static final double VELOCIDADE_LIMITE = 250;
+    public final Comprador COMPRADOR = new Comprador();   // referência final
+}
+
+// CarroTest01
+Carro carro = new Carro();
+System.out.println(carro.COMPRADOR);        // Comprador{nome='null'}
+carro.COMPRADOR.setNome("Kuririn");         // pode: altera o OBJETO
+System.out.println(carro.COMPRADOR);        // Comprador{nome='Kuririn'}
+
+Comprador comprador2 = new Comprador();
+// carro.COMPRADOR = comprador2;            // NÃO compila: a REFERÊNCIA é final</code></pre>
+<pre><code>carro ──▶ [nome | COMPRADOR ═══▶ [ nome: null → "Kuririn" ]]
+                  (seta fixa)      (o conteúdo pode mudar)</code></pre>
+      <ul>
+        <li>Numa variável de referência, <code>final</code> trava <strong>a seta</strong>: ela sempre apontará para aquele mesmo objeto.</li>
+        <li><strong>Os dados do objeto continuam alteráveis:</strong> <code>setNome("Kuririn")</code> funciona. <code>final</code> não torna o objeto imutável.</li>
+        <li>Sem o <code>= new Comprador()</code>, o compilador exige a inicialização, pelo mesmo motivo da aula 77.</li>
+        <li><strong>Para que serve:</strong> casos em que você quer <strong>um único objeto</strong>, sempre o mesmo. Por exemplo, um gerenciador de conexões com o banco: com mil usuários, você não quer mil gerenciadores. O William indica pesquisar o padrão de projeto <strong>Singleton</strong>, que usa isso.</li>
+      </ul>
+
+      <h3>79 · final em classes e métodos</h3>
+<pre><code>public final class Carro { ... }
+// public class Ferrari extends Carro { }   // NÃO compila: Carro é final
+
+public class Carro {
+    public final void imprime() {           // método final
+        System.out.println(this.nome);
+    }
+}
+
+public class Ferrari extends Carro {
+    // public void imprime() { ... }        // NÃO compila: não se sobrescreve método final
+}
+
+Ferrari ferrari = new Ferrari();
+ferrari.setNome("Enzo");
+ferrari.imprime();                          // Enzo — herdado e usado normalmente</code></pre>
+      <ul>
+        <li><strong>Classe <code>final</code> não pode ser estendida.</strong> A OO incentiva a herança, mas há casos em que você quer impedi-la.</li>
+        <li><strong>O grande exemplo é <code>String</code></strong>, que é <code>final</code>. Permitir herança é permitir que alguém <strong>mude o comportamento</strong> dos métodos (como fizemos com o <code>toString</code>). Com bilhões de JVMs no mundo dependendo de <code>String</code>, o comportamento dela tem que ser garantido.</li>
+        <li><strong>Método <code>final</code> não pode ser sobrescrito</strong>, mas é herdado e usado normalmente. Ele diz: "este é o comportamento para todo mundo".</li>
+        <li><strong>Ordem das palavras:</strong> <code>public final void</code> e <code>final public void</code> compilam. O tipo de retorno fica sempre logo antes do nome, então <code>public void final imprime()</code> não compila. "Na dúvida, teste e veja se compila."</li>
+        <li>Numa classe <code>final</code>, marcar métodos como <code>final</code> é <strong>redundante</strong>: se ninguém estende a classe, ninguém sobrescreve nada. Por isso os métodos de <code>String</code> não são <code>final</code>.</li>
+      </ul>
+
+      <h3>Atenção</h3>
+      <ul>
+        <li><strong><code>final</code> ≠ imutável.</strong> Uma referência final pode ter o objeto alterado por dentro. Um array <code>final</code> também: <code>final int[] a = {1, 2}; a[0] = 9;</code> compila.</li>
+        <li><strong><code>final</code> sem valor não compila</strong> (a menos que o construtor, ou um bloco, atribua). E cada construtor precisa garantir a atribuição.</li>
+        <li><strong>Extra: nomes.</strong> O professor escreve <code>COMPRADOR</code> em maiúsculas, mas a convenção mais aceita reserva o <code>UPPER_SNAKE_CASE</code> para <code>static final</code> (constantes de verdade). Um <code>final</code> de instância normalmente segue <code>camelCase</code>: <code>private final Comprador comprador;</code>.</li>
+        <li><strong>Extra: <code>final</code> em variáveis locais e parâmetros.</strong> <code>final int x = 10;</code> dentro de um método e <code>void m(final String nome)</code> impedem a reatribuição. Isso vai importar com lambdas ("effectively final").</li>
+        <li><strong>Extra: receita de classe imutável.</strong> Classe <code>final</code>, atributos <code>private final</code>, preenchidos no construtor e sem setters. É o que <code>String</code> faz, e o que os <code>record</code> (Java 16+) geram sozinhos.</li>
+        <li>Acesse constantes pela <strong>classe</strong>, não pela referência: <code>Carro.VELOCIDADE_LIMITE</code>.</li>
+      </ul>
+
+      <h3>Paralelo com PHP</h3>
+      <ul>
+        <li><strong>Constantes:</strong> <code>const VELOCIDADE_LIMITE = 250;</code> numa classe PHP, com acesso <code>Carro::VELOCIDADE_LIMITE</code>, equivale a <code>public static final</code>, com acesso <code>Carro.VELOCIDADE_LIMITE</code>. A convenção em maiúsculas é a mesma.</li>
+        <li><strong><code>readonly</code> ≈ <code>final</code> de instância:</strong> a propriedade <code>readonly</code> do PHP 8.1 só pode ser atribuída uma vez. E, igual à aula 78, se ela guarda um objeto, <strong>o objeto continua mutável</strong> por dentro: <code>$carro-&gt;comprador-&gt;nome = 'Kuririn'</code> funciona.</li>
+        <li><strong><code>final class</code> e <code>final function</code></strong> existem no PHP com o mesmo significado. Muitos pacotes modernos (Symfony, PHPStan) marcam classes como <code>final</code> por padrão, exatamente para evitar herança não planejada. O PHP 8.1 também tem constantes de classe <code>final</code>.</li>
+        <li><strong>Classe imutável:</strong> o <code>readonly class</code> do PHP 8.2 é o equivalente de uma classe com todos os atributos <code>final</code>, ou de um <code>record</code>.</li>
+      </ul>
+    </section>
+
+    <section id="flashcards">
+      <h2>Flashcards</h2>
+      <p style="color:var(--muted);margin-top:-6px">Toque no cartão para virar.</p>
+      <div id="flashcards-app"></div>
+    </section>
+
+    <section id="quiz">
+      <h2>Quiz</h2>
+      <div id="quiz-app"></div>
+    </section>
+
+    <section id="estudo">
+      <h2>Material de estudo</h2>
+
+      <h3>Mapa mental</h3>
+<pre><code>final
+├── Em primitivo (77)
+│   ├── constante: não pode ser reatribuída
+│   ├── precisa de valor explícito (sem padrão)
+│   ├── public static final · UPPER_SNAKE_CASE
+│   └── inicializar: declaração, bloco (static ou instância) ou construtor
+├── Em referência (78)
+│   ├── a seta é fixa (não aponta para outro objeto)
+│   ├── o objeto ainda pode mudar (setNome)
+│   └── uso: uma instância só (Singleton)
+├── Em classe (79)
+│   ├── não pode ser estendida
+│   └── ex.: String
+└── Em método (79)
+    ├── não pode ser sobrescrito (mas é herdado)
+    └── em classe final, é redundante</code></pre>
+
+      <h3>Prática no seu WSL (15 minutos)</h3>
+<pre><code>cd ~/java-lab
+J=src/academy/devdojo/maratonajava/javacore/Jmodificadorfinal
+mkdir -p $J/dominio $J/test
+
+cat > $J/dominio/Comprador.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Jmodificadorfinal.dominio;
+
+public class Comprador {
+    private String nome;
+    @Override
+    public String toString() { return "Comprador{nome='" + nome + "'}"; }
+    public void setNome(String nome) { this.nome = nome; }
+}
+EOF
+
+cat > $J/dominio/Carro.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Jmodificadorfinal.dominio;
+
+public class Carro {
+    private String nome;
+    public static final double VELOCIDADE_LIMITE = 250;
+    public final Comprador COMPRADOR = new Comprador();
+
+    public final void imprime() { System.out.println(this.nome); }
+    public void setNome(String nome) { this.nome = nome; }
+}
+EOF
+
+cat > $J/dominio/Ferrari.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Jmodificadorfinal.dominio;
+
+public class Ferrari extends Carro {
+}
+EOF
+
+cat > $J/test/CarroTest01.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Jmodificadorfinal.test;
+
+import academy.devdojo.maratonajava.javacore.Jmodificadorfinal.dominio.Carro;
+import academy.devdojo.maratonajava.javacore.Jmodificadorfinal.dominio.Ferrari;
+
+public class CarroTest01 {
+    public static void main(String[] args) {
+        Carro carro = new Carro();
+        System.out.println(Carro.VELOCIDADE_LIMITE);   // ?
+        System.out.println(carro.COMPRADOR);           // ?
+        carro.COMPRADOR.setNome("Kuririn");
+        System.out.println(carro.COMPRADOR);           // ?
+        Ferrari ferrari = new Ferrari();
+        ferrari.setNome("Enzo");
+        ferrari.imprime();                             // ?
+    }
+}
+EOF
+
+javac -d out $(find src -name '*.java')
+java -cp out academy.devdojo.maratonajava.javacore.Jmodificadorfinal.test.CarroTest01</code></pre>
+      <details>
+        <summary>Ver a saída esperada</summary>
+<pre><code>250.0
+Comprador{nome='null'}
+Comprador{nome='Kuririn'}
+Enzo</code></pre>
+      </details>
+      <p><strong>Provoque os erros (um por vez) e leia as mensagens:</strong></p>
+      <ol>
+        <li><code>Carro.VELOCIDADE_LIMITE = 180;</code> no teste.</li>
+        <li>Tire o <code>= 250</code> da constante.</li>
+        <li><code>carro.COMPRADOR = new Comprador();</code> no teste.</li>
+        <li>Marque <code>Carro</code> como <code>final</code> (a <code>Ferrari</code> quebra).</li>
+        <li>Sobrescreva <code>imprime()</code> na <code>Ferrari</code>.</li>
+        <li>Tente <code>class MinhaString extends String {}</code>.</li>
+      </ol>
+
+      <h3>Glossário</h3>
+      <ul>
+        <li><strong><code>final</code></strong>: modificador que impede reatribuição (variável), herança (classe) ou sobrescrita (método).</li>
+        <li><strong>Constante</strong>: valor que não muda. Em Java, normalmente <code>public static final</code> em MAIÚSCULAS.</li>
+        <li><strong>UPPER_SNAKE_CASE</strong>: maiúsculas com <code>_</code> entre as palavras.</li>
+        <li><strong>Referência final</strong>: variável que sempre aponta para o mesmo objeto (o objeto pode mudar).</li>
+        <li><strong>Imutável</strong>: objeto cujo estado não muda depois de criado (ex.: <code>String</code>).</li>
+        <li><strong>Singleton</strong>: padrão de projeto que garante uma única instância de uma classe.</li>
+      </ul>
+
+      <h3>Revisão espaçada</h3>
+      <ul class="revisao">
+        <li><span class="dia">Dia 1</span><span>Todos os flashcards + a prática.</span></li>
+        <li><span class="dia">Dia 3</span><span>Quiz + os 6 erros provocados.</span></li>
+        <li><span class="dia">Dia 7</span><span>Explicar final × imutável com o exemplo do comprador.</span></li>
+        <li><span class="dia">Dia 14</span><span>Flashcards que errou + questões discursivas.</span></li>
+      </ul>
+
+      <h3>Para aprofundar</h3>
+      <ul>
+        <li>Como implementar um Singleton em Java (atributo <code>private static final</code> + construtor <code>private</code>)?</li>
+        <li>O que é "effectively final" e por que as lambdas exigem isso?</li>
+        <li>Por que o compilador "copia" o valor de constantes <code>static final</code> primitivas para quem as usa?</li>
+        <li>Como <code>record</code> e <code>List.of(...)</code> ajudam a criar objetos imutáveis?</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    window.AULA = {
+      flashcards: [
+        ["O que final faz numa variável?", "Impede reatribuir: depois do valor atribuído, ele não muda"],
+        ["Um atributo final aceita o valor padrão (0/null)?", "Não: precisa de um valor explícito"],
+        ["Qual o combo mais comum para constantes?", "public static final"],
+        ["Qual a convenção de nome de constante?", "MAIÚSCULAS com underline: VELOCIDADE_LIMITE"],
+        ["Como acessar uma constante static?", "Pelo nome da classe: Carro.VELOCIDADE_LIMITE"],
+        ["Onde inicializar um static final?", "Na declaração ou num bloco static"],
+        ["Onde inicializar um final de instância?", "Na declaração, num bloco de instância ou no construtor"],
+        ["O que final trava numa variável de referência?", "A referência: ela não pode apontar para outro objeto"],
+        ["Com final Comprador COMPRADOR, dá para fazer COMPRADOR.setNome(\"x\")?", "Sim: o objeto pode mudar por dentro"],
+        ["carro.COMPRADOR = new Comprador() compila?", "Não: a referência é final"],
+        ["final torna o objeto imutável?", "Não: só impede trocar a referência"],
+        ["Para que serve uma referência final, segundo a aula?", "Garantir um único objeto (ex.: padrão Singleton)"],
+        ["O que final faz numa classe?", "Impede que ela seja estendida"],
+        ["Dê um exemplo de classe final da API do Java.", "String"],
+        ["Por que String é final?", "Para ninguém alterar o comportamento dela via herança/sobrescrita"],
+        ["O que final faz num método?", "Impede que ele seja sobrescrito (mas é herdado)"],
+        ["Uma subclasse pode chamar um método final herdado?", "Sim, só não pode sobrescrever"],
+        ["public void final imprime() compila?", "Não: o tipo de retorno fica logo antes do nome"],
+        ["Por que métodos final numa classe final são redundantes?", "Ninguém estende a classe, então ninguém sobrescreve"],
+        ["Um array final pode ter as posições alteradas?", "Sim: final só trava a referência do array"],
+        ["Qual a convenção de nome para um final de instância?", "Normalmente camelCase; MAIÚSCULAS fica para static final"],
+        ["Equivalente PHP de public static final?", "const dentro da classe (Carro::VELOCIDADE_LIMITE)"],
+        ["Equivalente PHP de um atributo final de instância?", "readonly (PHP 8.1)"]
+      ],
+      quiz: [
+        { tipo: 'vf', pergunta: 'Um atributo final precisa receber um valor explícito, porque não vale o valor padrão.', correta: 0,
+          explicacao: 'Verdadeiro: na declaração, num bloco de inicialização ou no construtor, mas sempre antes de ser usado.' },
+        { tipo: 'multipla', pergunta: 'Qual a declaração de constante no padrão da aula?', opcoes: ['public final double velocidadeLimite = 250;', 'public static final double VELOCIDADE_LIMITE = 250;', 'public const double VELOCIDADE_LIMITE = 250;', 'public static double VELOCIDADE_LIMITE;'], correta: 1,
+          explicacao: 'public static final, nome em MAIÚSCULAS com underline e valor atribuído. Java não tem a palavra const em uso.' },
+        { tipo: 'multipla', pergunta: 'O que acontece em Carro.VELOCIDADE_LIMITE = 180; sendo ela static final?', opcoes: ['Muda para todos os carros', 'Muda só para o carro atual', 'Erro de compilação', 'Erro só ao executar'], correta: 2,
+          explicacao: 'final impede reatribuir. O compilador barra na hora.' },
+        { tipo: 'multipla', pergunta: 'Com public final Comprador COMPRADOR = new Comprador();, qual linha NÃO compila?', opcoes: ['carro.COMPRADOR.setNome("Kuririn");', 'System.out.println(carro.COMPRADOR);', 'carro.COMPRADOR = new Comprador();', 'String n = carro.COMPRADOR.toString();'], correta: 2,
+          explicacao: 'A referência final não pode apontar para outro objeto. Alterar o objeto (setNome) é permitido.' },
+        { tipo: 'vf', pergunta: 'Declarar uma referência como final torna o objeto referenciado imutável.', correta: 1,
+          explicacao: 'Falso: final trava a referência, não o conteúdo. O comprador continua podendo mudar de nome.' },
+        { tipo: 'multipla', pergunta: 'Se Carro é declarada como public final class Carro, o que acontece em class Ferrari extends Carro?', opcoes: ['Compila normalmente', 'Compila, mas Ferrari não herda os métodos', 'Erro de compilação: não se estende uma classe final', 'Erro só ao criar uma Ferrari'], correta: 2,
+          explicacao: 'Classe final não pode ter subclasses.' },
+        { tipo: 'multipla', pergunta: 'Carro tem public final void imprime(). Na Ferrari (extends Carro), o que é permitido?', opcoes: ['Sobrescrever imprime()', 'Chamar ferrari.imprime()', 'Declarar imprime() como private', 'Nada: método final não é herdado'], correta: 1,
+          explicacao: 'O método final é herdado e pode ser chamado, só não pode ser sobrescrito.' },
+        { tipo: 'vf', pergunta: 'Os métodos da classe String são todos final.', correta: 1,
+          explicacao: 'Falso: não precisam ser. Como a classe String é final, ninguém a estende, então ninguém sobrescreve nada, e final nos métodos seria redundante.' },
+        { tipo: 'discursiva', pergunta: 'Explique a diferença entre final em um int e final em uma referência de objeto, usando o exemplo do Carro com VELOCIDADE_LIMITE e COMPRADOR.',
+          explicacao: 'Num primitivo, a variável guarda o próprio valor, e final impede trocá-lo: VELOCIDADE_LIMITE será sempre 250. Numa referência, a variável guarda "para onde apontar", e final impede trocar a seta: COMPRADOR sempre será aquele mesmo objeto, e carro.COMPRADOR = new Comprador() não compila. Mas o objeto em si continua mutável: carro.COMPRADOR.setNome("Kuririn") funciona. final garante a identidade da referência, não a imutabilidade do objeto.' },
+        { tipo: 'discursiva', pergunta: 'Por que a String é final, e quando faz sentido você marcar suas próprias classes como final?',
+          explicacao: 'Permitir herança é permitir que subclasses mudem o comportamento dos métodos por sobrescrita. String é usada por praticamente todo código Java do mundo, então o comportamento dela precisa ser garantido (e ela é imutável). Marcar uma classe como final faz sentido quando ela não foi projetada para ser estendida: classes utilitárias, objetos de valor imutáveis, classes cuja lógica não pode ser alterada por segurança ou consistência. É a mesma razão pela qual muitos pacotes PHP modernos marcam classes como final por padrão.' }
+      ]
+    };
+  </script>
+  <script src="../js/app.js"></script>
+</body>
+</html>
