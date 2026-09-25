@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>175–182 · Set, Map e Queue</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="topo">
+      <a class="voltar" href="../index.html">← Todas as aulas</a>
+      <h1>175–182 · Coleções: Set, TreeSet, Map, TreeMap e PriorityQueue</h1>
+      <p>Coleções sem repetidos, ordenadas pela árvore, chave → valor e filas com prioridade · <a href="https://www.youtube.com/playlist?list=PL62G310vn6nFIsOCC0H-C2infYgwm8SWW" target="_blank" rel="noopener">playlist</a></p>
+    </header>
+
+    <nav class="abas">
+      <a href="#resumo">Resumo</a>
+      <a href="#flashcards">Flashcards</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#estudo">Material de estudo</a>
+    </nav>
+
+    <p class="aviso">Junta as aulas 175 (Set, HashSet), 176 e 177 (NavigableSet, TreeSet), 178 a 180 (Map, HashMap, LinkedHashMap), 181 (NavigableMap, TreeMap) e 182 (Queue, PriorityQueue), fechando o bloco de Coleções. Continua as <a href="166-174-list-sort-iterator.html">aulas 166–174</a>. Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. O código (pacote <code>javacore.Ycolecoes</code>, <code>Manga</code>, <code>Smartphone</code> e o novo <code>Consumidor</code>) foi conferido no <a href="https://github.com/devdojobr/maratona-java-virado-no-jiraya" target="_blank" rel="noopener">repositório do professor</a>. Os itens marcados como "extra" não estão nos vídeos.</p>
+
+    <section id="resumo">
+      <h2>Resumo</h2>
+      <p>Além da <code>List</code>, o Java tem três famílias. <strong><code>Set</code></strong> é uma coleção <strong>sem elementos repetidos</strong>. <strong><code>Map</code></strong> associa <strong>chave → valor</strong>, e tecnicamente <strong>não é uma <code>Collection</code></strong>. <strong><code>Queue</code></strong> é uma <strong>fila</strong>. Em cada família, o nome da implementação diz como ela organiza os dados:</p>
+<pre><code>Hash...        → usa hashCode/equals · SEM ordem garantida · O(1)
+LinkedHash...  → usa hash, mas LEMBRA a ordem de inserção
+Tree...        → árvore ORDENADA pelo compareTo/Comparator · O(log n) · navegável (lower, floor, higher, ceiling)
+
+Set:   HashSet · LinkedHashSet · TreeSet (NavigableSet)
+Map:   HashMap · LinkedHashMap · TreeMap (NavigableMap)
+Queue: PriorityQueue (sai pela prioridade do Comparable/Comparator)</code></pre>
+
+      <h3>175 · LinkedList, Set e HashSet</h3>
+<pre><code>List&lt;Manga&gt; mangas = new LinkedList&lt;&gt;();   // troca de implementação: o resto do código não muda
+
+Set&lt;Manga&gt; mangas = new HashSet&lt;&gt;();       // sem repetidos, sem índice, sem ordem garantida
+mangas.add(new Manga(5L, "Hellsing Ultimate", 19.9, 0));
+mangas.add(new Manga(1L, "Berserk", 9.5, 5));
+mangas.add(new Manga(2L, "Dragon ball Z", 2.99, 0));
+mangas.add(new Manga(2L, "Dragon ball Z", 2.99, 0));   // repetido: IGNORADO (equals/hashCode)
+for (Manga manga : mangas) {               // não existe get(i): só percorrer
+    System.out.println(manga);
+}
+
+Set&lt;Manga&gt; ordemInsercao = new LinkedHashSet&lt;&gt;();   // hash + mantém a ordem de inserção
+
+// equals/hashCode do Manga regerados só com id e nome (o preço pode mudar sem virar outro produto):
+return Objects.equals(id, manga.id) &amp;&amp; Objects.equals(nome, manga.nome);
+return Objects.hash(id, nome);</code></pre>
+      <ul>
+        <li><strong>A vantagem de programar para a interface:</strong> trocar <code>ArrayList</code> por <code>LinkedList</code> é mudar só o <code>new</code>. A <code>LinkedList</code> é uma lista em que cada elemento conhece o <strong>anterior e o próximo</strong>, então <strong>remover</strong> é mais barato que no <code>ArrayList</code> (Big-O, aula 165).</li>
+        <li><strong><code>Set</code> não aceita duplicados.</strong> Antes de inserir, ele verifica com <strong><code>equals</code>/<code>hashCode</code></strong>, e se já existir, <strong>ignora</strong>. Útil para eliminar repetidos que vieram, por exemplo, do banco.</li>
+        <li><strong>Não é indexado</strong>: não há <code>get(i)</code>. Você percorre com foreach.</li>
+        <li><strong><code>HashSet</code></strong>: a ordem depende do hash e pode mudar conforme você insere. <strong><code>LinkedHashSet</code></strong>: mesmo esquema, mas mantém a <strong>ordem de inserção</strong> (5, 1, 4, 3, 2).</li>
+        <li><strong>O que é "repetido" é decisão sua</strong>, no <code>equals</code>. Com o preço no <code>equals</code>, o mesmo mangá com preço novo viraria outro produto. Por isso o William regerou usando só <code>id</code> e <code>nome</code>.</li>
+      </ul>
+
+      <h3>176 · TreeSet e NavigableSet</h3>
+<pre><code>// Smartphone não é Comparable:
+// NavigableSet&lt;Smartphone&gt; set = new TreeSet&lt;&gt;();  set.add(smartphone);   → ClassCastException
+
+class SmartphoneMarcaComparator implements Comparator&lt;Smartphone&gt; {
+    @Override
+    public int compare(Smartphone o1, Smartphone o2) {
+        return o1.getMarca().compareTo(o2.getMarca());
+    }
+}
+NavigableSet&lt;Smartphone&gt; set = new TreeSet&lt;&gt;(new SmartphoneMarcaComparator());   // agora funciona
+set.add(new Smartphone("123", "Nokia"));
+
+NavigableSet&lt;Manga&gt; mangas = new TreeSet&lt;&gt;();       // Manga é Comparable (compareTo por nome)
+mangas.add(new Manga(5L, "Hellsing Ultimate", 19.9, 0));
+... (Berserk, Pokemon, Attack on titan, Dragon ball Z)
+mangas.add(new Manga(10L, "Aaragon", 2.99, 0));      // inserido por último...
+mangas.add(new Manga(10L, "Aaragon", 10.0, 0));      // mesmo nome → ignorado
+// Aaragon · Attack on titan · Berserk · Dragon ball Z · Hellsing Ultimate · Pokemon  ← sempre ordenado</code></pre>
+      <ul>
+        <li><strong><code>SortedSet</code> → <code>NavigableSet</code> → <code>TreeSet</code></strong>. Continua sendo um <code>Set</code> (sem repetidos), mas <strong>reordena a cada inserção</strong>.</li>
+        <li>Classes com "Tree" no nome precisam saber <strong>comparar</strong>: o elemento é <strong><code>Comparable</code></strong> <strong>ou</strong> você passa um <strong><code>Comparator</code></strong> no construtor. Sem isso: <code>ClassCastException</code>.</li>
+        <li>O "Aaragon" entrou por último e saiu primeiro na impressão, porque a ordem é a do <code>compareTo</code> (nome).</li>
+        <li>Desempenho: O(log n) para inserir e buscar. Não é constante como o hash, mas continua bom.</li>
+      </ul>
+
+      <h3>177 · O contrato quebrado e a navegação</h3>
+<pre><code>class MangaPrecoComparator implements Comparator&lt;Manga&gt; {
+    @Override
+    public int compare(Manga o1, Manga o2) {
+        return Double.compare(o1.getPreco(), o2.getPreco());
+    }
+}
+NavigableSet&lt;Manga&gt; mangas = new TreeSet&lt;&gt;(new MangaPrecoComparator());
+// Hellsing 19.9 · Berserk 9.5 · Pokemon 3.2 · Attack 11.2 · Dragon ball Z 2.99 · Aaragon 2.99
+// Aaragon NÃO entra: mesmo PREÇO que o Dragon ball Z → compare == 0 → "repetido"
+// 2.99 Dragon ball Z · 3.2 Pokemon · 9.5 Berserk · 11.2 Attack on titan · 19.9 Hellsing Ultimate
+
+Manga yuyu = new Manga(21L, "Yuyu Hakusho", 3.2, 5);
+// lower &lt;   floor &lt;=   higher &gt;   ceiling &gt;=
+System.out.println(mangas.lower(yuyu));     // Dragon ball Z (2.99)  estritamente menor
+System.out.println(mangas.floor(yuyu));     // Pokemon (3.2)         menor ou igual
+System.out.println(mangas.higher(yuyu));    // Berserk (9.5)         estritamente maior
+System.out.println(mangas.ceiling(yuyu));   // Pokemon (3.2)         maior ou igual
+System.out.println(mangas.size());          // 5
+System.out.println(mangas.pollLast());      // Hellsing Ultimate: devolve E REMOVE o último
+System.out.println(mangas.size());          // 4
+// mangas.descendingSet() → a ordem invertida · pollFirst() → devolve e remove o primeiro</code></pre>
+      <ul>
+        <li><strong>A pegadinha:</strong> o <code>TreeSet</code> <strong>não usa o <code>equals</code></strong> para decidir se é repetido. Ele usa o <strong><code>compareTo</code>/<code>compare</code></strong>. Se o critério de ordem dá 0, o elemento é descartado, mesmo com <code>equals</code> falso. A documentação diz que ele "falha em obedecer o contrato do <code>Set</code>". Escolha o critério pensando nisso.</li>
+        <li><strong>Métodos de navegação</strong> (pelo critério de ordem, aqui o preço): <strong><code>lower</code></strong> (&lt;), <strong><code>floor</code></strong> (≤), <strong><code>higher</code></strong> (&gt;) e <strong><code>ceiling</code></strong> (≥). Devolvem <code>null</code> se não houver.</li>
+        <li><strong><code>pollFirst</code>/<code>pollLast</code></strong> devolvem <strong>e removem</strong> o primeiro ou o último. <strong><code>descendingSet()</code></strong> inverte a ordem.</li>
+      </ul>
+
+      <h3>178 · Map, HashMap e LinkedHashMap</h3>
+<pre><code>Map&lt;String, String&gt; map = new LinkedHashMap&lt;&gt;();   // &lt;TipoDaChave, TipoDoValor&gt;
+map.put("teklado", "teclado");                     // "corretor ortográfico"
+map.put("mouze", "mouse");
+map.put("vc", "você");
+map.put("vc", "você!");                            // chave repetida: SOBRESCREVE o valor
+map.putIfAbsent("vc2", "você");                    // só insere se a chave não existir (Java 8)
+System.out.println(map);                           // {teklado=teclado, mouze=mouse, vc=você!, vc2=você}
+
+for (String key : map.keySet()) {                  // keySet(): Set das chaves (únicas)
+    System.out.println(key + " : " + map.get(key));
+}
+for (String value : map.values()) {                // values(): Collection dos valores (podem repetir)
+    System.out.println(value);
+}
+for (Map.Entry&lt;String, String&gt; entry : map.entrySet()) {   // chave E valor juntos
+    System.out.println(entry.getKey() + " - " + entry.getValue());
+}</code></pre>
+      <ul>
+        <li><code>Map&lt;K, V&gt;</code> guarda pares <strong>chave → valor</strong>. <strong>Não é uma <code>Collection</code></strong>: não aparece na hierarquia dela, mesmo sendo "uma coleção de dados".</li>
+        <li><strong>Chaves únicas</strong> (via <code>equals</code>/<code>hashCode</code> da chave). Diferente do <code>Set</code>, que <strong>ignora</strong> o repetido, o <code>Map</code> <strong>sobrescreve</strong> o valor. Para não sobrescrever: <strong><code>putIfAbsent</code></strong>.</li>
+        <li><strong>Três formas de percorrer:</strong> <code>keySet()</code> devolve um <code>Set</code> (chaves não repetem) e você pega o valor com <code>get</code>. <code>values()</code> devolve uma <code>Collection</code> (valores podem repetir). <strong><code>entrySet()</code></strong> devolve os pares <code>Map.Entry</code>, com <code>getKey()</code>/<code>getValue()</code>. É o melhor quando você precisa dos dois.</li>
+        <li>Ir do valor para a chave não é algo natural no <code>Map</code>. O fluxo é sempre chave → valor.</li>
+        <li><strong><code>HashMap</code></strong> não garante ordem. <strong><code>LinkedHashMap</code></strong> mantém a ordem de inserção.</li>
+      </ul>
+
+      <h3>179–180 · Map com objetos e Map de List</h3>
+<pre><code>public class Consumidor {
+    private Long id;
+    private String nome;
+    public Consumidor(String nome) {
+        this.id = ThreadLocalRandom.current().nextLong(0, 100_000);   // id aleatório de 0 a 99.999
+        this.nome = nome;
+    }
+    // equals/hashCode só pelo id
+}
+
+// 179: cada consumidor comprou UM mangá
+Map&lt;Consumidor, Manga&gt; consumidorManga = new HashMap&lt;&gt;();
+consumidorManga.put(consumidor1, manga1);     // William Suane - Hellsing Ultimate
+consumidorManga.put(consumidor2, manga4);     // DevDojo Academy - Attack on titan
+for (Map.Entry&lt;Consumidor, Manga&gt; entry : consumidorManga.entrySet()) {
+    System.out.println(entry.getKey().getNome() + " - " + entry.getValue().getNome());
+}
+
+// 180: cada consumidor comprou VÁRIOS → o valor é uma lista
+Map&lt;Consumidor, List&lt;Manga&gt;&gt; consumidorMangaMap = new HashMap&lt;&gt;();
+consumidorMangaMap.put(consumidor1, List.of(manga1, manga2, manga3));
+consumidorMangaMap.put(consumidor2, List.of(manga3, manga4));
+for (Map.Entry&lt;Consumidor, List&lt;Manga&gt;&gt; entry : consumidorMangaMap.entrySet()) {
+    System.out.println("----" + entry.getKey().getNome());
+    for (Manga manga : entry.getValue()) {          // for dentro do for
+        System.out.println("-------" + manga.getNome());
+    }
+}</code></pre>
+      <ul>
+        <li>Chave e valor podem ser <strong>objetos seus</strong>. Para chave, a classe precisa de <strong><code>equals</code>/<code>hashCode</code></strong> coerentes (aqui, pelo <code>id</code>).</li>
+        <li><strong><code>ThreadLocalRandom.current().nextLong(0, 100_000)</code></strong> gera um número aleatório num intervalo. O William usa para simular um id gerado. Sem o intervalo, saem números gigantes e até negativos.</li>
+        <li><strong>"Um para muitos"</strong>: quando uma chave tem vários valores, o valor vira uma coleção, <code>Map&lt;Consumidor, List&lt;Manga&gt;&gt;</code>, "como um array multidimensional". Para imprimir, um <code>for</code> nas entradas e outro <code>for</code> na lista de cada uma.</li>
+        <li>Imprimir <code>entry.getKey()</code> usa o <code>toString</code>. Para uma saída limpa, use os getters (<code>getNome()</code>).</li>
+      </ul>
+
+      <h3>181 · TreeMap e NavigableMap</h3>
+<pre><code>NavigableMap&lt;String, String&gt; map = new TreeMap&lt;&gt;();   // ordenado pela CHAVE
+map.put("A", "Letra A");
+map.put("D", "Letra D");
+map.put("B", "Letra B");
+map.put("C", "Letra C");
+map.put("E", "Letra E");
+// A-Letra A · B-Letra B · C-Letra C · D-Letra D · E-Letra E
+
+System.out.println(map.headMap("C", true));   // {A=Letra A, B=Letra B, C=Letra C} (true = inclui o C)
+System.out.println(map.ceilingKey("C"));      // C  (≥)
+System.out.println(map.higherKey("C"));       // D  (&gt;)
+System.out.println(map.lowerKey("C"));        // B  (&lt;)
+System.out.println(map.floorKey("C"));        // C  (≤)
+// com Consumidor como chave (não Comparable, sem Comparator) → ClassCastException</code></pre>
+      <ul>
+        <li>É o <code>TreeSet</code> do mundo dos <code>Map</code>s: ordenado <strong>pela chave</strong>, com as mesmas regras (a chave é <code>Comparable</code> ou você passa um <code>Comparator</code>). O valor pode ser qualquer coisa.</li>
+        <li><strong><code>headMap(chave)</code></strong> devolve tudo <strong>antes</strong> da chave, e com <code>true</code> inclui a própria chave. Também existe <code>tailMap</code> (depois). A visão fica <strong>ligada ao mapa original</strong>: remover da <code>headMap</code> remove do original, como no <code>Arrays.asList</code>.</li>
+        <li>Navegação: <code>lowerKey</code>/<code>floorKey</code>/<code>higherKey</code>/<code>ceilingKey</code> devolvem só a chave. As versões <code>...Entry</code> (<code>ceilingEntry</code>...) devolvem chave e valor.</li>
+      </ul>
+
+      <h3>182 · Queue e PriorityQueue</h3>
+<pre><code>Queue&lt;String&gt; fila = new PriorityQueue&lt;&gt;();   // a ordem de saída é a do Comparable
+fila.add("C");
+fila.add("A");
+fila.add("B");
+System.out.println(fila);            // [A, C, B] ← por dentro NÃO está ordenado
+while (!fila.isEmpty()) {
+    System.out.println(fila.remove());   // A · B · C ← mas SAI em ordem
+}
+
+// Prioridade customizada: os MAIS CAROS primeiro
+Queue&lt;Manga&gt; mangas = new PriorityQueue&lt;&gt;(new MangaPrecoComparator().reversed());
+... (os mesmos mangás)
+while (!mangas.isEmpty()) {
+    System.out.println(mangas.poll());   // 19.9 · 11.2 · 9.5 · 3.2 · 2.99 · 2.99
+}</code></pre>
+      <ul>
+        <li>Uma <strong>fila</strong> costuma ser <strong>FIFO</strong> (o primeiro que entra é o primeiro que sai, como a fila do banco). A <strong><code>PriorityQueue</code></strong> muda isso: sai primeiro quem tem <strong>maior prioridade</strong>, pelo <code>Comparable</code> ou pelo <code>Comparator</code> do construtor.</li>
+        <li><strong>A ordem só aparece ao retirar.</strong> Imprimir a fila ou percorrê-la com foreach mostra a ordem interna (um <em>heap</em>), que não é a ordenada.</li>
+        <li><strong>Métodos:</strong>
+          <ul>
+            <li><code>peek()</code> <strong>espia</strong> o primeiro sem remover. Num laço, fica mostrando o mesmo para sempre.</li>
+            <li><code>poll()</code> <strong>retira</strong> o primeiro (<code>null</code> se vazia). <code>remove()</code> faz o mesmo, mas lança exceção se vazia.</li>
+            <li><code>offer</code>/<code>add</code> inserem. Em fila com capacidade limitada, <code>offer</code> devolve <code>false</code> e <code>add</code> lança exceção.</li>
+          </ul>
+        </li>
+        <li>Elemento sem <code>Comparable</code> e sem <code>Comparator</code> (o <code>Consumidor</code>) → <code>ClassCastException</code> <strong>já na inserção</strong>.</li>
+        <li><strong>Para que serve:</strong> regra de negócio com prioridade, como atender primeiro os carrinhos de maior valor. <code>comparator.reversed()</code> inverte a ordem.</li>
+      </ul>
+
+      <h3>Atenção</h3>
+      <ul>
+        <li><strong>Hash = sem ordem · LinkedHash = ordem de inserção · Tree = ordenado.</strong></li>
+        <li><strong><code>HashSet</code>/<code>HashMap</code> dependem de <code>equals</code>/<code>hashCode</code>. <code>TreeSet</code>/<code>TreeMap</code> dependem de <code>compareTo</code>/<code>compare</code></strong>, e é esse critério que decide o que é "repetido".</li>
+        <li><strong>Set ignora o repetido, e Map sobrescreve o valor da chave repetida</strong> (a não ser com <code>putIfAbsent</code>).</li>
+        <li><strong>Extra: não altere um objeto que já é chave de <code>HashMap</code>/elemento de <code>HashSet</code></strong> nos campos usados pelo <code>hashCode</code>. Ele fica "perdido" no balde errado.</li>
+        <li><strong>Extra:</strong> <code>map.getOrDefault(chave, padrao)</code>, <code>map.containsKey(chave)</code>, <code>map.computeIfAbsent(chave, k -&gt; new ArrayList&lt;&gt;()).add(x)</code> (o jeito moderno de montar o <code>Map&lt;K, List&lt;V&gt;&gt;</code>) e <code>Map.of(...)</code> (imutável, Java 9+).</li>
+        <li><strong>Extra: fila e pilha "de verdade"</strong>: para FIFO simples, <code>ArrayDeque</code> (<code>offer</code>/<code>poll</code>). Para pilha, o mesmo <code>ArrayDeque</code> com <code>push</code>/<code>pop</code>.</li>
+      </ul>
+
+      <h3>Paralelo com PHP</h3>
+      <ul>
+        <li><strong>O array associativo do PHP é o <code>LinkedHashMap</code></strong>: chave → valor, mantendo a ordem de inserção. <code>$m['vc'] = 'você'</code> ≈ <code>put</code> (também sobrescreve). <code>$m['vc'] ??= 'você'</code> ≈ <code>putIfAbsent</code>. <code>array_keys</code> ≈ <code>keySet</code>, <code>array_values</code> ≈ <code>values</code>, <code>foreach ($m as $k =&gt; $v)</code> ≈ <code>entrySet</code>.</li>
+        <li><strong>Diferença grande:</strong> no PHP a chave é só <code>int</code> ou <code>string</code>. Em Java, <strong>qualquer objeto</strong> pode ser chave (<code>Map&lt;Consumidor, ...&gt;</code>), desde que tenha <code>equals</code>/<code>hashCode</code>. No PHP isso exige <code>SplObjectStorage</code> ou usar o id como chave.</li>
+        <li><strong>Set:</strong> o PHP não tem. Faz-se com <code>array_unique</code> ou usando os valores como chave (<code>$set[$v] = true</code>). No Laravel: <code>$c-&gt;unique('id')</code>.</li>
+        <li><strong>TreeMap/TreeSet:</strong> no PHP, é um array + <code>ksort</code>/<code>sort</code> depois de inserir. Não existe estrutura que se mantenha ordenada sozinha, nem <code>floor</code>/<code>ceiling</code>.</li>
+        <li><strong>Map de List (aula 180):</strong> no PHP, <code>$compras[$idConsumidor][] = $manga</code> faz isso direto, e o <code>groupBy('consumidor_id')</code> da Collection do Laravel faz o mesmo. Em Java, <code>computeIfAbsent</code> (ou, mais adiante, <code>Collectors.groupingBy</code>, aulas 214+).</li>
+        <li><strong>PriorityQueue:</strong> o PHP tem <code>SplPriorityQueue</code> (<code>insert($valor, $prioridade)</code>, <code>extract()</code>), e <code>SplQueue</code> para FIFO.</li>
+      </ul>
+    </section>
+
+    <section id="flashcards">
+      <h2>Flashcards</h2>
+      <p style="color:var(--muted);margin-top:-6px">Toque no cartão para virar.</p>
+      <div id="flashcards-app"></div>
+    </section>
+
+    <section id="quiz">
+      <h2>Quiz</h2>
+      <div id="quiz-app"></div>
+    </section>
+
+    <section id="estudo">
+      <h2>Material de estudo</h2>
+
+      <h3>Mapa mental</h3>
+<pre><code>Set, Map e Queue
+├── Set (175–177): sem repetidos · sem índice
+│   ├── HashSet (sem ordem) · LinkedHashSet (ordem de inserção) → equals/hashCode
+│   └── TreeSet / NavigableSet (ordenado) → compareTo ou Comparator
+│       ├── "repetido" = compare == 0 (ignora o equals!)
+│       ├── lower &lt; · floor &lt;= · higher &gt; · ceiling &gt;=
+│       └── pollFirst/pollLast (devolve e remove) · descendingSet
+├── Map (178–181): chave → valor · NÃO é Collection
+│   ├── put (sobrescreve) · putIfAbsent · get
+│   ├── keySet (Set) · values (Collection) · entrySet (Map.Entry: getKey/getValue)
+│   ├── HashMap · LinkedHashMap · chave-objeto precisa de equals/hashCode
+│   ├── Map&lt;K, List&lt;V&gt;&gt;: um para muitos (for dentro do for)
+│   └── TreeMap / NavigableMap: ordenado pela chave · headMap/tailMap · lowerKey...
+└── Queue (182)
+    ├── PriorityQueue: sai pela prioridade (Comparable/Comparator; .reversed())
+    ├── por dentro não fica ordenada; a ordem aparece ao retirar
+    └── peek (espia) · poll (retira; null se vazia) · remove · offer/add</code></pre>
+
+      <h3>Prática no seu WSL (25 minutos)</h3>
+      <p>Usa o <code>Manga</code> da página anterior. Troque o <code>equals</code>/<code>hashCode</code> dele para só <code>id</code> e <code>nome</code>, como na aula 175.</p>
+<pre><code>cd ~/java-lab
+Y=src/academy/devdojo/maratonajava/javacore/Ycolecoes
+mkdir -p $Y/test
+
+cat > $Y/test/SetMapQueueTest01.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Ycolecoes.test;
+
+import academy.devdojo.maratonajava.javacore.Ycolecoes.dominio.Manga;
+
+import java.util.*;
+
+class MangaPrecoComparator implements Comparator&lt;Manga&gt; {
+    @Override
+    public int compare(Manga o1, Manga o2) {
+        return Double.compare(o1.getPreco(), o2.getPreco());
+    }
+}
+
+public class SetMapQueueTest01 {
+    static List&lt;Manga&gt; mangas() {
+        return List.of(new Manga(5L, "Hellsing Ultimate", 19.9, 0), new Manga(1L, "Berserk", 9.5, 5),
+                new Manga(4L, "Pokemon", 3.2, 0), new Manga(3L, "Attack on titan", 11.20, 2),
+                new Manga(2L, "Dragon ball Z", 2.99, 0), new Manga(10L, "Aaragon", 2.99, 0));
+    }
+
+    public static void main(String[] args) {
+        Set&lt;Manga&gt; linked = new LinkedHashSet&lt;&gt;(mangas());
+        linked.add(new Manga(1L, "Berserk", 50.0, 1));             // mesmo id e nome
+        System.out.println(linked.size());                         // ?
+
+        NavigableSet&lt;Manga&gt; porNome = new TreeSet&lt;&gt;(mangas());
+        System.out.println(porNome.first().getNome() + " | " + porNome.last().getNome());   // ?
+
+        NavigableSet&lt;Manga&gt; porPreco = new TreeSet&lt;&gt;(new MangaPrecoComparator());
+        porPreco.addAll(mangas());
+        System.out.println(porPreco.size());                       // ? (Aaragon entrou?)
+        Manga yuyu = new Manga(21L, "Yuyu Hakusho", 3.2, 5);
+        System.out.println(porPreco.lower(yuyu).getNome() + " | " + porPreco.floor(yuyu).getNome()
+                + " | " + porPreco.higher(yuyu).getNome() + " | " + porPreco.ceiling(yuyu).getNome());   // ?
+        System.out.println(porPreco.pollLast().getNome() + " " + porPreco.size());   // ?
+
+        Map&lt;String, String&gt; map = new LinkedHashMap&lt;&gt;();
+        map.put("teklado", "teclado");
+        map.put("mouze", "mouse");
+        map.put("vc", "você");
+        map.put("vc", "você!");
+        map.putIfAbsent("vc", "ignorado");
+        System.out.println(map);                                   // ?
+        for (Map.Entry&lt;String, String&gt; e : map.entrySet()) System.out.print(e.getKey() + "→" + e.getValue() + " ");
+        System.out.println();
+
+        Map&lt;String, List&lt;String&gt;&gt; compras = new LinkedHashMap&lt;&gt;();
+        compras.computeIfAbsent("William", k -&gt; new ArrayList&lt;&gt;()).add("Hellsing Ultimate");   // extra
+        compras.computeIfAbsent("William", k -&gt; new ArrayList&lt;&gt;()).add("Berserk");
+        compras.computeIfAbsent("DevDojo", k -&gt; new ArrayList&lt;&gt;()).add("Attack on titan");
+        System.out.println(compras);                               // ?
+
+        NavigableMap&lt;String, String&gt; letras = new TreeMap&lt;&gt;(Map.of("A", "Letra A", "D", "Letra D", "B", "Letra B", "C", "Letra C", "E", "Letra E"));
+        System.out.println(letras.headMap("C", true));             // ?
+        System.out.println(letras.lowerKey("C") + letras.floorKey("C") + letras.higherKey("C") + letras.ceilingKey("C"));   // ?
+
+        Queue&lt;String&gt; fila = new PriorityQueue&lt;&gt;(List.of("C", "A", "B"));
+        System.out.println(fila.peek());                           // ?
+        StringBuilder saida = new StringBuilder();
+        while (!fila.isEmpty()) saida.append(fila.poll());
+        System.out.println(saida);                                 // ?
+
+        Queue&lt;Manga&gt; caros = new PriorityQueue&lt;&gt;(new MangaPrecoComparator().reversed());
+        caros.addAll(mangas());
+        System.out.println(caros.poll().getNome() + " | " + caros.poll().getNome());   // ?
+    }
+}
+EOF
+
+javac -d out $(find src -name '*.java')
+java -cp out academy.devdojo.maratonajava.javacore.Ycolecoes.test.SetMapQueueTest01</code></pre>
+      <details>
+        <summary>Ver a saída esperada</summary>
+<pre><code>6
+Aaragon | Pokemon
+5
+Dragon ball Z | Pokemon | Berserk | Pokemon
+Hellsing Ultimate 4
+{teklado=teclado, mouze=mouse, vc=você!}
+teklado→teclado mouze→mouse vc→você!
+{William=[Hellsing Ultimate, Berserk], DevDojo=[Attack on titan]}
+{A=Letra A, B=Letra B, C=Letra C}
+BCDC
+A
+ABC
+Hellsing Ultimate | Attack on titan</code></pre>
+      </details>
+      <p><strong>Exercícios:</strong></p>
+      <ol>
+        <li>Troque o <code>LinkedHashSet</code> por <code>HashSet</code> e imprima o set. A ordem se mantém? E o tamanho?</li>
+        <li>Mude o <code>MangaPrecoComparator</code> para desempatar pelo nome quando o preço for igual (<code>thenComparing</code> ou um <code>if</code>) e veja se o Aaragon passa a entrar no <code>TreeSet</code>.</li>
+        <li>Crie um <code>Map&lt;String, Integer&gt;</code> que conte quantas vezes cada palavra aparece em <code>"java é java e java é bom"</code> (use <code>getOrDefault</code> ou <code>merge</code>).</li>
+        <li>Coloque um <code>Consumidor</code> (sem Comparable) numa <code>PriorityQueue</code> e num <code>TreeMap</code> como chave. Leia as exceções.</li>
+        <li>Simule a fila do banco com <code>ArrayDeque</code> (FIFO puro) e compare a ordem de saída com a <code>PriorityQueue</code>.</li>
+      </ol>
+
+      <h3>Glossário</h3>
+      <ul>
+        <li><strong><code>Set</code></strong>: coleção sem elementos repetidos e sem índice.</li>
+        <li><strong><code>Map</code></strong>: estrutura de pares chave → valor, com chaves únicas; não é <code>Collection</code>.</li>
+        <li><strong><code>Map.Entry</code></strong>: um par chave/valor do mapa (<code>getKey</code>, <code>getValue</code>).</li>
+        <li><strong><code>LinkedList</code></strong>: lista em que cada nó conhece o anterior e o próximo; boa para inserir e remover.</li>
+        <li><strong>Hash / LinkedHash / Tree</strong>: sem ordem / ordem de inserção / ordenado por comparação.</li>
+        <li><strong><code>NavigableSet</code>/<code>NavigableMap</code></strong>: coleções ordenadas com navegação (<code>lower</code>, <code>floor</code>, <code>higher</code>, <code>ceiling</code>).</li>
+        <li><strong>FIFO</strong>: <em>first in, first out</em>, o primeiro a entrar é o primeiro a sair.</li>
+        <li><strong><code>PriorityQueue</code></strong>: fila em que sai primeiro o de maior prioridade (pela comparação).</li>
+        <li><strong><code>peek</code> / <code>poll</code></strong>: espia o primeiro sem remover / retira o primeiro.</li>
+      </ul>
+
+      <h3>Revisão espaçada</h3>
+      <ul class="revisao">
+        <li><span class="dia">Dia 1</span><span>Todos os flashcards + a prática com previsões.</span></li>
+        <li><span class="dia">Dia 3</span><span>Quiz + exercícios 1 a 3.</span></li>
+        <li><span class="dia">Dia 7</span><span>Exercícios 4 e 5 + montar de memória a tabela Hash/LinkedHash/Tree × Set/Map.</span></li>
+        <li><span class="dia">Dia 14</span><span>Flashcards que errou + questões discursivas + revisão geral de Coleções (aulas 161–182).</span></li>
+      </ul>
+
+      <h3>Para aprofundar</h3>
+      <ul>
+        <li>Como o <code>HashMap</code> trata colisões por dentro (listas e, a partir do Java 8, árvores no balde)?</li>
+        <li>O que é um <em>heap</em> binário e por que a <code>PriorityQueue</code> é O(log n) para inserir e retirar?</li>
+        <li>O que é uma árvore rubro-negra (<em>red-black tree</em>), a estrutura por trás de <code>TreeMap</code>/<code>TreeSet</code>?</li>
+        <li><code>ConcurrentHashMap</code> × <code>Collections.synchronizedMap</code>: quando usar em ambiente com threads (aulas 220+)?</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    window.AULA = {
+      flashcards: [
+        ["Qual a principal característica do Set?", "Não aceita elementos repetidos (e não tem índice)"],
+        ["Como o HashSet decide se um elemento é repetido?", "Pelo hashCode e pelo equals"],
+        ["HashSet × LinkedHashSet?", "Sem ordem garantida × mantém a ordem de inserção"],
+        ["O que acontece ao adicionar um repetido num Set?", "É ignorado (add devolve false)"],
+        ["Vantagem da LinkedList sobre o ArrayList?", "Remover e inserir são mais baratos; cada nó conhece o anterior e o próximo"],
+        ["O que o TreeSet exige dos elementos?", "Que sejam Comparable ou que um Comparator seja passado no construtor"],
+        ["TreeSet com elemento não comparável?", "ClassCastException"],
+        ["Como o TreeSet decide se é repetido?", "Pelo compareTo/compare == 0, NÃO pelo equals"],
+        ["lower, floor, higher, ceiling?", "< · <= · > · >= (pelo critério de ordem)"],
+        ["pollFirst / pollLast?", "Devolvem e removem o primeiro / o último"],
+        ["Como inverter a ordem de um TreeSet?", "descendingSet()"],
+        ["Map é uma Collection?", "Não: guarda pares chave → valor, fora da hierarquia de Collection"],
+        ["put com chave repetida faz o quê?", "Sobrescreve o valor"],
+        ["Como inserir só se a chave não existir?", "putIfAbsent(chave, valor)"],
+        ["keySet(), values() e entrySet() devolvem o quê?", "Set das chaves · Collection dos valores · Set de Map.Entry (chave e valor)"],
+        ["Por que keySet é um Set?", "Porque as chaves são únicas"],
+        ["Melhor forma de percorrer chave e valor juntos?", "for (Map.Entry<K,V> e : map.entrySet()) { e.getKey(); e.getValue(); }"],
+        ["HashMap × LinkedHashMap × TreeMap?", "Sem ordem · ordem de inserção · ordenado pela chave"],
+        ["O que uma classe precisa para ser chave de HashMap?", "equals e hashCode coerentes"],
+        ["Como representar \"um consumidor, vários mangás\"?", "Map<Consumidor, List<Manga>>"],
+        ["O que headMap(\"C\", true) devolve?", "As entradas com chave até C, incluindo C"],
+        ["Como a PriorityQueue decide quem sai primeiro?", "Pela comparação (Comparable ou Comparator); não é FIFO"],
+        ["Imprimir uma PriorityQueue mostra a ordem de saída?", "Não: a ordem aparece ao retirar (poll/remove)"],
+        ["peek × poll?", "peek espia o primeiro sem remover; poll retira (null se vazia)"],
+        ["Como fazer a PriorityQueue tirar os mais caros primeiro?", "new PriorityQueue<>(comparatorPorPreco.reversed())"]
+      ],
+      quiz: [
+        { tipo: 'multipla', pergunta: 'Qual implementação de Set mantém a ordem de inserção?', opcoes: ['HashSet', 'LinkedHashSet', 'TreeSet', 'Nenhuma'], correta: 1,
+          explicacao: 'LinkedHashSet usa hash e guarda a ordem de inserção. HashSet não garante ordem, e TreeSet ordena pela comparação.' },
+        { tipo: 'vf', pergunta: 'No HashSet, um elemento com equals igual a um já existente é ignorado na inserção.', correta: 0,
+          explicacao: 'Verdadeiro. Set não aceita repetidos: o add verifica hashCode/equals e devolve false para o repetido.' },
+        { tipo: 'multipla', pergunta: 'TreeSet<Manga> com Comparator por preço. Dois mangás diferentes (equals false) com o mesmo preço 2.99. O que acontece com o segundo?', opcoes: ['Entra normalmente', 'É ignorado, porque compare devolve 0', 'Lança exceção', 'Substitui o primeiro'], correta: 1,
+          explicacao: 'O TreeSet decide "repetido" pelo compare/compareTo, não pelo equals. Mesmo preço, compare == 0, e o segundo é descartado.' },
+        { tipo: 'multipla', pergunta: 'Num TreeSet ordenado por preço [2.99, 3.2, 9.5, 11.2, 19.9], qual o floor de um mangá de preço 3.2?', opcoes: ['2.99', '3.2', '9.5', 'null'], correta: 1,
+          explicacao: 'floor é o maior ≤ 3.2, que é o próprio 3.2. lower (< 3.2) seria 2.99.' },
+        { tipo: 'multipla', pergunta: 'map.put("vc", "você"); map.put("vc", "você!"); Qual o valor de map.get("vc")?', opcoes: ['você', 'você!', '[você, você!]', 'Lança exceção'], correta: 1,
+          explicacao: 'Chave repetida sobrescreve o valor. Para não sobrescrever, use putIfAbsent.' },
+        { tipo: 'multipla', pergunta: 'Qual tipo devolve map.keySet() num Map<String, Integer>?', opcoes: ['List<String>', 'Set<String>', 'Collection<Integer>', 'Map.Entry<String, Integer>'], correta: 1,
+          explicacao: 'As chaves são únicas, então keySet é um Set. values() devolve uma Collection<Integer>, e entrySet() um Set<Map.Entry<...>>.' },
+        { tipo: 'vf', pergunta: 'Um TreeMap com Consumidor (que não é Comparable) como chave, sem Comparator, lança ClassCastException ao inserir.', correta: 0,
+          explicacao: 'Verdadeiro. Estruturas Tree precisam comparar as chaves (Comparable ou Comparator no construtor).' },
+        { tipo: 'multipla', pergunta: 'PriorityQueue<String> com add("C"), add("A"), add("B"). O que imprime o laço while(!fila.isEmpty()) System.out.print(fila.poll())?', opcoes: ['CAB', 'ABC', 'CBA', 'A ordem é aleatória'], correta: 1,
+          explicacao: 'A PriorityQueue retira pela ordem natural (A, B, C). Por dentro ela não fica ordenada: imprimir a fila direto mostraria outra ordem.' },
+        { tipo: 'discursiva', pergunta: 'Explique quando usar HashSet, LinkedHashSet e TreeSet (e os Map equivalentes), citando o que cada um exige da classe dos elementos.',
+          explicacao: 'HashSet/HashMap: quando só importa não repetir ou buscar rápido, sem ordem. É O(1) e exige equals e hashCode coerentes. LinkedHashSet/LinkedHashMap: os mesmos requisitos, mas mantêm a ordem de inserção (útil para exibir na ordem em que chegou). TreeSet/TreeMap: quando os dados devem ficar sempre ordenados, ou quando você precisa navegar (lower, floor, higher, ceiling, headMap). É O(log n) e exige que o elemento (ou a chave, no Map) seja Comparable ou que um Comparator seja passado. Atenção: nas Tree o que define "repetido" é compare == 0, não o equals. No Map, isso vale para as chaves, e os valores podem ser qualquer coisa.' },
+        { tipo: 'discursiva', pergunta: 'O array associativo do PHP ($m[$chave] = $valor) corresponde a qual Map do Java? Cite duas diferenças importantes.',
+          explicacao: 'Corresponde ao LinkedHashMap: chave → valor, mantendo a ordem de inserção, e atribuir a uma chave existente sobrescreve (como o put). Diferenças: 1) No PHP a chave só pode ser int ou string. Em Java qualquer objeto pode ser chave (Map<Consumidor, List<Manga>>), desde que tenha equals/hashCode. 2) Java tipa chave e valor com generics (Map<String, String>) e tem implementações com comportamentos diferentes: HashMap sem ordem, TreeMap ordenado pela chave com navegação. No PHP é um tipo só, e ordenar exige ksort. Outros detalhes: o ??= do PHP equivale a putIfAbsent, e foreach ($m as $k => $v) equivale a percorrer o entrySet.' }
+      ]
+    };
+  </script>
+  <script src="../js/app.js"></script>
+</body>
+</html>
