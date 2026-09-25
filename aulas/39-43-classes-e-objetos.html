@@ -21,7 +21,7 @@
       <a href="#estudo">Material de estudo</a>
     </nav>
 
-    <p class="aviso">Junta as aulas 39 e 40 (introdução a classes), 41 (coesão), 42 (exercício) e 43 (referência de objetos). Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. Os nomes e valores dos exemplos (estudantes, carros) foram trocados onde o áudio não deixa claro. A comparação com <code>==</code>, o efeito de alterar um objeto por duas variáveis e os itens marcados como "extra" não estão nos vídeos.</p>
+    <p class="aviso">Junta as aulas 39 e 40 (introdução a classes), 41 (coesão), 42 (exercício) e 43 (referência de objetos). Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. Os nomes e valores dos exemplos foram conferidos no <a href="https://github.com/devdojobr/maratona-java-virado-no-jiraya" target="_blank" rel="noopener">repositório do professor</a>. A comparação com <code>==</code>, o efeito de alterar um objeto por duas variáveis e os itens marcados como "extra" não estão nos vídeos.</p>
 
     <section id="resumo">
       <h2>Resumo</h2>
@@ -32,7 +32,7 @@
 └── javacore                     ← o "núcleo" do Java começa aqui
     └── Aintroducaoclasses
         ├── dominio              ← classes que representam o mundo real (Estudante, Professor, Carro)
-        └── test                 ← classes com main que testam o domínio (EstudanteTeste01...)</code></pre>
+        └── test                 ← classes com main que testam o domínio (EstudanteTest01...)</code></pre>
       <ul>
         <li>O <code>A</code> maiúsculo no começo de <code>Aintroducaoclasses</code> serve só para manter os pacotes do curso em ordem. O William frisa: "<strong>nunca, nunca faça isso na vida real</strong>". Pacote é sempre minúsculo.</li>
         <li>Classes de <strong>domínio</strong> (em inglês, <em>model</em>) representam o negócio e geralmente <strong>não têm <code>main</code></strong>. Quem executa são as classes de teste.</li>
@@ -46,14 +46,14 @@ public class Estudante {
     public char sexo;
 }
 
-// test/EstudanteTeste01.java
+// test/EstudanteTest01.java
 import academy.devdojo.maratonajava.javacore.Aintroducaoclasses.dominio.Estudante;
 
-public class EstudanteTeste01 {
+public class EstudanteTest01 {
     public static void main(String[] args) {
         Estudante estudante = new Estudante();
         estudante.nome = "Luffy";
-        estudante.idade = 18;
+        estudante.idade = 21;
         estudante.sexo = 'M';
         System.out.println(estudante.nome + " " + estudante.idade + " " + estudante.sexo);
         System.out.println(estudante); // algo como ...dominio.Estudante@1b6d3586
@@ -89,11 +89,11 @@ public class EstudanteTeste01 {
       </ul>
 
       <h3>42 · Exercício: classe Carro</h3>
-      <p>Criar a classe <code>Carro</code> (em <code>dominio</code>) com <code>nome</code>, <code>modelo</code> e <code>ano</code>, criar dois objetos diferentes e imprimir os valores (em <code>CarroTeste01</code>, dentro de <code>test</code>).</p>
+      <p>Criar a classe <code>Carro</code> (em <code>dominio</code>) com <code>nome</code>, <code>modelo</code> e <code>ano</code>, criar dois objetos diferentes e imprimir os valores (em <code>CarroTest01</code>, dentro de <code>test</code>).</p>
 <pre><code>Carro carro1 = new Carro();
 Carro carro2 = new Carro();
-carro1.nome = "Fusca";
-carro1.modelo = "1300";
+carro1.nome = "Fusca Bala";
+carro1.modelo = "Sport";
 carro1.ano = 1969;
 carro2.nome = "Mustang";
 carro2.modelo = "GT 500";
@@ -112,7 +112,7 @@ System.out.println("Carro 1\n" + carro1.nome + " " + carro1.modelo + " " + carro
 carro1 ─┐
         ├──▶ [Mustang | GT 500 | 1968]
 carro2 ─┘
-             [Fusca | 1300 | 1969]      ← sem referência: perdido, vai para o GC</code></pre>
+             [Fusca Bala | Sport | 1969]      ← sem referência: perdido, vai para o GC</code></pre>
       <ul>
         <li>A variável de referência pode <strong>passar a apontar para outro objeto</strong> do mesmo tipo. <code>carro1 = carro2</code> não copia os dados: faz as duas variáveis apontarem para o <strong>mesmo</strong> objeto.</li>
         <li>O Fusca ficou <strong>sem nenhuma referência</strong>: não há como voltar a ele, e o garbage collector recolhe a memória. Só daria para salvá-lo se uma terceira variável ainda apontasse para ele.</li>
@@ -194,12 +194,12 @@ public class Carro {
 }
 EOF
 
-cat > $B/test/CarroTeste01.java &lt;&lt;'EOF'
+cat > $B/test/CarroTest01.java &lt;&lt;'EOF'
 package academy.devdojo.maratonajava.javacore.Aintroducaoclasses.test;
 
 import academy.devdojo.maratonajava.javacore.Aintroducaoclasses.dominio.Carro;
 
-public class CarroTeste01 {
+public class CarroTest01 {
     public static void main(String[] args) {
         Carro carro1 = new Carro();
         Carro carro2 = new Carro();
@@ -216,7 +216,7 @@ public class CarroTeste01 {
 EOF
 
 javac -d out $(find src -name '*.java')
-java -cp out academy.devdojo.maratonajava.javacore.Aintroducaoclasses.test.CarroTeste01</code></pre>
+java -cp out academy.devdojo.maratonajava.javacore.Aintroducaoclasses.test.CarroTest01</code></pre>
       <details>
         <summary>Ver a saída esperada</summary>
 <pre><code>null 0
@@ -227,7 +227,7 @@ Opala</code></pre>
       <p><strong>Exercícios:</strong></p>
       <ol>
         <li>Refaça a aula 42 sem olhar: <code>Carro</code> com nome, modelo e ano, dois objetos e a impressão de ambos.</li>
-        <li>Crie <code>Professor</code> (nome, idade, sexo) e <code>ProfessorTeste01</code> imprimindo tudo numa linha.</li>
+        <li>Crie <code>Professor</code> (nome, idade, sexo) e <code>ProfessorTest01</code> imprimindo tudo numa linha.</li>
         <li>Desenhe no papel a memória antes e depois de <code>carro1 = carro2</code> e diga qual objeto ficou sem referência.</li>
         <li>Pense num Model seu do Laravel (por exemplo <code>Pedido</code>) e escreva a classe Java equivalente só com atributos. Algum atributo pertence a outra classe (baixa coesão)?</li>
       </ol>

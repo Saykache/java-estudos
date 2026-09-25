@@ -21,7 +21,7 @@
       <a href="#estudo">Material de estudo</a>
     </nav>
 
-    <p class="aviso">Junta as aulas 58 (construtores) e 59 (sobrecarga de construtores). Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. Os valores do anime seguem os da página anterior. A ordem "atributos antes do construtor", o <code>Alt+Insert → Constructor</code> e os itens marcados como "extra" não estão nos vídeos.</p>
+    <p class="aviso">Junta as aulas 58 (construtores) e 59 (sobrecarga de construtores). Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. Os valores do anime (Haikyuu, estúdio Production IG) foram conferidos no <a href="https://github.com/devdojobr/maratona-java-virado-no-jiraya" target="_blank" rel="noopener">repositório do professor</a>. A ordem "atributos antes do construtor", o <code>Alt+Insert → Constructor</code> e os itens marcados como "extra" não estão nos vídeos.</p>
 
     <section id="resumo">
       <h2>Resumo</h2>
@@ -46,8 +46,8 @@
     }
 }
 
-// AnimeTeste01
-Anime anime = new Anime("Akudama Drive", "TV", 12, "Ação");   // tudo numa linha
+// AnimeTest01
+Anime anime = new Anime("Haikyuu", "TV", 12, "Ação");   // tudo numa linha
 Anime anime2 = new Anime();                                   // tudo com valor padrão</code></pre>
       <ul>
         <li><strong>A sintaxe:</strong> modificador de acesso, o <strong>nome exato da classe</strong> (por isso começa com maiúscula) e os parâmetros. <strong>Não tem tipo de retorno, nem <code>void</code>.</strong></li>
@@ -81,7 +81,7 @@ Anime anime2 = new Anime();                                   // tudo com valor 
     }
 }
 
-new Anime("Akudama Drive", "TV", 12, "Ação", "Pierrot");
+new Anime("Haikyuu", "TV", 12, "Ação", "Production IG");
 // 1) entra no de 5 → 2) this(...) vai para o de 4 → 3) this() vai para o vazio
 //    (imprime a mensagem) → 4) volta e termina o de 4 → 5) termina o de 5 (estudio)</code></pre>
       <ul>
@@ -190,14 +190,14 @@ public class Anime {
 }
 EOF
 
-cat > $D/test/AnimeTeste01.java &lt;&lt;'EOF'
+cat > $D/test/AnimeTest01.java &lt;&lt;'EOF'
 package academy.devdojo.maratonajava.javacore.Dconstrutores.test;
 
 import academy.devdojo.maratonajava.javacore.Dconstrutores.dominio.Anime;
 
-public class AnimeTeste01 {
+public class AnimeTest01 {
     public static void main(String[] args) {
-        Anime anime = new Anime("Akudama Drive", "TV", 12, "Ação", "Pierrot");  // ?
+        Anime anime = new Anime("Haikyuu", "TV", 12, "Ação", "Production IG");  // ?
         anime.imprime();                                                        // ?
         Anime vazio = new Anime();                                              // ?
         vazio.imprime();                                                        // ?
@@ -206,14 +206,14 @@ public class AnimeTeste01 {
 EOF
 
 javac -d out $(find src -name '*.java')
-java -cp out academy.devdojo.maratonajava.javacore.Dconstrutores.test.AnimeTeste01
+java -cp out academy.devdojo.maratonajava.javacore.Dconstrutores.test.AnimeTest01
 javap -cp out academy.devdojo.maratonajava.javacore.Dconstrutores.dominio.Anime   # lista os construtores</code></pre>
       <details>
         <summary>Ver a saída esperada</summary>
 <pre><code>Dentro do construtor sem argumentos
 Dentro do construtor de 4
 Dentro do construtor de 5
-Akudama Drive | TV | 12 | Ação | Pierrot
+Haikyuu | TV | 12 | Ação | Production IG
 Dentro do construtor sem argumentos
 null | null | 0 | null | null</code></pre>
       </details>

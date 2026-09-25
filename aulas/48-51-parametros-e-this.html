@@ -35,11 +35,11 @@ public void alteraDoisNumeros(int num1, int num2) {
     System.out.println("Dentro do alteraDoisNumeros: " + num1 + " " + num2);
 }
 
-// CalculadoraTeste04
+// CalculadoraTest04
 int num1 = 1;
 int num2 = 2;
 calculadora.alteraDoisNumeros(num1, num2);                     // 99 33
-System.out.println("Dentro do CalculadoraTeste04: " + num1 + " " + num2);   // 1 2</code></pre>
+System.out.println("Dentro do CalculadoraTest04: " + num1 + " " + num2);   // 1 2</code></pre>
       <ul>
         <li>O Java <strong>copia os bits do valor</strong> para a variável local do método. São espaços de memória diferentes, mesmo com o <strong>mesmo nome</strong>. O William usa nomes iguais de propósito, para mostrar que isso não liga nada.</li>
         <li>Renomear os parâmetros para <code>a</code> e <code>b</code> não muda o resultado: continuam sendo variáveis independentes.</li>
@@ -57,7 +57,7 @@ public class ImpressoraEstudante {
     }
 }
 
-// test/EstudanteTeste01.java
+// test/EstudanteTest01.java
 ImpressoraEstudante impressora = new ImpressoraEstudante();
 impressora.imprime(estudante01);   // "estudante" aponta para o MESMO objeto de estudante01
 impressora.imprime(estudante02);   // agora aponta para o de estudante02</code></pre>
@@ -104,7 +104,7 @@ public class Estudante {
     }
 }
 
-// test/EstudanteTeste02.java
+// test/EstudanteTest02.java
 estudante01.imprime();   // executa no objeto de estudante01
 estudante02.imprime();   // executa no objeto de estudante02</code></pre>
       <ul>
@@ -192,12 +192,12 @@ public class Estudante {
 }
 EOF
 
-cat > $B/test/EstudanteTeste01.java &lt;&lt;'EOF'
+cat > $B/test/EstudanteTest01.java &lt;&lt;'EOF'
 package academy.devdojo.maratonajava.javacore.Bintroducaometodos.test;
 
 import academy.devdojo.maratonajava.javacore.Bintroducaometodos.dominio.Estudante;
 
-public class EstudanteTeste01 {
+public class EstudanteTest01 {
     static void alteraIdade(int idade) { idade = 99; }
     static void alteraNome(Estudante e) { e.nome = "Gohan"; }
     static void troca(Estudante e) { e = new Estudante(); e.nome = "Novo"; }
@@ -218,7 +218,7 @@ public class EstudanteTeste01 {
 EOF
 
 javac -d out $(find src -name '*.java')
-java -cp out academy.devdojo.maratonajava.javacore.Bintroducaometodos.test.EstudanteTeste01</code></pre>
+java -cp out academy.devdojo.maratonajava.javacore.Bintroducaometodos.test.EstudanteTest01</code></pre>
       <p>Os métodos auxiliares estão como <code>static</code> dentro da classe de teste só para caber num arquivo. O <code>static</code> será explicado nas aulas 61–62.</p>
       <details>
         <summary>Ver a saída esperada</summary>

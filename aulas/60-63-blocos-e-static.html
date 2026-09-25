@@ -21,7 +21,7 @@
       <a href="#estudo">Material de estudo</a>
     </nav>
 
-    <p class="aviso">Junta as aulas 60 (blocos de inicialização), 61 (modificador <code>static</code>), 62 (métodos estáticos) e 63 (bloco de inicialização estático). Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. Os nomes dos pacotes (<code>Eblocosinicializacao</code>, <code>Fmodificadorestatico</code>) seguem o padrão do curso, reconstruídos do áudio. O contador de instâncias, a diferença do <code>static</code> em PHP-FPM e os itens marcados como "extra" não estão nos vídeos.</p>
+    <p class="aviso">Junta as aulas 60 (blocos de inicialização), 61 (modificador <code>static</code>), 62 (métodos estáticos) e 63 (bloco de inicialização estático). Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. Os nomes dos pacotes (<code>Eblocosinicializacao</code>, <code>Fmodificadorestatico</code>) e os carros (BMW 280, Mercedes 275, Audi 290) foram conferidos no <a href="https://github.com/devdojobr/maratona-java-virado-no-jiraya" target="_blank" rel="noopener">repositório do professor</a>. O contador de instâncias, a diferença do <code>static</code> em PHP-FPM e os itens marcados como "extra" não estão nos vídeos.</p>
 
     <section id="resumo">
       <h2>Resumo</h2>
@@ -95,7 +95,7 @@ public static double getVelocidadeLimite() {
     return velocidadeLimite;
 }
 
-// CarroTeste01 — antes de criar qualquer carro
+// CarroTest01 — antes de criar qualquer carro
 Carro.setVelocidadeLimite(180);</code></pre>
       <ul>
         <li>Com o atributo <code>private</code>, o acesso passa por getter e setter <strong>estáticos</strong>, chamados pelo nome da classe.</li>
@@ -239,12 +239,12 @@ public class Carro {
 }
 EOF
 
-cat > $F/test/CarroTeste01.java &lt;&lt;'EOF'
+cat > $F/test/CarroTest01.java &lt;&lt;'EOF'
 package academy.devdojo.maratonajava.javacore.Fmodificadorestatico.test;
 
 import academy.devdojo.maratonajava.javacore.Fmodificadorestatico.dominio.Carro;
 
-public class CarroTeste01 {
+public class CarroTest01 {
     public static void main(String[] args) {
         System.out.println("início do main");
         Carro.setVelocidadeLimite(180);          // ?
@@ -258,7 +258,7 @@ public class CarroTeste01 {
 EOF
 
 javac -d out $(find src -name '*.java')
-java -cp out academy.devdojo.maratonajava.javacore.Fmodificadorestatico.test.CarroTeste01</code></pre>
+java -cp out academy.devdojo.maratonajava.javacore.Fmodificadorestatico.test.CarroTest01</code></pre>
       <details>
         <summary>Ver a saída esperada</summary>
 <pre><code>início do main

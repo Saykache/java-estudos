@@ -21,7 +21,7 @@
       <a href="#estudo">Material de estudo</a>
     </nav>
 
-    <p class="aviso">Junta as aulas 32, 33 e 34 (Arrays pt 01 a 03). Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. Os nomes dos personagens da aula 34 não dão para entender no áudio, então os exemplos usam outros. Na aula 33 o valor padrão do <code>char</code> é descrito como "espaço em branco"; aqui ele aparece com o nome certo, o caractere nulo <code>'\u0000'</code>. A inicialização com chaves (<code>{21, 15, 11}</code>), o <code>Arrays.toString</code> e a cópia de referência não estão nos vídeos: são complementos marcados como "extra". A inicialização é o tema da aula 38.</p>
+    <p class="aviso">Junta as aulas 32, 33 e 34 (Arrays pt 01 a 03). Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. Os nomes dos personagens da aula 34 (Goku, Kurosaki, Luffy) foram conferidos no <a href="https://github.com/devdojobr/maratona-java-virado-no-jiraya" target="_blank" rel="noopener">repositório do professor</a>. Na aula 33 o valor padrão do <code>char</code> é descrito como "espaço em branco"; aqui ele aparece com o nome certo, o caractere nulo <code>'\u0000'</code>. A inicialização com chaves (<code>{21, 15, 11}</code>), o <code>Arrays.toString</code> e a cópia de referência não estão nos vídeos: são complementos marcados como "extra". As formas de inicialização são o tema da <a href="35-arrays-foreach.html">aula 35</a>.</p>
 
     <section id="resumo">
       <h2>Resumo</h2>
@@ -63,8 +63,8 @@ String e outros tipos referência   null</code></pre>
       <h3>34 · Percorrer com for, length e tamanho fixo</h3>
 <pre><code>String[] nomes = new String[3];
 nomes[0] = "Goku";
-nomes[1] = "Kirito";
-nomes[2] = "Naruto";
+nomes[1] = "Kurosaki";
+nomes[2] = "Luffy";
 
 for (int i = 0; i &lt; nomes.length; i++) {
     System.out.println(nomes[i]);
@@ -77,7 +77,7 @@ for (int i = 0; i &lt; nomes.length; i++) {
         <li>Posições não preenchidas continuam com o valor padrão. Um <code>String[4]</code> com 3 nomes imprime o quarto como <code>null</code>.</li>
         <li><strong>Reatribuir cria outro objeto:</strong> <code>nomes = new String[5];</code> não "aumenta" o array antigo. Cria um array <em>novo</em>, vazio, e a variável passa a apontar para ele. O antigo perde a referência, não dá mais para recuperá-lo, e o <strong>garbage collector</strong> (coletor de lixo) do Java libera essa memória.</li>
       </ul>
-<pre><code>nomes ──X──▶ [Goku | Kirito | Naruto]      ← sem referência: o GC recolhe
+<pre><code>nomes ──X──▶ [Goku | Kurosaki | Luffy]      ← sem referência: o GC recolhe
    └───────▶ [null | null | null | null | null]</code></pre>
 
       <h3>Atenção</h3>
@@ -86,7 +86,7 @@ for (int i = 0; i &lt; nomes.length; i++) {
         <li><strong><code>length</code> sem parênteses</strong> no array. Na String é <code>texto.length()</code>, com parênteses, porque é um método. Nas coleções é <code>lista.size()</code>. Três jeitos diferentes, e é pegadinha de prova.</li>
         <li>Índice fora do limite <strong>compila</strong> e só quebra ao rodar. O compilador não verifica.</li>
         <li><strong>Extra:</strong> para ver o conteúdo de um array, use <code>System.out.println(Arrays.toString(idades));</code>, que imprime <code>[21, 15, 11]</code>. Precisa de <code>import java.util.Arrays;</code> no topo do arquivo.</li>
-        <li><strong>Extra:</strong> dá para criar e preencher de uma vez: <code>int[] idades = {21, 15, 11};</code>. O tamanho vem da lista. É o tema da aula 38.</li>
+        <li><strong>Extra:</strong> dá para criar e preencher de uma vez: <code>int[] idades = {21, 15, 11};</code>. O tamanho vem da lista. É o tema da <a href="35-arrays-foreach.html">aula 35</a>.</li>
         <li><strong>Extra: <code>int[] b = a;</code> não copia o array.</strong> Copia a <em>referência</em>, e as duas variáveis passam a apontar para o mesmo objeto. <code>b[0] = 99;</code> muda também <code>a[0]</code>. Para copiar de verdade, use <code>a.clone()</code> ou <code>Arrays.copyOf(a, a.length)</code>.</li>
         <li><strong>Extra:</strong> <code>new int[0]</code> é válido (array vazio). Tamanho negativo compila e lança <code>NegativeArraySizeException</code> ao rodar.</li>
       </ul>

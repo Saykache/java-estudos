@@ -21,7 +21,7 @@
       <a href="#estudo">Material de estudo</a>
     </nav>
 
-    <p class="aviso">Junta as aulas 64 a 67 (associação: arrays com objetos, unidirecional um para muitos, muitos para um e bidirecional), 68 e 69 (leitura de dados pelo teclado) e 70 (exercício de associação). Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. Na aula 70, o título do seminário e a especialidade do professor não dão para entender no áudio, então os valores foram trocados. A armadilha do <code>nextInt()</code> + <code>nextLine()</code>, o método que liga os dois lados da associação e os itens marcados como "extra" não estão nos vídeos.</p>
+    <p class="aviso">Junta as aulas 64 a 67 (associação: arrays com objetos, unidirecional um para muitos, muitos para um e bidirecional), 68 e 69 (leitura de dados pelo teclado) e 70 (exercício de associação). Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. Os nomes e valores dos exemplos foram conferidos no <a href="https://github.com/devdojobr/maratona-java-virado-no-jiraya" target="_blank" rel="noopener">repositório do professor</a>. A armadilha do <code>nextInt()</code> + <code>nextLine()</code>, o método que liga os dois lados da associação e os itens marcados como "extra" não estão nos vídeos.</p>
 
     <section id="resumo">
       <h2>Resumo</h2>
@@ -96,8 +96,8 @@ jogador1.imprime();</code></pre>
     }
 }
 
-Professor professor1 = new Professor("Jiraiya Sensei");
-Professor professor2 = new Professor("Kakashi");
+Professor professor1 = new Professor("Jiraya Sensei");
+Professor professor2 = new Professor("Kakashi Sensei");
 Professor[] professores = {professor1, professor2};
 Escola escola = new Escola("Konoha", professores);</code></pre>
       <ul>
@@ -190,6 +190,7 @@ public void imprime() {
     }
 }</code></pre>
       <ul>
+        <li>O teste do professor (<code>AssociacaoTeste</code>) cadastra: <code>new Local("Rua das laranjeiras")</code>, <code>new Aluno("Luffy", 17)</code>, <code>new Professor("Barba Branca", "Pirata")</code> e <code>new Seminario("Onde achar one piece", alunosParaSeminario, local)</code>, e depois <code>professor.setSeminarios(seminariosDisponiveis)</code>.</li>
         <li><strong>Comece pelas classes básicas</strong>, só com os atributos obrigatórios e seus construtores. Depois acrescente os relacionamentos, um requisito por vez.</li>
         <li>O <code>Professor</code> já existia com um construtor. Para acrescentar <code>especialidade</code> sem quebrar quem já usava a classe, <strong>sobrecarregue</strong> o construtor.</li>
         <li><strong>Siga o requisito:</strong> o professor conhece os seminários, mas o seminário não precisa conhecer o professor. Poderia ser bidirecional, mas "provavelmente quem escreveu entende do negócio".</li>

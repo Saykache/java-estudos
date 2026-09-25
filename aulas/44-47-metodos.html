@@ -39,10 +39,10 @@
     }
 }
 
-// CalculadoraTeste01
+// CalculadoraTest01
 Calculadora calculadora = new Calculadora();
 calculadora.somaDoisNumeros();       // 20
-System.out.println("Finalizando CalculadoraTeste01");
+System.out.println("Finalizando CalculadoraTest01");
 calculadora.subtraiDoisNumeros();    // 19</code></pre>
       <ul>
         <li>As partes de um método: <strong>modificador de acesso</strong> (<code>public</code>), <strong>tipo de retorno</strong>, <strong>nome</strong>, <strong>parênteses com os parâmetros</strong> e o <strong>corpo</strong> entre chaves.</li>
@@ -200,12 +200,12 @@ public class Calculadora {
 }
 EOF
 
-cat > $B/test/CalculadoraTeste01.java &lt;&lt;'EOF'
+cat > $B/test/CalculadoraTest01.java &lt;&lt;'EOF'
 package academy.devdojo.maratonajava.javacore.Bintroducaometodos.test;
 
 import academy.devdojo.maratonajava.javacore.Bintroducaometodos.dominio.Calculadora;
 
-public class CalculadoraTeste01 {
+public class CalculadoraTest01 {
     public static void main(String[] args) {
         Calculadora calculadora = new Calculadora();
         calculadora.multiplicaDoisNumeros(10, 20);               // ?
@@ -221,7 +221,7 @@ public class CalculadoraTeste01 {
 EOF
 
 javac -d out $(find src -name '*.java')
-java -cp out academy.devdojo.maratonajava.javacore.Bintroducaometodos.test.CalculadoraTeste01</code></pre>
+java -cp out academy.devdojo.maratonajava.javacore.Bintroducaometodos.test.CalculadoraTest01</code></pre>
       <details>
         <summary>Ver a saída esperada</summary>
 <pre><code>200

@@ -21,7 +21,7 @@
       <a href="#estudo">Material de estudo</a>
     </nav>
 
-    <p class="aviso">Junta as aulas 52 (varargs) e 53 (exercício com métodos, classes e objetos). Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. O nome do funcionário e os valores dos salários foram trocados, porque o áudio não deixa claro. O varargs vazio, o <code>printf</code> e os itens marcados como "extra" não estão nos vídeos.</p>
+    <p class="aviso">Junta as aulas 52 (varargs) e 53 (exercício com métodos, classes e objetos). Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. O nome do funcionário e os salários foram conferidos no <a href="https://github.com/devdojobr/maratona-java-virado-no-jiraya" target="_blank" rel="noopener">repositório do professor</a>. O varargs vazio, o <code>printf</code> e os itens marcados como "extra" não estão nos vídeos.</p>
 
     <section id="resumo">
       <h2>Resumo</h2>
@@ -37,7 +37,7 @@ public void somaArray(int[] numeros) {
     System.out.println(soma);
 }
 
-// CalculadoraTeste05
+// CalculadoraTest05
 int[] numeros = {1, 2, 3, 4, 5};
 calculadora.somaArray(numeros);                      // 15
 calculadora.somaArray(new int[]{1, 2, 3, 4, 5});     // também funciona</code></pre>
@@ -99,9 +99,9 @@ public class Funcionario {
     }
 }
 
-// test/FuncionarioTeste01.java
+// test/FuncionarioTest01.java
 Funcionario funcionario = new Funcionario();
-funcionario.nome = "Ana";
+funcionario.nome = "Sanji";
 funcionario.idade = 23;
 funcionario.salarios = new double[]{1200, 987.32, 2000};
 funcionario.imprime();</code></pre>
@@ -117,7 +117,7 @@ funcionario.imprime();</code></pre>
       <h3>53 · A NullPointerException e as proteções</h3>
       <ul>
         <li>Se ninguém atribuir <code>salarios</code>, o atributo fica com o valor padrão de referência, <strong><code>null</code></strong>. Percorrê-lo lança <strong><code>NullPointerException</code></strong> na execução: você tentou usar algo que não existe.</li>
-        <li><strong>Aprenda a ler o stack trace:</strong> ele mostra a pilha de chamadas (<code>FuncionarioTeste01.main</code> → <code>imprime</code> → <code>imprimeMediaSalario</code>). As linhas azuis são clicáveis e levam direto à linha do erro.</li>
+        <li><strong>Aprenda a ler o stack trace:</strong> ele mostra a pilha de chamadas (<code>FuncionarioTest01.main</code> → <code>imprime</code> → <code>imprimeMediaSalario</code>). As linhas azuis são clicáveis e levam direto à linha do erro.</li>
         <li>A primeira correção foi <code>if (salarios != null) { ... }</code> envolvendo o laço. A versão final é uma <strong>guard clause</strong>: <code>if (salarios == null) return;</code> no começo, que deixa o resto do método sem aninhamento.</li>
         <li>A validação fica nos <strong>dois</strong> métodos. <code>imprimeMediaSalario</code> é <code>public</code>, então alguém pode chamá-lo sem passar pelo <code>imprime</code>. Com <code>private</code> (próxima aula) só a própria classe o chamaria, mas ainda valeria manter a checagem.</li>
         <li>No mundo real, o cliente "por descuido" vai esquecer de informar o salário, e seu código precisa estar preparado. Mais à frente, o jeito certo é <strong>impedir</strong> o objeto de existir sem salário (construtores e exceções).</li>
@@ -182,10 +182,10 @@ funcionario.imprime();</code></pre>
 B=src/academy/devdojo/maratonajava/javacore/Bintroducaometodos
 mkdir -p $B/dominio $B/test
 
-cat > $B/test/VarargsTeste.java &lt;&lt;'EOF'
+cat > $B/test/VarargsTest01.java &lt;&lt;'EOF'
 package academy.devdojo.maratonajava.javacore.Bintroducaometodos.test;
 
-public class VarargsTeste {
+public class VarargsTest01 {
     static int soma(int... numeros) {
         int soma = 0;
         for (int num : numeros) {
@@ -210,13 +210,13 @@ public class VarargsTeste {
         System.out.println(soma());                       // ?
         System.out.println(media(-1));                    // ?
         System.out.println(media(-1, 1200, 900, 2100));    // ?
-        System.out.printf("%s tem %d anos%n", "Ana", 23); // ?
+        System.out.printf("%s tem %d anos%n", "Sanji", 23); // ?
     }
 }
 EOF
 
 javac -d out $(find src -name '*.java')
-java -cp out academy.devdojo.maratonajava.javacore.Bintroducaometodos.test.VarargsTeste</code></pre>
+java -cp out academy.devdojo.maratonajava.javacore.Bintroducaometodos.test.VarargsTest01</code></pre>
       <details>
         <summary>Ver a saída esperada</summary>
 <pre><code>28
@@ -224,11 +224,11 @@ java -cp out academy.devdojo.maratonajava.javacore.Bintroducaometodos.test.Varar
 0
 -1.0
 1400.0
-Ana tem 23 anos</code></pre>
+Sanji tem 23 anos</code></pre>
       </details>
       <p><strong>Exercícios:</strong></p>
       <ol>
-        <li>Faça o exercício da aula 53 sem olhar a resolução: <code>Funcionario</code> em <code>dominio</code>, <code>FuncionarioTeste01</code> em <code>test</code>.</li>
+        <li>Faça o exercício da aula 53 sem olhar a resolução: <code>Funcionario</code> em <code>dominio</code>, <code>FuncionarioTest01</code> em <code>test</code>.</li>
         <li>Comente a linha que atribui <code>salarios</code>, rode, e leia o stack trace de baixo para cima. Qual linha do seu código aparece primeiro?</li>
         <li>Acrescente a guard clause nos dois métodos e confirme que a exceção sumiu. Depois teste com <code>new double[0]</code> e corrija o <code>NaN</code>.</li>
         <li>Troque o atributo por um método <code>setSalarios(double... salarios)</code> que usa <code>this.salarios = salarios;</code> e chame com <code>funcionario.setSalarios(1200, 987.32, 2000);</code>.</li>
