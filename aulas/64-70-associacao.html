@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>64–70 · Associação e Scanner</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="topo">
+      <a class="voltar" href="../index.html">← Todas as aulas</a>
+      <h1>64–70 · Associação e leitura do teclado</h1>
+      <p>Arrays de objetos, associações unidirecionais e bidirecionais, Scanner e o exercício dos seminários · <a href="https://www.youtube.com/playlist?list=PL62G310vn6nFIsOCC0H-C2infYgwm8SWW" target="_blank" rel="noopener">playlist</a></p>
+    </header>
+
+    <nav class="abas">
+      <a href="#resumo">Resumo</a>
+      <a href="#flashcards">Flashcards</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#estudo">Material de estudo</a>
+    </nav>
+
+    <p class="aviso">Junta as aulas 64 a 67 (associação: arrays com objetos, unidirecional um para muitos, muitos para um e bidirecional), 68 e 69 (leitura de dados pelo teclado) e 70 (exercício de associação). Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. Na aula 70, o título do seminário e a especialidade do professor não dão para entender no áudio, então os valores foram trocados. A armadilha do <code>nextInt()</code> + <code>nextLine()</code>, o método que liga os dois lados da associação e os itens marcados como "extra" não estão nos vídeos.</p>
+
+    <section id="resumo">
+      <h2>Resumo</h2>
+      <p><strong>Associação</strong> é o <strong>relacionamento entre objetos</strong>: um time tem jogadores, uma escola tem professores, um seminário acontece num local. Quem conhece banco de dados reconhece na hora, porque é o mesmo conceito dos relacionamentos entre tabelas, só que feito com <strong>atributos que guardam referências</strong> para outros objetos (ou arrays delas). No meio do bloco, as aulas 68–69 ensinam a ler dados do teclado com <code>Scanner</code>. Tudo fica no pacote novo <code>javacore.Gassociacao</code>.</p>
+
+      <h3>64 · Array de objetos</h3>
+<pre><code>Jogador jogador1 = new Jogador("Pelé");
+Jogador jogador2 = new Jogador("Romário");
+Jogador jogador3 = new Jogador("Cafu");
+
+Jogador[] jogadores = {jogador1, jogador2, jogador3};   // ou new Jogador[3] e preencher
+
+for (Jogador jogador : jogadores) {
+    jogador.imprime();
+}</code></pre>
+<pre><code>jogadores ─▶ [ ref | ref | ref ]
+               │     │     └──▶ [Cafu]    ◀── jogador3
+               │     └────────▶ [Romário] ◀── jogador2
+               └──────────────▶ [Pelé]    ◀── jogador1</code></pre>
+      <ul>
+        <li>Um array de objetos guarda <strong>referências</strong>, não cópias. <code>jogadores[0]</code> e <code>jogador1</code> apontam para o <strong>mesmo</strong> objeto Pelé, que agora tem duas referências.</li>
+        <li>O foreach declara o <strong>tipo do objeto</strong>: <code>for (Jogador jogador : jogadores)</code>. Com isso dá para chamar métodos em cada um.</li>
+        <li>Segundo o William, esse conceito é a base das <strong>coleções</strong> (listas e mapas), que vêm mais à frente.</li>
+        <li>Detalhe da aula: o pacote tinha sido criado com o nome errado. <code>Shift+F6</code> renomeia e o IntelliJ corrige os <code>import</code> sozinho.</li>
+      </ul>
+
+      <h3>65 · Associação unidirecional: jogador → time</h3>
+<pre><code>public class Jogador {
+    private String nome;
+    private Time time;          // o jogador conhece o time (um)
+
+    public Jogador(String nome) { this.nome = nome; }   // time opcional: fica fora do construtor
+
+    public void imprime() {
+        System.out.println(this.nome);
+        if (time != null) {                             // sem isso: NullPointerException
+            System.out.println(time.getNome());
+        }
+    }
+    // getters e setters...
+}
+
+Jogador jogador1 = new Jogador("Pelé");
+Time time = new Time("Seleção Brasileira");
+jogador1.setTime(time);         // É AQUI que a relação é criada
+jogador1.imprime();</code></pre>
+      <ul>
+        <li>Os tipos de relação: <strong>um para um</strong> (jogador e personagem num jogo), <strong>um para muitos</strong> (um time tem vários jogadores), <strong>muitos para um</strong> (vários jogadores, um time) e <strong>muitos para muitos</strong> (estudante e cursos).</li>
+        <li><strong>Unidirecional:</strong> só um lado conhece o outro. Aqui o <code>Jogador</code> tem um <code>Time</code>, mas o <code>Time</code> não sabe quais jogadores tem.</li>
+        <li><strong>Obrigatório ou opcional se decide no construtor:</strong> se o jogador <em>precisa</em> de um time para existir, o time vai no construtor. Se ele pode se cadastrar e escolher depois, fica só o setter.</li>
+        <li>Criar os dois objetos <strong>não</strong> cria a relação. Ela só existe depois de <code>jogador1.setTime(time)</code>.</li>
+        <li>Como o time é opcional, <code>time.getNome()</code> sem a checagem <code>time != null</code> lança <code>NullPointerException</code> quando o jogador ainda não tem time.</li>
+      </ul>
+
+      <h3>66 · Um lado com muitos: escola → professores</h3>
+<pre><code>public class Escola {
+    private String nome;
+    private Professor[] professores;       // "muitos" = array
+
+    public Escola(String nome) { this.nome = nome; }
+    public Escola(String nome, Professor[] professores) {   // sobrecarga
+        this.nome = nome;
+        this.professores = professores;
+    }
+
+    public void imprime() {
+        System.out.println(this.nome);
+        if (professores == null) return;
+        for (Professor professor : professores) {
+            System.out.println(professor.getNome());
+        }
+    }
+}
+
+Professor professor1 = new Professor("Jiraiya Sensei");
+Professor professor2 = new Professor("Kakashi");
+Professor[] professores = {professor1, professor2};
+Escola escola = new Escola("Konoha", professores);</code></pre>
+      <ul>
+        <li>Uma escola tem <strong>vários</strong> professores, e cada professor trabalha em <strong>uma</strong> escola. O relacionamento é unidirecional, da escola para os professores. O lado "muitos" vira um <strong>array</strong>.</li>
+        <li><strong>A ordem de criação:</strong> comece pelos objetos que <strong>não dependem</strong> de ninguém (professor) e deixe por último os que os usam (escola).</li>
+        <li><code>Alt+Insert → Constructor</code> gera o construtor sobrecarregado com os dois atributos (segure <code>Shift</code> e use as setas para selecionar vários).</li>
+        <li><strong>Muitos para muitos</strong> seria a mesma ideia com array <strong>dos dois lados</strong>.</li>
+      </ul>
+
+      <h3>67 · Associação bidirecional: jogador ↔ time</h3>
+<pre><code>public class Time {
+    private String nome;
+    private Jogador[] jogadores;   // agora o time também conhece os jogadores
+    // construtores sobrecarregados, imprime com null check, get/set
+}
+
+Jogador jogador = new Jogador("Cafu");
+Time time = new Time("Brasil");
+jogador.setTime(time);                        // lado 1
+Jogador[] jogadores = {jogador};
+time.setJogadores(jogadores);                 // lado 2</code></pre>
+<pre><code>jogador ──▶ [Cafu | time ─┐]
+                          ▼
+time ─────▶ [Brasil | jogadores ─┐]
+                                 ▼
+               [ ref ] ──▶ (o mesmo objeto Cafu)</code></pre>
+      <ul>
+        <li><strong>Bidirecional:</strong> os dois lados guardam referência um para o outro. O jogador sabe seu time, e o time sabe seus jogadores.</li>
+        <li><strong>Nada garante a integridade.</strong> A aula mostra o Pelé colocado no array do Brasil <em>sem</em> <code>jogador2.setTime(time)</code>: o time diz que ele é jogador, mas o jogador não sabe que tem time. Num banco de dados, as chaves estrangeiras cuidam disso. Com objetos na memória, <strong>quem mantém os dois lados coerentes é você</strong>.</li>
+        <li>O conselho do William: <strong>desenhe</strong> as referências. "Se você é capaz de desenhar, é capaz de explicar. E se é capaz de explicar, entendeu."</li>
+        <li>No IntelliJ, <code>Ctrl+Shift+↑/↓</code> move a linha atual para cima ou para baixo.</li>
+      </ul>
+
+      <h3>68 · Leitura de dados pelo teclado (<code>Scanner</code>)</h3>
+<pre><code>import java.util.Scanner;
+
+Scanner entrada = new Scanner(System.in);
+
+System.out.println("Digite seu nome abaixo");
+String nome = entrada.nextLine();          // a linha inteira
+System.out.println("Digite sua idade");
+int idade = entrada.nextInt();             // já converte para int
+System.out.println("Digite M ou F para o seu sexo");
+char sexo = entrada.next().charAt(0);      // Scanner não tem nextChar
+
+System.out.println(nome + " " + idade + " " + sexo);</code></pre>
+      <ul>
+        <li><code>Scanner</code> (do pacote <code>java.util</code>) lê o que é digitado. O <code>System.in</code> é a "entrada padrão", o teclado. Streams e <code>System.in</code> voltam mais à frente.</li>
+        <li><strong><code>next()</code></strong> lê <strong>só a primeira palavra</strong>: "Olá mundo" vira "Olá". <strong><code>nextLine()</code></strong> lê a <strong>linha inteira</strong>.</li>
+        <li>Há um <code>next</code> para cada tipo (<code>nextInt</code>, <code>nextDouble</code>, <code>nextBoolean</code>, <code>nextBigDecimal</code>...), que já devolve o valor convertido. Digitar texto onde se espera número dá erro.</li>
+        <li>Para um <code>char</code>: <code>next().charAt(0)</code>, o caractere da posição 0 da String. Digitando "masculino", fica só o <code>'m'</code>.</li>
+        <li>Enquanto espera a digitação, o programa fica parado. O William avisa que não vai usar muito o teclado no curso: para testar, é mais rápido deixar os valores no código. Mas é ótimo para praticar e "mostrar para a família".</li>
+      </ul>
+
+      <h3>69 · Exercício: o "oráculo" que responde sim ou não</h3>
+<pre><code>Scanner entrada = new Scanner(System.in);
+System.out.println("Sou o grande oráculo. Digite sua pergunta e eu responderei SIM ou NÃO");
+String pergunta = entrada.nextLine();
+if (pergunta.charAt(0) == ' ') {           // char se compara com aspas simples
+    System.out.println("SIM");
+} else {
+    System.out.println("NÃO");
+}</code></pre>
+      <ul>
+        <li>A "pegadinha" para brincar com os amigos: se você começar a pergunta com um <strong>espaço</strong>, digitado rápido sem ninguém ver, a resposta é SIM. Sem o espaço, é NÃO.</li>
+        <li><code>charAt</code> devolve um <code>char</code>, que se compara com <code>' '</code> (aspas simples). Com <code>" "</code> (String) não compila.</li>
+      </ul>
+
+      <h3>70 · Exercício: sistema de seminários</h3>
+      <p><em>Cadastrar seminários, alunos, professores e o local de cada seminário. Um aluno pode estar em apenas um seminário. Um seminário pode ter nenhum ou vários alunos. Um professor pode ministrar vários seminários. Um seminário deve ter obrigatoriamente um local. Campos: Seminário (título), Aluno (nome, idade), Professor (nome, especialidade), Local (endereço).</em></p>
+<pre><code>Local           endereco
+Aluno           nome, idade, Seminario seminario           (aluno → 1 seminário)
+Seminario       titulo, Aluno[] alunos, Local local        (seminário → N alunos, 1 local)
+Professor       nome, especialidade, Seminario[] seminarios (professor → N seminários)
+
+Aluno ↔ Seminario: bidirecional · Professor → Seminario: unidirecional (é o que o requisito pede)</code></pre>
+<pre><code>// Professor.imprime()
+public void imprime() {
+    System.out.println("Professor: " + this.nome);
+    if (seminarios == null) return;
+    System.out.println("----- Seminários cadastrados -----");
+    for (Seminario seminario : seminarios) {
+        System.out.println(seminario.getTitulo() + " — " + seminario.getLocal().getEndereco());
+        if (seminario.getAlunos() == null || seminario.getAlunos().length == 0) {
+            continue;   // sem alunos: pula SÓ este seminário (break pararia todos)
+        }
+        for (Aluno aluno : seminario.getAlunos()) {
+            System.out.println("  " + aluno.getNome() + ", " + aluno.getIdade());
+        }
+    }
+}</code></pre>
+      <ul>
+        <li><strong>Comece pelas classes básicas</strong>, só com os atributos obrigatórios e seus construtores. Depois acrescente os relacionamentos, um requisito por vez.</li>
+        <li>O <code>Professor</code> já existia com um construtor. Para acrescentar <code>especialidade</code> sem quebrar quem já usava a classe, <strong>sobrecarregue</strong> o construtor.</li>
+        <li><strong>Siga o requisito:</strong> o professor conhece os seminários, mas o seminário não precisa conhecer o professor. Poderia ser bidirecional, mas "provavelmente quem escreveu entende do negócio".</li>
+        <li><strong>Ordem de cadastro no teste:</strong> primeiro o que não depende de nada (<code>Local</code>), depois <code>Aluno</code> e <code>Professor</code>, e por último o <code>Seminario</code>, que usa os outros. É como um sistema real, com "pré-cadastros" antes do principal.</li>
+        <li><strong><code>null</code> × vazio (o papel higiênico):</strong> um array <code>null</code> é não ter nem o rolo. Um array de tamanho 0 é ter o rolo vazio. O <code>new Aluno[0]</code> passou pelo <code>== null</code>, e por isso a checagem completa é <code>== null || length == 0</code>.</li>
+        <li><strong><code>continue</code>, não <code>break</code>:</strong> se um seminário não tem alunos, o laço precisa seguir para o próximo seminário.</li>
+        <li>Uma máxima citada: um método com mais de ~20 linhas provavelmente pode ser quebrado em métodos menores. Refatorar vem com a prática.</li>
+      </ul>
+
+      <h3>Atenção</h3>
+      <ul>
+        <li><strong>Criar os objetos não os relaciona.</strong> A relação só existe depois de <code>setTime</code>, <code>setJogadores</code> etc.</li>
+        <li><strong>Relação opcional exige null check</strong> antes de navegar (<code>time.getNome()</code>, <code>seminario.getLocal().getEndereco()</code>).</li>
+        <li><strong>Extra: a armadilha do <code>nextInt()</code> + <code>nextLine()</code>.</strong> <code>nextInt()</code> lê o número e deixa o Enter no buffer. O <code>nextLine()</code> seguinte lê esse "resto de linha" vazio e parece que "pulou" a pergunta. Solução: chame um <code>entrada.nextLine();</code> extra depois do <code>nextInt()</code>, ou leia tudo com <code>nextLine()</code> e converta (<code>Integer.parseInt(...)</code>).</li>
+        <li><strong>Extra:</strong> digitar "abc" num <code>nextInt()</code> lança <code>InputMismatchException</code>, e uma pergunta vazia no oráculo faz o <code>charAt(0)</code> lançar <code>StringIndexOutOfBoundsException</code>. Tratamento de exceções vem nas aulas 95+.</li>
+        <li><strong>Extra: um método que liga os dois lados</strong> evita a inconsistência da aula 67. Por exemplo, <code>time.adicionaJogador(jogador)</code>, que coloca o jogador no time <em>e</em> chama <code>jogador.setTime(this)</code>.</li>
+        <li><strong>Extra: cuidado com impressão recursiva.</strong> Numa relação bidirecional, se <code>Jogador.imprime()</code> chamar <code>time.imprime()</code> e <code>Time.imprime()</code> chamar <code>jogador.imprime()</code>, um chama o outro sem parar até <code>StackOverflowError</code>. Imprima só os dados simples do outro lado (o nome).</li>
+        <li><strong>Extra:</strong> array tem tamanho fixo, então "adicionar um jogador" exige criar outro array. É justamente o que as coleções (<code>List</code>) resolvem.</li>
+      </ul>
+
+      <h3>Paralelo com PHP</h3>
+      <ul>
+        <li><strong>Eloquent, na mesma língua:</strong> <code>Jogador</code> com um atributo <code>Time</code> é o <code>belongsTo</code>. <code>Time</code> com <code>Jogador[]</code> é o <code>hasMany</code>. Array nos dois lados é o <code>belongsToMany</code> (com tabela pivot no banco).</li>
+        <li><strong>A diferença de integridade:</strong> no Laravel a relação vive no <strong>banco</strong> (chave estrangeira), e <code>$time-&gt;jogadores</code> consulta o que está gravado, então os dois lados sempre batem. Em Java puro, sem banco, as referências vivem na <strong>memória</strong>, e nada sincroniza os dois lados sozinho (aula 67). Com JPA/Hibernate, mais à frente, a situação volta a parecer a do Eloquent.</li>
+        <li><strong>Serializar relação bidirecional</strong> dá o mesmo problema nas duas linguagens: <code>toArray()</code>/JSON de um time que tem jogadores que têm o time entra em loop. O Laravel resolve com <code>$hidden</code> ou Resources, e o Java com <code>@JsonIgnore</code> e afins.</li>
+        <li><strong>Ler do teclado:</strong> no PHP CLI é <code>readline("Nome: ")</code> ou <code>fgets(STDIN)</code>. Num comando Artisan, <code>$this-&gt;ask()</code>. Em Java, <code>Scanner</code>. O <code>nextInt()</code> já converte, enquanto no PHP tudo chega como string.</li>
+      </ul>
+    </section>
+
+    <section id="flashcards">
+      <h2>Flashcards</h2>
+      <p style="color:var(--muted);margin-top:-6px">Toque no cartão para virar.</p>
+      <div id="flashcards-app"></div>
+    </section>
+
+    <section id="quiz">
+      <h2>Quiz</h2>
+      <div id="quiz-app"></div>
+    </section>
+
+    <section id="estudo">
+      <h2>Material de estudo</h2>
+
+      <h3>Mapa mental</h3>
+<pre><code>Associação e Scanner
+├── Array de objetos (64)
+│   ├── guarda referências (Pelé: jogador1 e jogadores[0])
+│   └── for (Jogador j : jogadores) j.imprime();
+├── Associação (65–67)
+│   ├── 1:1 · 1:N · N:1 · N:N (como tabelas no banco)
+│   ├── lado "um" = atributo (Time time) · lado "muitos" = array (Jogador[])
+│   ├── unidirecional: só um lado conhece o outro
+│   ├── bidirecional: os dois se conhecem · integridade é sua
+│   ├── obrigatório → construtor · opcional → setter + null check
+│   └── criar objetos ≠ relacionar (setX cria a relação)
+├── Scanner (68–69)
+│   ├── new Scanner(System.in) · import java.util.Scanner
+│   ├── next() = palavra · nextLine() = linha · nextInt() etc.
+│   ├── char: next().charAt(0)
+│   └── oráculo: pergunta.charAt(0) == ' '
+└── Exercício seminários (70)
+    ├── classes básicas → relacionamentos → teste
+    ├── cadastrar do independente para o dependente
+    ├── null × vazio (o rolo de papel)
+    └── continue (não break) para pular um seminário</code></pre>
+
+      <h3>Prática no seu WSL (25 minutos)</h3>
+<pre><code>cd ~/java-lab
+G=src/academy/devdojo/maratonajava/javacore/Gassociacao
+mkdir -p $G/dominio $G/test
+
+cat > $G/dominio/Time.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Gassociacao.dominio;
+
+public class Time {
+    private String nome;
+    private Jogador[] jogadores = new Jogador[0];
+
+    public Time(String nome) { this.nome = nome; }
+
+    public void adicionaJogador(Jogador jogador) {       // liga os DOIS lados
+        Jogador[] novo = new Jogador[jogadores.length + 1];
+        for (int i = 0; i &lt; jogadores.length; i++) novo[i] = jogadores[i];
+        novo[jogadores.length] = jogador;
+        jogadores = novo;
+        jogador.setTime(this);
+    }
+
+    public void imprime() {
+        System.out.println("Time: " + nome);
+        for (Jogador jogador : jogadores) System.out.println("  " + jogador.getNome());
+    }
+
+    public String getNome() { return nome; }
+}
+EOF
+
+cat > $G/dominio/Jogador.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Gassociacao.dominio;
+
+public class Jogador {
+    private String nome;
+    private Time time;
+
+    public Jogador(String nome) { this.nome = nome; }
+
+    public void imprime() {
+        System.out.println(nome + (time != null ? " joga no " + time.getNome() : " sem time"));
+    }
+
+    public String getNome() { return nome; }
+    public void setTime(Time time) { this.time = time; }
+}
+EOF
+
+cat > $G/test/AssociacaoTeste.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Gassociacao.test;
+
+import academy.devdojo.maratonajava.javacore.Gassociacao.dominio.Jogador;
+import academy.devdojo.maratonajava.javacore.Gassociacao.dominio.Time;
+import java.util.Scanner;
+
+public class AssociacaoTeste {
+    public static void main(String[] args) {
+        Scanner entrada = new Scanner(System.in);
+        System.out.println("Nome do time:");
+        Time time = new Time(entrada.nextLine());
+        System.out.println("Quantos jogadores?");
+        int quantidade = entrada.nextInt();
+        entrada.nextLine();                         // consome o Enter que sobrou
+        for (int i = 0; i &lt; quantidade; i++) {
+            System.out.println("Nome do jogador " + (i + 1) + ":");
+            time.adicionaJogador(new Jogador(entrada.nextLine()));
+        }
+        time.imprime();
+        new Jogador("Sem Clube").imprime();
+    }
+}
+EOF
+
+javac -d out $(find src -name '*.java')
+# interativo:
+java -cp out academy.devdojo.maratonajava.javacore.Gassociacao.test.AssociacaoTeste
+# ou simulando a digitação:
+printf 'Brasil\n2\nCafu\nPelé\n' | java -cp out academy.devdojo.maratonajava.javacore.Gassociacao.test.AssociacaoTeste</code></pre>
+      <details>
+        <summary>Ver a saída esperada (com o printf)</summary>
+<pre><code>Nome do time:
+Quantos jogadores?
+Nome do jogador 1:
+Nome do jogador 2:
+Time: Brasil
+  Cafu
+  Pelé
+Sem Clube sem time</code></pre>
+        <p>Tire a linha <code>entrada.nextLine();</code> depois do <code>nextInt()</code> e rode de novo. O primeiro jogador fica com nome vazio.</p>
+      </details>
+      <p><strong>Exercícios:</strong></p>
+      <ol>
+        <li>Faça o exercício da aula 70 completo, sem olhar a resolução: <code>Local</code>, <code>Aluno</code>, <code>Seminario</code>, <code>Professor</code> e o teste com o relatório do professor.</li>
+        <li>No teste da aula 70, passe <code>new Aluno[0]</code> e depois <code>null</code> como alunos e confirme que as duas checagens (<code>null</code> e <code>length == 0</code>) são necessárias.</li>
+        <li>Garanta a bidirecionalidade <code>Aluno ↔ Seminario</code>: ao colocar alunos num seminário, chame <code>aluno.setSeminario(this)</code> para cada um.</li>
+        <li>Faça o oráculo da aula 69 e corrija o erro de pergunta vazia (<code>pergunta.isEmpty()</code> antes do <code>charAt</code>).</li>
+      </ol>
+
+      <h3>Glossário</h3>
+      <ul>
+        <li><strong>Associação</strong>: relacionamento entre objetos, representado por atributos que referenciam outros objetos.</li>
+        <li><strong>Cardinalidade</strong>: 1:1, 1:N, N:1, N:N, ou seja, quantos de um lado se relacionam com quantos do outro.</li>
+        <li><strong>Unidirecional</strong>: só um dos lados tem a referência para o outro.</li>
+        <li><strong>Bidirecional</strong>: os dois lados se referenciam. Manter a coerência é responsabilidade do código.</li>
+        <li><strong>Integridade referencial</strong>: garantia de que as relações são coerentes. No banco, chaves estrangeiras. Na memória, o seu código.</li>
+        <li><strong><code>Scanner</code></strong>: classe de <code>java.util</code> que lê dados de uma fonte, como o teclado (<code>System.in</code>).</li>
+        <li><strong><code>next()</code> / <code>nextLine()</code></strong>: próxima palavra / linha inteira.</li>
+        <li><strong><code>charAt(i)</code></strong>: o caractere da posição <code>i</code> de uma String.</li>
+      </ul>
+
+      <h3>Revisão espaçada</h3>
+      <ul class="revisao">
+        <li><span class="dia">Dia 1</span><span>Todos os flashcards + a prática (interativa e com printf).</span></li>
+        <li><span class="dia">Dia 3</span><span>Quiz + exercício 1 (seminários) completo.</span></li>
+        <li><span class="dia">Dia 7</span><span>Exercícios 2, 3 e 4 + desenhar a memória da aula 67.</span></li>
+        <li><span class="dia">Dia 14</span><span>Flashcards que errou + questões discursivas.</span></li>
+      </ul>
+
+      <h3>Para aprofundar</h3>
+      <ul>
+        <li>Qual a diferença entre associação, agregação e composição (UML)?</li>
+        <li>Como o <code>ArrayList</code> simplifica o <code>adicionaJogador</code> da prática?</li>
+        <li>Como o JPA (<code>@OneToMany</code>, <code>@ManyToOne</code>) mapeia essas associações para o banco?</li>
+        <li>Por que a regra "um método com no máximo ~20 linhas" ajuda na legibilidade? E quando ela atrapalha?</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    window.AULA = {
+      flashcards: [
+        ["O que um array de objetos guarda?", "Referências para os objetos, não cópias"],
+        ["jogadores[0] e jogador1 apontam para o mesmo objeto?", "Sim, se o array foi montado com jogador1"],
+        ["Como percorrer um Jogador[] chamando um método?", "for (Jogador jogador : jogadores) { jogador.imprime(); }"],
+        ["O que é associação?", "O relacionamento entre objetos, feito com atributos que referenciam outros objetos"],
+        ["Quais são os tipos de relação?", "Um para um, um para muitos, muitos para um e muitos para muitos"],
+        ["Como representar o lado \"um\" e o lado \"muitos\"?", "Um: atributo simples (Time time). Muitos: array (Jogador[] jogadores)"],
+        ["O que é associação unidirecional?", "Só um dos lados conhece o outro"],
+        ["O que é associação bidirecional?", "Os dois lados se referenciam"],
+        ["Como decidir se a relação é obrigatória?", "Obrigatória: no construtor. Opcional: só no setter"],
+        ["Criar um Jogador e um Time já os relaciona?", "Não: a relação só existe após jogador.setTime(time)"],
+        ["Por que if (time != null) no imprime do jogador?", "Time é opcional; sem ele, time.getNome() lança NullPointerException"],
+        ["Em que ordem criar objetos relacionados?", "Primeiro os que não dependem de ninguém, por último os que os usam"],
+        ["Quem garante a integridade numa relação bidirecional em memória?", "O seu código (no banco seriam as chaves estrangeiras)"],
+        ["Como ligar os dois lados de forma segura?", "Um método como time.adicionaJogador(j) que também faz j.setTime(this)"],
+        ["Como criar um Scanner para o teclado?", "Scanner entrada = new Scanner(System.in); (import java.util.Scanner)"],
+        ["next() × nextLine()?", "next() lê uma palavra; nextLine() lê a linha inteira"],
+        ["Como ler um int com Scanner?", "entrada.nextInt()"],
+        ["Como ler um char com Scanner?", "entrada.next().charAt(0)"],
+        ["O que charAt(0) devolve?", "O primeiro caractere da String (um char)"],
+        ["Como comparar o primeiro caractere com espaço?", "pergunta.charAt(0) == ' ' (aspas simples)"],
+        ["Por que o nextLine() parece \"pular\" depois de um nextInt()?", "O nextInt() deixa o Enter no buffer; chame um nextLine() extra"],
+        ["Qual a diferença entre array null e array vazio?", "null: não há array (sem rolo). Vazio: array com length 0 (rolo vazio)"],
+        ["Por que continue e não break no relatório de seminários?", "break pararia todos os seminários; continue pula só o sem alunos"],
+        ["Equivalente Eloquent de Jogador com atributo Time?", "belongsTo (e Time com Jogador[] é hasMany)"],
+        ["Como ler do teclado no PHP CLI?", "readline() ou fgets(STDIN); em Artisan, $this->ask()"]
+      ],
+      quiz: [
+        { tipo: 'vf', pergunta: 'Um array Jogador[] guarda cópias dos objetos jogadores.', correta: 1,
+          explicacao: 'Falso: guarda referências. jogadores[0] e jogador1 podem apontar para o mesmo objeto.' },
+        { tipo: 'multipla', pergunta: 'Um time tem vários jogadores e cada jogador tem um time. Como representar o lado do time?', opcoes: ['Jogador jogador;', 'Jogador[] jogadores;', 'Time[] times;', 'String jogadores;'], correta: 1,
+          explicacao: 'O lado "muitos" vira um array (ou, mais à frente, uma coleção) de referências.' },
+        { tipo: 'multipla', pergunta: 'O Jogador tem um atributo Time, mas o Time não tem referência aos jogadores. Que associação é essa?', opcoes: ['Bidirecional', 'Unidirecional', 'Muitos para muitos', 'Nenhuma'], correta: 1,
+          explicacao: 'Só um lado conhece o outro: unidirecional.' },
+        { tipo: 'vf', pergunta: 'Depois de Jogador j = new Jogador("Pelé"); Time t = new Time("Brasil");, o jogador já pertence ao time.', correta: 1,
+          explicacao: 'Falso: são dois objetos independentes. A relação só existe após j.setTime(t) (e, se for bidirecional, também no time).' },
+        { tipo: 'multipla', pergunta: 'O que acontece em jogador.imprime() se imprime() faz System.out.println(time.getNome()) e o jogador não tem time?', opcoes: ['Imprime null', 'Imprime vazio', 'NullPointerException', 'Erro de compilação'], correta: 2,
+          explicacao: 'time é null; chamar getNome() nele lança NullPointerException. Relação opcional pede null check.' },
+        { tipo: 'multipla', pergunta: 'O usuário digita "Olá mundo". O que String s = entrada.next(); guarda?', opcoes: ['"Olá mundo"', '"Olá"', '"mundo"', '"O"'], correta: 1,
+          explicacao: 'next() lê só a próxima palavra. Para a linha inteira, use nextLine().' },
+        { tipo: 'multipla', pergunta: 'Qual linha lê um char digitado?', opcoes: ['char c = entrada.nextChar();', 'char c = entrada.next().charAt(0);', 'char c = entrada.nextLine();', 'char c = (char) entrada.next();'], correta: 1,
+          explicacao: 'Scanner não tem nextChar. Lê-se uma String e pega-se o primeiro caractere com charAt(0).' },
+        { tipo: 'multipla', pergunta: 'No relatório da aula 70, qual checagem evita problemas com alunos null E com array vazio?', opcoes: ['if (alunos.length == 0 || alunos == null) continue;', 'if (alunos == null || alunos.length == 0) continue;', 'if (alunos == null) break;', 'if (alunos.length == null) continue;'], correta: 1,
+          explicacao: 'Primeiro o null (curto-circuito evita a NPE), depois o length. E continue, para não parar os outros seminários.' },
+        { tipo: 'discursiva', pergunta: 'Na aula 67, o Pelé foi colocado no array de jogadores do Brasil sem chamar jogador2.setTime(time). Qual o problema e como evitá-lo?',
+          explicacao: 'A relação ficou inconsistente: pelo time, Pelé é jogador do Brasil; pelo jogador, ele não tem time (null). Numa relação bidirecional em memória, nada sincroniza os dois lados automaticamente, ao contrário do banco, que tem chaves estrangeiras. Para evitar, centralize a ligação num método que atualiza os dois lados, por exemplo time.adicionaJogador(j), que coloca j no array e chama j.setTime(this). Quem usa a classe não precisa lembrar das duas chamadas.' },
+        { tipo: 'discursiva', pergunta: 'Compare a associação Jogador ↔ Time da aula com belongsTo/hasMany do Eloquent. O que muda em relação à integridade dos dados?',
+          explicacao: 'Conceitualmente é o mesmo: Jogador com um Time equivale a belongsTo, e Time com vários Jogadores equivale a hasMany. No Laravel, porém, a relação está no banco (coluna time_id, chave estrangeira), e $time->jogadores consulta o que foi gravado, então os dois lados sempre batem. Na aula, as referências vivem só na memória: é preciso atribuir os dois lados manualmente, e nada impede um lado "esquecido". Com JPA/Hibernate (mais à frente), o mapeamento volta a se apoiar no banco.' }
+      ]
+    };
+  </script>
+  <script src="../js/app.js"></script>
+</body>
+</html>
