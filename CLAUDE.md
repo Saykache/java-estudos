@@ -62,5 +62,11 @@ Plano (títulos da playlist; a aula 35 não aparece nela):
 `ferramentas/.venv/bin/python ferramentas/transcricao.py --aulas 20-24` → `transcricoes/NN-*.txt` (fora do git).
 Setup: `ferramentas/instalar.sh` (precisa de sudo).
 
+## Código do professor
+Repositório oficial: https://github.com/devdojobr/maratona-java-virado-no-jiraya (branch `videoNN` = projeto acumulado
+até a aula NN; o README lista os títulos das 284 aulas). Código exato de uma aula: `git diff origin/videoNN-1 origin/videoNN`.
+Usar para conferir nomes de classes/pacotes (ex.: testes são `XxxTest01`, pacotes `javacore.Aintroducaoclasses`,
+`Bintroducaometodos`, ... `Gassociacao`, `Hheranca`) e valores dos exemplos, em vez de adivinhar pelo áudio.
+
 ## Contexto do autor
 O autor é desenvolvedor PHP/Laravel aprendendo Java; comparações com PHP ajudam.
