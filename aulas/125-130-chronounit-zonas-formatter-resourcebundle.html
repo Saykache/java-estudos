@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>125–130 · Ajustes, zonas e formatação</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="topo">
+      <a class="voltar" href="../index.html">← Todas as aulas</a>
+      <h1>125–130 · ChronoUnit, TemporalAdjusters, zonas, DateTimeFormatter e ResourceBundle</h1>
+      <p>Intervalos em qualquer unidade, ajustes de data (próximo dia útil), fusos horários, formatação e mensagens internacionalizadas · <a href="https://www.youtube.com/playlist?list=PL62G310vn6nFIsOCC0H-C2infYgwm8SWW" target="_blank" rel="noopener">playlist</a></p>
+    </header>
+
+    <nav class="abas">
+      <a href="#resumo">Resumo</a>
+      <a href="#flashcards">Flashcards</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#estudo">Material de estudo</a>
+    </nav>
+
+    <p class="aviso">Junta as aulas 125 (ChronoUnit), 126 (TemporalAdjusters), 127 (TemporalAdjuster, exercício do próximo dia útil), 128 (ZonedDateTime, ZoneId, OffsetDateTime), 129 (DateTimeFormatter) e 130 (ResourceBundle). Continua as <a href="119-124-java-time.html">aulas 119–124</a>. Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. O código (pacotes <code>javacore.Rdatas</code>, <code>Sformatacao</code> e <code>Tresourcebundle</code>) foi conferido no <a href="https://github.com/devdojobr/maratona-java-virado-no-jiraya" target="_blank" rel="noopener">repositório do professor</a>. Os itens marcados como "extra" não estão nos vídeos.</p>
+
+    <section id="resumo">
+      <h2>Resumo</h2>
+      <p>Fechamento do <code>java.time</code>. O <strong><code>ChronoUnit</code></strong> mede intervalos em qualquer unidade (resolve o "58 semanas são quantos meses?"). Os <strong>TemporalAdjusters</strong> "pulam" para uma data (próxima quinta, último dia do mês), e dá para criar o seu (<strong>próximo dia útil</strong>). <strong><code>ZoneId</code>/<code>ZonedDateTime</code>/<code>OffsetDateTime</code></strong> tratam fusos. O <strong><code>DateTimeFormatter</code></strong> formata e faz parse. O bloco termina com o <strong><code>ResourceBundle</code></strong>, que traduz as mensagens do sistema conforme o <code>Locale</code>.</p>
+
+      <h3>125 · ChronoUnit</h3>
+<pre><code>LocalDateTime aniversario = LocalDateTime.of(1988, Month.AUGUST, 6, 12, 0, 0);
+LocalDateTime now = LocalDateTime.now();
+System.out.println(ChronoUnit.DAYS.between(aniversario, now));    // 11884 (em 18/02/2021 18h)
+System.out.println(ChronoUnit.WEEKS.between(aniversario, now));   // 1697
+System.out.println(ChronoUnit.MONTHS.between(aniversario, now));  // 390
+System.out.println(ChronoUnit.YEARS.between(aniversario, now));   // 32
+
+// De volta ao problema da aula 124: 58 semanas (406 dias) são quantos meses?
+LocalDate hoje = LocalDate.now();
+hoje.until(hoje.plusDays(406), ChronoUnit.MONTHS);   // 13 (o total, não o componente)
+hoje.until(hoje.plusDays(406), ChronoUnit.DAYS);     // 406</code></pre>
+      <ul>
+        <li><code>ChronoUnit</code> é um <strong>enum com todas as unidades de tempo</strong>: <code>NANOS</code>, <code>MICROS</code>, <code>MILLIS</code>, <code>SECONDS</code>... <code>DAYS</code>, <code>WEEKS</code>, <code>MONTHS</code>, <code>YEARS</code>, <code>DECADES</code>, <code>CENTURIES</code>...</li>
+        <li><strong><code>UNIDADE.between(inicio, fim)</code></strong> devolve um <code>long</code> com o <strong>total de unidades completas</strong>. "Seu filho tem quantas semanas?": agora o sistema responde.</li>
+        <li><strong><code>data.until(outra, unidade)</code></strong> faz o mesmo a partir do objeto. É a resposta para o <code>Period.getMonths()</code> que não normalizava (aula 124).</li>
+        <li>O William resume o pacote: <code>Instant</code> para a máquina, <code>LocalDate</code>/<code>LocalDateTime</code>/<code>LocalTime</code> para humanos, <code>Duration</code>/<code>Period</code> para quantidades e <code>ChronoUnit</code> para intervalos.</li>
+      </ul>
+
+      <h3>126 · with e TemporalAdjusters</h3>
+<pre><code>LocalDate now = LocalDate.now();                              // quinta, 18/02/2021
+now = now.with(ChronoField.DAY_OF_MONTH, 18);                 // troca só o dia (= withDayOfMonth(18))
+now = LocalDate.now().with(TemporalAdjusters.nextOrSame(DayOfWeek.THURSDAY));  // 2021-02-18 (hoje é quinta)
+now = LocalDate.now().with(TemporalAdjusters.next(DayOfWeek.THURSDAY));        // 2021-02-25
+now = LocalDate.now().with(TemporalAdjusters.previous(DayOfWeek.THURSDAY));    // 2021-02-11
+now = LocalDate.now().with(TemporalAdjusters.firstDayOfMonth());               // 2021-02-01 MONDAY
+now = LocalDate.now().with(TemporalAdjusters.lastDayOfMonth());                // 2021-02-28 SUNDAY
+now = LocalDate.now().with(TemporalAdjusters.firstDayOfNextYear());            // 2022-01-01 SATURDAY
+now = LocalDate.now().with(TemporalAdjusters.firstDayOfNextMonth());           // 2021-03-01 MONDAY</code></pre>
+      <ul>
+        <li><strong><code>plus</code> × <code>with</code>:</strong> <code>plusDays(20)</code> anda no calendário e pode virar o mês. <code>with</code> <strong>substitui</strong> um campo e deixa o resto igual: <code>withDayOfMonth(20)</code>, <code>withMonth(1)</code>, <code>with(ChronoField.DAY_OF_MONTH, 20)</code>.</li>
+        <li><strong><code>TemporalAdjuster</code></strong> (singular) é uma <strong>interface</strong> com um único método. <strong><code>TemporalAdjusters</code></strong> (plural) é uma <strong>classe utilitária</strong> com métodos <code>static</code> que devolvem ajustadores prontos.</li>
+        <li><code>nextOrSame</code> devolve hoje se hoje já for o dia pedido. <code>next</code> sempre avança. <code>previous</code>/<code>previousOrSame</code> voltam.</li>
+        <li><code>lastDayOfMonth()</code> poupa a conta "28, 29, 30 ou 31?". Também existem <code>firstDayOfYear</code>, <code>lastDayOfYear</code>, <code>firstInMonth(DayOfWeek)</code>...</li>
+        <li>Como tudo é imutável, cada linha começa de <code>LocalDate.now()</code> e reatribui.</li>
+      </ul>
+
+      <h3>127 · TemporalAdjuster próprio: próximo dia útil</h3>
+<pre><code>// Regra do exercício: sexta, sábado e domingo NÃO são dias úteis.
+class ObterProximoDiaUtil implements TemporalAdjuster {      // não pública: pode ficar no mesmo arquivo
+    @Override
+    public Temporal adjustInto(Temporal temporal) {
+        DayOfWeek dayOfWeek = DayOfWeek.of(temporal.get(ChronoField.DAY_OF_WEEK));
+        int addDays;
+        switch (dayOfWeek) {
+            case THURSDAY: addDays = 4; break;   // quinta → segunda
+            case FRIDAY:   addDays = 3; break;
+            case SATURDAY: addDays = 2; break;
+            default:       addDays = 1;          // domingo → segunda; seg/ter/qua → dia seguinte
+        }
+        return temporal.plus(addDays, ChronoUnit.DAYS);
+    }
+}
+
+LocalDate.now().with(new ObterProximoDiaUtil());                    // qui 18/02 → 2021-02-22 MONDAY
+LocalDate.now().withDayOfMonth(15).with(new ObterProximoDiaUtil()); // seg 15/02 → 2021-02-16 TUESDAY
+// 19 (sex), 20 (sáb) e 21 (dom) → 2021-02-22 MONDAY</code></pre>
+      <ul>
+        <li>Quando nenhum ajustador pronto resolve, <strong>implemente a interface <code>TemporalAdjuster</code></strong> e escreva a regra de negócio em <code>adjustInto</code>.</li>
+        <li><strong>Regra do arquivo:</strong> um <code>.java</code> pode ter várias classes, mas <strong>só uma pública</strong>, com o mesmo nome do arquivo. Por isso <code>ObterProximoDiaUtil</code> fica sem <code>public</code>.</li>
+        <li><code>DayOfWeek.of(temporal.get(ChronoField.DAY_OF_WEEK))</code> transforma o número (1 = segunda ... 7 = domingo) no enum. O <code>switch</code> com enum usa <code>case THURSDAY</code>, sem prefixo (aulas 80–83).</li>
+        <li><code>temporal.plus(n, ChronoUnit.DAYS)</code> devolve a data ajustada. O William ajustou a regra ao testar: faltava o caso da quinta.</li>
+        <li><strong>Polimorfismo de novo:</strong> <code>with</code> aceita qualquer <code>TemporalAdjuster</code> e chama <code>adjustInto</code>. Ele não sabe qual implementação recebeu (aulas 90–94).</li>
+      </ul>
+
+      <h3>128 · ZoneId, ZonedDateTime e OffsetDateTime</h3>
+<pre><code>Map&lt;String, String&gt; shortIds = ZoneId.SHORT_IDS;     // ex.: BET=America/Sao_Paulo (Map = chave → valor)
+System.out.println(ZoneId.systemDefault());           // Europe/Berlin na máquina do William
+ZoneId tokyoZone = ZoneId.of("Asia/Tokyo");            // id inválido ("Asia/Pequim") → exceção
+
+LocalDateTime now = LocalDateTime.now();              // 2021-02-19T18:03 (sem zona)
+ZonedDateTime zonedDateTime = now.atZone(tokyoZone);   // 2021-02-19T18:03+09:00[Asia/Tokyo]  ← só "cola" a zona
+
+Instant nowInstant = Instant.now();                   // 2021-02-19T17:03:00Z (UTC)
+ZonedDateTime zonedDateTime2 = nowInstant.atZone(tokyoZone);   // 2021-02-20T02:03+09:00[Asia/Tokyo] ← converte
+
+System.out.println(ZoneOffset.MIN);                   // -18:00
+System.out.println(ZoneOffset.MAX);                   // +18:00
+ZoneOffset offsetManaus = ZoneOffset.of("-04:00");    // "-400" → exceção em tempo de execução
+OffsetDateTime o1 = now.atOffset(offsetManaus);        // 2021-02-19T18:03-04:00
+OffsetDateTime o2 = OffsetDateTime.of(now, offsetManaus);   // o mesmo
+OffsetDateTime o3 = nowInstant.atOffset(offsetManaus);      // 2021-02-19T13:03-04:00 (hora de Manaus)
+
+JapaneseDate.from(LocalDate.of(2021, 2, 19));          // Japanese Reiwa 3-02-19
+JapaneseDate.from(LocalDate.of(1900, 2, 1));           // Japanese Meiji 33-02-01</code></pre>
+      <ul>
+        <li><strong><code>ZoneId</code></strong> identifica a zona pelo nome da região (<code>America/Sao_Paulo</code>, <code>Asia/Tokyo</code>). Os nomes não batem com os do Windows ("Brasília"): use os do Java. <code>ZoneId.SHORT_IDS</code> é um <strong><code>Map</code></strong> (coleção chave → valor, assunto futuro) com apelidos.</li>
+        <li><strong><code>ZonedDateTime</code></strong> é data, hora e zona. A diferença importa:
+          <ul>
+            <li><code>localDateTime.atZone(zona)</code> <strong>mantém a hora</strong> e só diz "isso é em Tóquio".</li>
+            <li><code>instant.atZone(zona)</code> <strong>converte</strong> o momento UTC para a hora de Tóquio (+9h).</li>
+          </ul>
+        </li>
+        <li><strong><code>ZoneOffset</code></strong> é o deslocamento fixo em relação ao UTC, de −18:00 a +18:00. Serve quando você sabe a diferença (Manaus = −4) mas não o nome da zona. O formato tem que ser exato: <code>"-04:00"</code>.</li>
+        <li><strong><code>OffsetDateTime</code></strong> é data, hora e offset, sem regras de zona. <code>ZonedDateTime</code> carrega a zona (com horário de verão). <code>OffsetDateTime</code> só o número.</li>
+        <li>Outros calendários: <code>JapaneseDate</code> mostra as eras japonesas (Meiji em 1900, Reiwa hoje). Também existem <code>ThaiBuddhistDate</code>, <code>HijrahDate</code> e <code>MinguoDate</code>.</li>
+      </ul>
+
+      <h3>129 · DateTimeFormatter</h3>
+<pre><code>LocalDate date = LocalDate.now();                            // 2021-02-19
+date.format(DateTimeFormatter.BASIC_ISO_DATE);               // 20210219
+date.format(DateTimeFormatter.ISO_DATE);                     // 2021-02-19 (aceita offset: 2021-02-19+05:00)
+date.format(DateTimeFormatter.ISO_LOCAL_DATE);               // 2021-02-19 (o padrão do toString)
+LocalDate.parse("20210219", DateTimeFormatter.BASIC_ISO_DATE);        // 2021-02-19
+LocalDate.parse("2021-02-19+05:00", DateTimeFormatter.ISO_DATE);      // 2021-02-19
+// LocalDate.parse("2021-02-19+05:00", DateTimeFormatter.ISO_LOCAL_DATE) → DateTimeParseException
+
+LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME);          // 2021-02-19T18:46:04.1121294
+LocalDateTime.parse("2021-02-19T18:46:04.1121294", DateTimeFormatter.ISO_DATE_TIME);
+
+DateTimeFormatter formatterBR = DateTimeFormatter.ofPattern("dd/MM/yyyy");   // EUA: MM/dd/yyyy · Japão: yyyy/MM/dd
+LocalDate.now().format(formatterBR);                          // 19/02/2021
+LocalDate.parse("19/02/2021", formatterBR);                   // 2021-02-19
+
+DateTimeFormatter formatterGR = DateTimeFormatter.ofPattern("dd.MMMM.yyyy", Locale.GERMAN);
+LocalDate.now().format(formatterGR);                          // 19.Februar.2021
+LocalDate.parse("19.Februar.2021", formatterGR);              // 2021-02-19</code></pre>
+      <ul>
+        <li><strong>Format</strong> = objeto → String. <strong>Parse</strong> = String → objeto. No parse, use <strong>o mesmo formato</strong> em que o texto foi gerado.</li>
+        <li><strong>Formatos prontos</strong> (constantes): <code>BASIC_ISO_DATE</code>, <code>ISO_DATE</code>, <code>ISO_LOCAL_DATE</code>, <code>ISO_DATE_TIME</code>... O Ctrl+Q na IDE mostra um exemplo de cada.</li>
+        <li><strong><code>ofPattern("dd/MM/yyyy")</code></strong> usa as mesmas letras do <code>SimpleDateFormat</code> (aula 118). Com um <code>Locale</code>, o mês por extenso sai no idioma (<code>MMMM</code> → "Februar" em alemão).</li>
+        <li>O formato do texto tem que bater com o formatter. Um offset (<code>+05:00</code>) passado para um formatter que não o aceita dá <strong><code>DateTimeParseException</code></strong> (unchecked).</li>
+        <li><strong>Extra:</strong> o <code>DateTimeFormatter</code> é <strong>imutável e thread-safe</strong>. Pode ser uma constante <code>static final</code>, ao contrário do <code>SimpleDateFormat</code>.</li>
+      </ul>
+
+      <h3>130 · ResourceBundle: mensagens internacionalizadas</h3>
+<pre><code># src/messages_en_US.properties       (# e ! são comentários)
+hello = Hello
+good.morning = Good Morning
+
+# src/messages_pt_BR.properties
+hello = Olá
+good.morning = Bom dia!
+
+# src/messages.properties              (sem locale: o último fallback)
+hi = Hi</code></pre>
+<pre><code>ResourceBundle bundle = ResourceBundle.getBundle("messages", new Locale("en", "US"));
+System.out.println(bundle.getString("hello"));          // Hello
+System.out.println(bundle.getString("good.morning"));   // Good Morning
+System.out.println(bundle.getString("hi"));             // Hi (veio do messages.properties)
+bundle = ResourceBundle.getBundle("messages", new Locale("pt", "BR"));
+System.out.println(bundle.getString("hello"));          // Olá
+System.out.println(bundle.getString("good.morning"));   // Bom dia!
+System.out.println(bundle.getString("hi"));             // Hi
+// bundle.getString("tchau") → MissingResourceException · bundle.containsKey("tchau") → false</code></pre>
+      <ul>
+        <li>É o recurso por trás do "trocar o idioma do site" (a Amazon da Holanda em inglês). As <strong>mensagens ficam em arquivos <code>.properties</code></strong>, um por idioma, no formato <strong>chave = valor</strong>. O código só pede a <strong>chave</strong>.</li>
+        <li><strong>Nome do arquivo:</strong> <code>nomeBase_língua_PAÍS.properties</code> (<code>messages_pt_BR.properties</code>). O nome base é livre (messages, labels...), mas o sufixo tem que ser exato. Os arquivos ficam na <strong>raiz do classpath</strong> (no projeto da aula, direto em <code>src</code>, fora de pacotes).</li>
+        <li><strong><code>getBundle(nomeBase, locale)</code></strong> carrega o arquivo certo, e <code>getString(chave)</code> busca o texto. A mesma chave precisa existir nos arquivos de cada idioma. Chave inexistente dá exceção. <code>containsKey</code> verifica antes.</li>
+        <li><strong>Fallback</strong> (ordem de busca, pedindo <code>fr_CA</code> com o sistema em <code>en_US</code>):
+          <code>messages_fr_CA</code> → <code>messages_fr</code> → <code>messages_en_US</code> (Locale padrão) → <code>messages_en</code> → <code>messages</code>. Se nenhum tiver a chave: exceção.</li>
+        <li><strong>Dica:</strong> mensagens iguais em todos os idiomas (o "Hi") vão só no arquivo <strong>base</strong>, sem locale. Não dependa de um idioma específico existir: se o Locale do servidor mudar, a busca pode se perder.</li>
+      </ul>
+
+      <h3>Atenção</h3>
+      <ul>
+        <li><strong><code>TemporalAdjuster</code> (interface, 1 método) × <code>TemporalAdjusters</code> (classe utilitária com os prontos).</strong></li>
+        <li><strong><code>ChronoUnit.X.between</code> conta unidades completas:</strong> de 06/08/1988 12h a 06/08/2020 11h ainda são 31 anos.</li>
+        <li><strong><code>atZone</code> num <code>LocalDateTime</code> não converte a hora</strong>, só associa a zona. Para converter um momento, parta de um <code>Instant</code> ou use <code>zoned.withZoneSameInstant(outraZona)</code> (extra).</li>
+        <li><strong>Extra: prefira <code>ZonedDateTime</code> com <code>ZoneId</code> a um offset fixo</strong> para regiões com horário de verão: a zona sabe quando o offset muda, o <code>ZoneOffset</code> não.</li>
+        <li><strong>Extra: <code>DayOfWeek.from(temporal)</code></strong> é um jeito mais curto de obter o dia da semana dentro do <code>adjustInto</code>.</li>
+        <li><strong>Extra: encoding dos <code>.properties</code>.</strong> Até o Java 8 eles eram lidos em ISO-8859-1 (acentos exigiam <code>á</code>). Do Java 9 em diante, o <code>ResourceBundle</code> lê em UTF-8. É por isso que o "Olá" aparece quebrado no repositório do professor.</li>
+      </ul>
+
+      <h3>Paralelo com PHP</h3>
+      <ul>
+        <li><strong>ChronoUnit ↔ Carbon:</strong> <code>ChronoUnit.DAYS.between(a, b)</code> ≈ <code>$a-&gt;diffInDays($b)</code> (também <code>diffInWeeks</code>, <code>diffInMonths</code>, <code>diffInYears</code>).</li>
+        <li><strong>Adjusters ↔ Carbon:</strong> <code>next(THURSDAY)</code> ≈ <code>-&gt;next(Carbon::THURSDAY)</code>, <code>previous</code> ≈ <code>-&gt;previous()</code>, <code>firstDayOfMonth</code>/<code>lastDayOfMonth</code> ≈ <code>-&gt;startOfMonth()</code>/<code>-&gt;endOfMonth()</code>, <code>withDayOfMonth(20)</code> ≈ <code>-&gt;day(20)</code>. O PHP puro aceita textos como <code>modify('next thursday')</code> e <code>'last day of this month'</code>. O "próximo dia útil" no Carbon seria <code>-&gt;nextWeekday()</code>, ou uma macro sua.</li>
+        <li><strong>Zonas:</strong> <code>ZoneId.of("Asia/Tokyo")</code> ≈ <code>new DateTimeZone('Asia/Tokyo')</code>, com os mesmos nomes da base IANA. <code>instant.atZone(z)</code> ≈ <code>$carbon-&gt;setTimezone('Asia/Tokyo')</code> (converte). Para só "colar" a zona sem converter: <code>-&gt;shiftTimezone()</code>.</li>
+        <li><strong>Formatter:</strong> <code>DateTimeFormatter.ofPattern("dd/MM/yyyy")</code> ≈ <code>-&gt;format('d/m/Y')</code> e <code>Carbon::createFromFormat('d/m/Y', ...)</code> (as letras diferem). O ISO: <code>-&gt;toIso8601String()</code>. O mês em alemão: <code>-&gt;locale('de')-&gt;translatedFormat('d.F.Y')</code>.</li>
+        <li><strong>ResourceBundle ↔ <code>lang/</code> do Laravel:</strong> <code>lang/pt_BR/messages.php</code> (ou <code>lang/pt_BR.json</code>) + <code>__('messages.hello')</code> ≈ <code>bundle.getString("hello")</code>. O <code>fallback_locale</code> do <code>config/app.php</code> faz o papel do fallback. A diferença: o Laravel devolve a própria chave quando falta a tradução, e o Java lança exceção.</li>
+      </ul>
+    </section>
+
+    <section id="flashcards">
+      <h2>Flashcards</h2>
+      <p style="color:var(--muted);margin-top:-6px">Toque no cartão para virar.</p>
+      <div id="flashcards-app"></div>
+    </section>
+
+    <section id="quiz">
+      <h2>Quiz</h2>
+      <div id="quiz-app"></div>
+    </section>
+
+    <section id="estudo">
+      <h2>Material de estudo</h2>
+
+      <h3>Mapa mental</h3>
+<pre><code>Fechamento do java.time + i18n
+├── ChronoUnit (125): enum de unidades
+│   ├── DAYS / WEEKS / MONTHS / YEARS .between(a, b) → long (unidades completas)
+│   └── a.until(b, ChronoUnit.MONTHS) → total (resolve o Period)
+├── Ajustes (126)
+│   ├── plus anda · with substitui o campo
+│   └── TemporalAdjusters: next · nextOrSame · previous · first/lastDayOfMonth · firstDayOfNextYear/Month
+├── TemporalAdjuster próprio (127)
+│   ├── implements TemporalAdjuster → adjustInto(Temporal)
+│   ├── próximo dia útil: qui+4 · sex+3 · sáb+2 · resto+1
+│   └── 1 classe pública por arquivo (com o nome do arquivo)
+├── Zonas (128)
+│   ├── ZoneId.of("Asia/Tokyo") · systemDefault · SHORT_IDS (Map)
+│   ├── ldt.atZone(z) cola a zona · instant.atZone(z) converte
+│   ├── ZoneOffset "-04:00" (−18 a +18) → OffsetDateTime
+│   └── JapaneseDate (eras Meiji… Reiwa)
+├── DateTimeFormatter (129)
+│   ├── format: objeto → String · parse: String → objeto (mesmo formato!)
+│   ├── BASIC_ISO_DATE · ISO_DATE · ISO_LOCAL_DATE · ISO_DATE_TIME
+│   └── ofPattern("dd/MM/yyyy") · ofPattern("dd.MMMM.yyyy", Locale.GERMAN)
+└── ResourceBundle (130)
+    ├── messages_pt_BR.properties: chave = valor (# ! comentários)
+    ├── getBundle("messages", locale).getString("hello")
+    └── fallback: fr_CA → fr → padrão (en_US → en) → base</code></pre>
+
+      <h3>Prática no seu WSL (25 minutos)</h3>
+      <p>Datas fixas, para a saída ser previsível. Os <code>.properties</code> vão numa pasta <code>resources</code> que entra no classpath.</p>
+<pre><code>cd ~/java-lab
+R=src/academy/devdojo/maratonajava/javacore/Rdatas
+T=src/academy/devdojo/maratonajava/javacore/Tresourcebundle
+mkdir -p $R/test $T/test resources
+
+cat > $R/test/TemporalAdjusterTest01.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Rdatas.test;
+
+import java.time.*;
+import java.time.chrono.JapaneseDate;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.*;
+import java.util.Locale;
+
+class ObterProximoDiaUtil implements TemporalAdjuster {
+    @Override
+    public Temporal adjustInto(Temporal temporal) {
+        DayOfWeek dayOfWeek = DayOfWeek.of(temporal.get(ChronoField.DAY_OF_WEEK));
+        int addDays;
+        switch (dayOfWeek) {
+            case THURSDAY: addDays = 4; break;
+            case FRIDAY:   addDays = 3; break;
+            case SATURDAY: addDays = 2; break;
+            default:       addDays = 1;
+        }
+        return temporal.plus(addDays, ChronoUnit.DAYS);
+    }
+}
+
+public class TemporalAdjusterTest01 {
+    public static void main(String[] args) {
+        LocalDateTime aniversario = LocalDateTime.of(1988, Month.AUGUST, 6, 12, 0);
+        LocalDateTime agora = LocalDateTime.of(2021, 2, 18, 18, 0);
+        System.out.println(ChronoUnit.WEEKS.between(aniversario, agora));   // ?
+        System.out.println(ChronoUnit.YEARS.between(aniversario, agora));   // ?
+
+        LocalDate hoje = LocalDate.of(2021, 2, 18);   // quinta
+        System.out.println(Period.ofWeeks(58).getMonths());                  // ?
+        System.out.println(hoje.until(hoje.plusDays(406), ChronoUnit.MONTHS)); // ?
+
+        System.out.println(hoje.with(TemporalAdjusters.nextOrSame(DayOfWeek.THURSDAY))); // ?
+        System.out.println(hoje.with(TemporalAdjusters.next(DayOfWeek.THURSDAY)));       // ?
+        System.out.println(hoje.with(TemporalAdjusters.lastDayOfMonth()));               // ?
+        System.out.println(hoje.withDayOfMonth(20));                                     // ?
+        for (int dia = 15; dia &lt;= 21; dia++) {
+            LocalDate d = hoje.withDayOfMonth(dia);
+            LocalDate util = d.with(new ObterProximoDiaUtil());
+            System.out.println(d.getDayOfWeek() + " → " + util + " " + util.getDayOfWeek());
+        }
+
+        ZoneId tokyo = ZoneId.of("Asia/Tokyo");
+        LocalDateTime ldt = LocalDateTime.of(2021, 2, 19, 18, 3);
+        Instant instant = Instant.parse("2021-02-19T17:03:00Z");
+        System.out.println(ldt.atZone(tokyo));                                 // ?
+        System.out.println(instant.atZone(tokyo));                             // ?
+        System.out.println(instant.atOffset(ZoneOffset.of("-04:00")));         // ?
+        System.out.println(JapaneseDate.from(LocalDate.of(1900, 2, 1)));       // ?
+
+        LocalDate data = LocalDate.of(2021, 2, 19);
+        System.out.println(data.format(DateTimeFormatter.BASIC_ISO_DATE));     // ?
+        DateTimeFormatter br = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        System.out.println(data.format(br));                                   // ?
+        System.out.println(LocalDate.parse("19/02/2021", br));                 // ?
+        System.out.println(data.format(DateTimeFormatter.ofPattern("dd.MMMM.yyyy", Locale.GERMAN))); // ?
+    }
+}
+EOF
+
+printf 'hello = Hello\ngood.morning = Good Morning\n' &gt; resources/messages_en_US.properties
+printf 'hello = Olá\ngood.morning = Bom dia!\n' &gt; resources/messages_pt_BR.properties
+printf 'hi = Hi\n' &gt; resources/messages.properties
+
+cat > $T/test/ResourceBundleTest01.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Tresourcebundle.test;
+
+import java.util.Locale;
+import java.util.ResourceBundle;
+
+public class ResourceBundleTest01 {
+    public static void main(String[] args) {
+        ResourceBundle bundle = ResourceBundle.getBundle("messages", new Locale("en", "US"));
+        System.out.println(bundle.getString("hello"));          // ?
+        System.out.println(bundle.getString("hi"));             // ?
+        bundle = ResourceBundle.getBundle("messages", new Locale("pt", "BR"));
+        System.out.println(bundle.getString("hello"));          // ?
+        System.out.println(bundle.getString("good.morning"));   // ?
+        System.out.println(bundle.containsKey("tchau"));        // ?
+    }
+}
+EOF
+
+javac -d out $(find src -name '*.java')
+java -cp out academy.devdojo.maratonajava.javacore.Rdatas.test.TemporalAdjusterTest01
+java -cp out:resources academy.devdojo.maratonajava.javacore.Tresourcebundle.test.ResourceBundleTest01</code></pre>
+      <details>
+        <summary>Ver a saída esperada</summary>
+<pre><code>1697
+32
+0
+13
+2021-02-18
+2021-02-25
+2021-02-28
+2021-02-20
+MONDAY → 2021-02-16 TUESDAY
+TUESDAY → 2021-02-17 WEDNESDAY
+WEDNESDAY → 2021-02-18 THURSDAY
+THURSDAY → 2021-02-22 MONDAY
+FRIDAY → 2021-02-22 MONDAY
+SATURDAY → 2021-02-22 MONDAY
+SUNDAY → 2021-02-22 MONDAY
+2021-02-19T18:03+09:00[Asia/Tokyo]
+2021-02-20T02:03+09:00[Asia/Tokyo]
+2021-02-19T13:03-04:00
+Japanese Meiji 33-02-01
+20210219
+19/02/2021
+2021-02-19
+19.Februar.2021
+
+Hello
+Hi
+Olá
+Bom dia!
+false</code></pre>
+      </details>
+      <p><strong>Exercícios:</strong></p>
+      <ol>
+        <li>Calcule quantos dias, semanas e meses completos você já viveu com <code>ChronoUnit</code>.</li>
+        <li>Mude o <code>ObterProximoDiaUtil</code> para a semana normal (sábado e domingo não são úteis) usando <code>DayOfWeek.from(temporal)</code>. Teste de 15 a 21/02/2021.</li>
+        <li>Pegue <code>ZonedDateTime.now(ZoneId.of("America/Sao_Paulo"))</code> e mostre a mesma hora em Tóquio e em Manaus com <code>withZoneSameInstant</code>.</li>
+        <li>Faça o parse de <code>"02/19/2021"</code> (formato dos EUA) com o formatter brasileiro e leia a exceção. Crie o formatter americano e converta para o formato brasileiro.</li>
+        <li>Crie <code>resources/messages_fr.properties</code> com <code>hello = Bonjour</code> e peça <code>new Locale("fr", "CA")</code>. Qual arquivo foi usado para <code>hello</code>? E para <code>good.morning</code>? Explique pelo fallback.</li>
+      </ol>
+
+      <h3>Glossário</h3>
+      <ul>
+        <li><strong><code>ChronoUnit</code></strong>: enum das unidades de tempo, com <code>between</code> para contar intervalos.</li>
+        <li><strong><code>TemporalAdjuster</code></strong>: interface funcional com <code>adjustInto</code>, que devolve uma data ajustada.</li>
+        <li><strong><code>TemporalAdjusters</code></strong>: classe utilitária com ajustadores prontos (<code>next</code>, <code>lastDayOfMonth</code>...).</li>
+        <li><strong><code>ZoneId</code></strong>: identificador de fuso por região (base IANA: <code>America/Sao_Paulo</code>).</li>
+        <li><strong><code>ZoneOffset</code></strong>: diferença fixa para o UTC (<code>-04:00</code>).</li>
+        <li><strong><code>ZonedDateTime</code> / <code>OffsetDateTime</code></strong>: data e hora com zona / com offset.</li>
+        <li><strong><code>DateTimeFormatter</code></strong>: formata e faz parse de datas do <code>java.time</code>; imutável e thread-safe.</li>
+        <li><strong><code>ResourceBundle</code></strong>: conjunto de mensagens por Locale, lidas de <code>.properties</code>.</li>
+        <li><strong>Fallback</strong>: a busca em arquivos cada vez mais genéricos quando o específico não existe.</li>
+        <li><strong>Classpath</strong>: as pastas e JARs onde a JVM procura classes e recursos.</li>
+      </ul>
+
+      <h3>Revisão espaçada</h3>
+      <ul class="revisao">
+        <li><span class="dia">Dia 1</span><span>Todos os flashcards + a prática com previsões.</span></li>
+        <li><span class="dia">Dia 3</span><span>Quiz + exercícios 1 a 3.</span></li>
+        <li><span class="dia">Dia 7</span><span>Exercícios 4 e 5 + a ordem do fallback do ResourceBundle de memória.</span></li>
+        <li><span class="dia">Dia 14</span><span>Flashcards que errou + questões discursivas + revisar o <code>java.time</code> inteiro (aulas 119–130).</span></li>
+      </ul>
+
+      <h3>Para aprofundar</h3>
+      <ul>
+        <li>Como escrever o <code>ObterProximoDiaUtil</code> como <em>lambda</em>, já que <code>TemporalAdjuster</code> é uma interface funcional? E o <code>TemporalAdjusters.ofDateAdjuster</code>?</li>
+        <li>Como considerar feriados no cálculo de dia útil (lista de feriados, <code>Set&lt;LocalDate&gt;</code>)?</li>
+        <li>O que acontece com <code>atZone</code> num horário que "não existe" por causa do horário de verão?</li>
+        <li>Como o Spring Boot usa <code>messages.properties</code> com <code>MessageSource</code> e o <code>Accept-Language</code>?</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    window.AULA = {
+      flashcards: [
+        ["O que é o ChronoUnit?", "Um enum com as unidades de tempo (NANOS... DAYS, WEEKS, MONTHS, YEARS...)"],
+        ["Como contar os dias entre duas datas?", "ChronoUnit.DAYS.between(inicio, fim) → long"],
+        ["ChronoUnit.YEARS.between conta anos incompletos?", "Não: só unidades completas"],
+        ["Como saber o total de meses em 406 dias a partir de hoje?", "hoje.until(hoje.plusDays(406), ChronoUnit.MONTHS) → 13"],
+        ["Diferença entre plusDays(20) e withDayOfMonth(20)?", "plus anda no calendário (pode virar o mês); with substitui só o campo"],
+        ["TemporalAdjuster × TemporalAdjusters?", "Interface com adjustInto × classe utilitária com ajustadores prontos"],
+        ["next × nextOrSame?", "next sempre avança; nextOrSame devolve hoje se hoje já for o dia pedido"],
+        ["Como pegar o último dia do mês?", "data.with(TemporalAdjusters.lastDayOfMonth())"],
+        ["Como criar um ajuste próprio (próximo dia útil)?", "implements TemporalAdjuster e implementar adjustInto(Temporal)"],
+        ["Quantas classes públicas pode haver num arquivo .java?", "Uma, com o mesmo nome do arquivo (as outras sem public)"],
+        ["Como obter o dia da semana dentro do adjustInto?", "DayOfWeek.of(temporal.get(ChronoField.DAY_OF_WEEK)) (ou DayOfWeek.from(temporal))"],
+        ["Como criar a zona de Tóquio?", "ZoneId.of(\"Asia/Tokyo\")"],
+        ["Qual o ZoneId de Brasília/São Paulo no Java?", "America/Sao_Paulo"],
+        ["localDateTime.atZone(tokyo) converte a hora?", "Não: mantém a hora e só associa a zona"],
+        ["instant.atZone(tokyo) converte a hora?", "Sim: o momento UTC vira a hora local de Tóquio (+9)"],
+        ["Faixa do ZoneOffset?", "De -18:00 a +18:00"],
+        ["ZoneOffset.of(\"-400\") funciona?", "Não: exceção em tempo de execução; use \"-04:00\""],
+        ["ZonedDateTime × OffsetDateTime?", "Zoned tem a zona (regras, horário de verão); Offset só o deslocamento fixo"],
+        ["O que BASIC_ISO_DATE produz para 19/02/2021?", "20210219"],
+        ["Como formatar no padrão brasileiro?", "data.format(DateTimeFormatter.ofPattern(\"dd/MM/yyyy\"))"],
+        ["Qual a regra de ouro do parse?", "Usar o mesmo formato em que o texto foi escrito"],
+        ["DateTimeFormatter é thread-safe?", "Sim (imutável); pode ser static final — extra"],
+        ["Como se chama o arquivo de mensagens em português do Brasil?", "messages_pt_BR.properties (nomeBase_língua_PAÍS)"],
+        ["Como ler uma mensagem do ResourceBundle?", "ResourceBundle.getBundle(\"messages\", locale).getString(\"hello\")"],
+        ["Ordem do fallback pedindo fr_CA com o padrão en_US?", "fr_CA → fr → en_US → en → messages (base)"]
+      ],
+      quiz: [
+        { tipo: 'multipla', pergunta: 'Qual forma devolve o total de meses entre duas datas?', opcoes: ['Period.between(a, b).getMonths()', 'ChronoUnit.MONTHS.between(a, b)', 'Duration.between(a, b).toMonths()', 'a.getMonthValue() - b.getMonthValue()'], correta: 1,
+          explicacao: 'ChronoUnit conta o total de unidades completas. Period.getMonths() devolve só o componente de meses (1 em P1Y1M), e Duration não tem meses.' },
+        { tipo: 'multipla', pergunta: 'Hoje é quinta, 18/02/2021. O que devolve hoje.with(TemporalAdjusters.nextOrSame(DayOfWeek.THURSDAY))?', opcoes: ['2021-02-18', '2021-02-25', '2021-02-11', '2021-02-19'], correta: 0,
+          explicacao: 'nextOrSame devolve a própria data quando ela já é o dia pedido. next devolveria 25/02.' },
+        { tipo: 'vf', pergunta: 'data.withDayOfMonth(20) pode virar o mês, assim como plusDays.', correta: 1,
+          explicacao: 'Falso. with substitui o campo e mantém mês e ano. Quem anda no calendário (e vira o mês) é o plus.' },
+        { tipo: 'multipla', pergunta: 'O que é preciso para usar data.with(new ObterProximoDiaUtil())?', opcoes: ['ObterProximoDiaUtil estender LocalDate', 'ObterProximoDiaUtil implementar TemporalAdjuster', 'ObterProximoDiaUtil ser um enum', 'ObterProximoDiaUtil ter um método static adjust'], correta: 1,
+          explicacao: 'with aceita qualquer TemporalAdjuster (polimorfismo) e chama o adjustInto implementado.' },
+        { tipo: 'multipla', pergunta: 'Instant 2021-02-19T17:03:00Z. Quanto vale instant.atZone(ZoneId.of("Asia/Tokyo"))?', opcoes: ['2021-02-19T17:03+09:00[Asia/Tokyo]', '2021-02-20T02:03+09:00[Asia/Tokyo]', '2021-02-19T08:03+09:00[Asia/Tokyo]', 'Lança exceção: Instant não tem zona'], correta: 1,
+          explicacao: 'A partir de um Instant (UTC), atZone converte: 17:03 + 9h = 02:03 do dia 20. Num LocalDateTime, a hora seria mantida.' },
+        { tipo: 'vf', pergunta: 'ZoneOffset.of("-04:00") é válido, e ZoneOffset.of("-400") lança exceção em tempo de execução.', correta: 0,
+          explicacao: 'Verdadeiro. O offset precisa seguir o formato ±HH:MM, dentro da faixa de −18:00 a +18:00.' },
+        { tipo: 'multipla', pergunta: 'Qual combinação faz o parse de "19/02/2021" corretamente?', opcoes: ['LocalDate.parse("19/02/2021")', 'LocalDate.parse("19/02/2021", DateTimeFormatter.ISO_DATE)', 'LocalDate.parse("19/02/2021", DateTimeFormatter.ofPattern("dd/MM/yyyy"))', 'LocalDate.parse("19/02/2021", DateTimeFormatter.ofPattern("dd/mm/yyyy"))'], correta: 2,
+          explicacao: 'O parse precisa do mesmo formato do texto. Sem formatter (ou com ISO) ele espera 2021-02-19, e mm é minuto, não mês.' },
+        { tipo: 'multipla', pergunta: 'Existem messages_en_US.properties, messages_pt_BR.properties e messages.properties. A chave "hi" só está no base. O que getBundle("messages", new Locale("pt","BR")).getString("hi") faz?', opcoes: ['Lança MissingResourceException', 'Devolve "Hi" (fallback para o arquivo base)', 'Devolve "hi" (a própria chave)', 'Devolve null'], correta: 1,
+          explicacao: 'A busca cai para os arquivos mais genéricos, até o base (messages.properties), que tem "hi = Hi". Só lança exceção se nenhum tiver a chave.' },
+        { tipo: 'discursiva', pergunta: 'Explique, com o exemplo de Tóquio, a diferença entre localDateTime.atZone(zona) e instant.atZone(zona), e diga qual usar para mostrar a um usuário japonês a hora de um evento salvo em UTC.',
+          explicacao: 'localDateTime.atZone(tokyo) não converte nada: pega 18:03 e diz "isso é 18:03 em Tóquio" (2021-02-19T18:03+09:00[Asia/Tokyo]). Só associa a zona a uma data sem fuso. instant.atZone(tokyo) parte de um momento absoluto em UTC (17:03Z) e calcula a hora local correspondente (02:03 do dia 20). Para um evento salvo em UTC, o certo é o segundo: guardar o Instant e, na exibição, instant.atZone(ZoneId.of("Asia/Tokyo")), formatando com DateTimeFormatter. Para mudar de zona um ZonedDateTime existente, usa-se withZoneSameInstant.' },
+        { tipo: 'discursiva', pergunta: 'Compare o ResourceBundle do Java com as traduções do Laravel (lang/ e __()). Como cada um encontra a mensagem e o que acontece quando ela falta?',
+          explicacao: 'Java: arquivos messages_pt_BR.properties com chave = valor na raiz do classpath. ResourceBundle.getBundle("messages", locale).getString("hello") procura do mais específico ao mais genérico: pt_BR → pt → Locale padrão (en_US → en) → messages.properties. Se nenhum tiver a chave, lança MissingResourceException, e containsKey verifica antes. Laravel: lang/pt_BR/messages.php (array) ou lang/pt_BR.json, com __("messages.hello"). Usa o locale atual (App::setLocale) e, se faltar, o fallback_locale do config/app.php. Se ainda faltar, devolve a própria chave em vez de lançar exceção. A ideia é a mesma: o código só conhece chaves, e os textos ficam em arquivos por idioma.' }
+      ]
+    };
+  </script>
+  <script src="../js/app.js"></script>
+</body>
+</html>
