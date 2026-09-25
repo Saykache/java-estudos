@@ -30,7 +30,7 @@ Aulas que são partes do mesmo tema viram uma página só: `aulas/NN-MM-slug.htm
 commit `Aulas NN-MM - Título`. Exercícios e resoluções ficam junto da teoria. Só gerar a página com as transcrições
 do bloco inteiro (o autor pode mandar em partes). Aulas avulsas continuam `NN-slug.html`.
 
-Feitas: 02 · 03–07 · 08 · 09 · 10–14 · 15–19 · 20–24 · 25–26 · 27–31 · 32–34 · 35 · 36–38 · 39–43 · 44–47 · 48–51 · 52–53 · 54–57 · 58–59 · 60–63 · 64–70 · 71–75 · 76 · 77–79 · 80–83 · 84–86 · 87–89.
+Feitas: 02 · 03–07 · 08 · 09 · 10–14 · 15–19 · 20–24 · 25–26 · 27–31 · 32–34 · 35 · 36–38 · 39–43 · 44–47 · 48–51 · 52–53 · 54–57 · 58–59 · 60–63 · 64–70 · 71–75 · 76 · 77–79 · 80–83 · 84–86 · 87–89 · 90–94.
 
 Plano (títulos no README do professor; a aula 35 não está na playlist, é o vídeo cl47iLWalUw — o script aceita a URL direta):
 - 10–14 Tipos primitivos (convenções, declaração/memória, casting, Strings, exercício)
@@ -56,7 +56,17 @@ Plano (títulos no README do professor; a aula 35 não está na playlist, é o v
 - 84–86 Classes abstratas
 - 87–89 Interfaces
 - 90–94 Polimorfismo
-- 95+ Exceções (planejar o restante quando chegar lá)
+- 95–99 Exceções: Error, RuntimeException, Exception, lançando unchecked e checked
+- 100–105 Exceções: finally, múltiplos catch, multi-catch, try-with-resources, customizada, regras de sobrescrita
+- 106–107 Wrappers
+- 108–111 Strings (pool, métodos, desempenho, StringBuilder)
+- 112–118 Datas legadas: Date, Calendar, DateFormat, Locale (datas, números, moeda), SimpleDateFormat
+- 119–124 java.time: LocalDate, LocalTime, LocalDateTime, Instant, Duration, Period
+- 125–130 java.time: ChronoUnit, TemporalAdjusters, ZonedDateTime, DateTimeFormatter + ResourceBundle
+- 131–136 Regex (Pattern e Matcher)
+- 137 Scanner: tokens e delimitadores
+- 138–143 IO (File, FileWriter/Reader, Buffered, diretórios)
+- 144+ NIO (planejar o restante quando chegar lá)
 
 ## Transcrições
 `ferramentas/transcricao.py` baixa as legendas pelo navegador (Playwright, janela aberta; headless vem vazio):

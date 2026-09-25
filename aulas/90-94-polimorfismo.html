@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>90–94 · Polimorfismo</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="topo">
+      <a class="voltar" href="../index.html">← Todas as aulas</a>
+      <h1>90–94 · Polimorfismo</h1>
+      <p>Variável da superclasse com objeto da subclasse, parâmetros polimórficos, cast e instanceof, programação orientada a interface · <a href="https://www.youtube.com/playlist?list=PL62G310vn6nFIsOCC0H-C2infYgwm8SWW" target="_blank" rel="noopener">playlist</a></p>
+    </header>
+
+    <nav class="abas">
+      <a href="#resumo">Resumo</a>
+      <a href="#flashcards">Flashcards</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#estudo">Material de estudo</a>
+    </nav>
+
+    <p class="aviso">Junta as aulas 90 (introdução), 91 (funcionamento), 92 (parâmetros polimórficos), 93 (cast e instanceof) e 94 (programação orientada a interface). Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. O código (pacote <code>javacore.Npolimorfismo</code>, produtos NUC10i7, Tomate Siciliano, Samsung 50", Ryzen 9 e Americano) foi conferido no <a href="https://github.com/devdojobr/maratona-java-virado-no-jiraya" target="_blank" rel="noopener">repositório do professor</a>. Os itens marcados como "extra" não estão nos vídeos.</p>
+
+    <section id="resumo">
+      <h2>Resumo</h2>
+      <p><strong>Polimorfismo</strong> ("múltiplas formas"), para o William "um dos assuntos mais importantes da orientação a objetos", é poder usar uma <strong>variável de referência de um tipo mais genérico</strong> (superclasse ou interface) apontando para um <strong>objeto de um tipo mais específico</strong> (subclasse ou implementação). Só funciona dentro da mesma linha de herança. A variável decide <strong>quais métodos você pode chamar</strong>. O objeto decide <strong>qual versão é executada</strong>. Com isso, um método só atende qualquer produto, e trocar a implementação vira trocar só o <code>new</code>.</p>
+
+      <h3>90 · Preparando o terreno</h3>
+<pre><code>public interface Taxavel {
+    public abstract double calcularImposto();
+}
+
+public abstract class Produto implements Taxavel {   // abstrata: não precisa implementar calcularImposto
+    protected String nome;
+    protected double valor;
+    public Produto(String nome, double valor) { this.nome = nome; this.valor = valor; }
+    public String getNome() { return nome; }
+    public double getValor() { return valor; }
+}
+
+public class Computador extends Produto {
+    public static final double IMPOSTO_POR_CENTO = 0.21;
+    public Computador(String nome, double valor) { super(nome, valor); }
+    @Override
+    public double calcularImposto() {
+        System.out.println("Calculando imposto do Computador");
+        return this.valor * IMPOSTO_POR_CENTO;
+    }
+}
+// Tomate: igual, com IMPOSTO_POR_CENTO = 0.06 e "Calculando imposto do tomate"
+
+// servico/CalculadoraImposto: calcularImpostoComputador(Computador c) e calcularImpostoTomate(Tomate t)
+// → dois métodos quase idênticos (o problema que a aula 92 resolve)</code></pre>
+      <ul>
+        <li>Revisão de tudo até aqui: <code>Produto</code> é <strong>abstrata</strong> (não existe "produto" genérico), implementa a interface <code>Taxavel</code> e deixa <code>calcularImposto</code> para a <strong>primeira classe concreta</strong>. <code>Computador</code> e <code>Tomate</code> são "irmãos" e cada um implementa o seu.</li>
+        <li><strong>Camadas:</strong> <code>dominio</code> (o modelo), <code>servico</code> (a regra de negócio: o relatório de impostos) e <code>test</code> (o que visualizamos). É a ideia do MVC: separar regra de negócio do domínio e da visualização.</li>
+        <li>Os métodos da <code>CalculadoraImposto</code> são <code>static</code> porque não usam nenhum atributo de instância (aulas 60–63). Assim não precisa dar <code>new CalculadoraImposto()</code>.</li>
+        <li>Resultado: computador NUC10i7 de 11000 paga <strong>2310.0</strong> e o Tomate Siciliano de 10 paga <strong>0.6</strong>.</li>
+      </ul>
+
+      <h3>91 · Como funciona: o controle remoto</h3>
+<pre><code>Produto produto = new Computador("Ryzen 9", 3000);   // variável genérica, objeto específico
+System.out.println(produto.getNome());               // Ryzen 9
+System.out.println(produto.getValor());              // 3000.0
+System.out.println(produto.calcularImposto());       // Calculando imposto do Computador / 630.0
+
+Produto produto2 = new Tomate("Americano", 20);
+System.out.println(produto2.calcularImposto());      // Calculando imposto do tomate / 1.2
+// produto2.getDataValidade();                       // NÃO compila: Produto não tem esse "botão"</code></pre>
+      <ul>
+        <li><strong>A analogia:</strong> a <strong>variável de referência é o controle remoto</strong> e o <strong>objeto é a TV</strong>. Quando você aperta o botão, quem <strong>executa</strong> é sempre a TV.</li>
+        <li>O controle da Samsung 2019 tem os botões Netflix e Prime Video. Ele também funciona na TV Samsung 2020 (a subclasse), que ainda tem YouTube. Netflix e Prime <strong>executam na TV 2020</strong>, mas <strong>não há botão de YouTube</strong> no controle, então não dá para acessá-lo.</li>
+        <li>No código: <code>produto.calcularImposto()</code> executa o método do <strong>Computador</strong>. Mas <code>getDataValidade()</code>, que só o <code>Tomate</code> tem, não pode ser chamado por uma variável <code>Produto</code>.</li>
+        <li>Isso funciona porque a herança garante: <strong>tudo que a superclasse tem, a subclasse também tem</strong>. O contrário não é garantido.</li>
+        <li>Guardar o objeto específico numa referência genérica é um <strong>widening cast</strong> (alargamento), também chamado de <em>upcasting</em>. É automático, como <code>long x = umInt;</code> nos primitivos (aulas 10–14).</li>
+      </ul>
+
+      <h3>92 · Parâmetros polimórficos</h3>
+<pre><code>public class CalculadoraImposto {
+    public static void calcularImposto(Produto produto) {   // UM método para qualquer produto
+        System.out.println("Relatório de imposto");
+        double imposto = produto.calcularImposto();          // quem executa é o objeto
+        System.out.println("Produto: " + produto.getNome());
+        System.out.println("Preço: " + produto.getValor());
+        System.out.println("Imposto a ser pago: " + imposto);
+    }
+}
+
+Televisao tv = new Televisao("Samsung 50\" ", 5000);   // \" = aspas dentro da String
+CalculadoraImposto.calcularImposto(computador);         // 2310.0
+CalculadoraImposto.calcularImposto(tomate);             // 0.6
+CalculadoraImposto.calcularImposto(tv);                 // 1050.0</code></pre>
+      <ul>
+        <li>Os dois métodos da aula 90 repetiam a mesma lógica e só usavam coisas que <strong>todo <code>Produto</code></strong> tem (<code>calcularImposto</code>, <code>getNome</code>, <code>getValor</code>). Com um parâmetro do tipo <code>Produto</code>, sobra <strong>um método genérico e desacoplado</strong>.</li>
+        <li>Para uma nova <code>Televisao extends Produto</code> (21%), <strong>não precisa mexer na calculadora</strong>: é só passar a TV. Dá para estender "infinitamente" para todos os objetos que passam no teste "é um produto". Com o jeito antigo seriam três métodos iguais.</li>
+        <li><strong>Caractere de escape:</strong> para ter aspas duplas dentro de uma String, use <code>\"</code>. Sem a barra, o compilador acha que a String terminou ali.</li>
+      </ul>
+
+      <h3>93 · Cast (downcasting) e instanceof</h3>
+<pre><code>Tomate tomate = new Tomate("Americano", 20);
+tomate.setDataValidade("11/12/2021");        // precisa da variável Tomate para chamar o setter
+
+// dentro de calcularImposto(Produto produto):
+if (produto instanceof Tomate) {                              // o objeto é um Tomate?
+    String dataValidade = ((Tomate) produto).getDataValidade();   // cast explícito
+    System.out.println(dataValidade);
+}
+
+CalculadoraImposto.calcularImposto(tomate);    // ... imprime 11/12/2021 no fim
+CalculadoraImposto.calcularImposto(produto);   // Computador: pula o if</code></pre>
+      <ul>
+        <li><strong>Novo requisito:</strong> imprimir a data de validade quando o produto for tomate. Mas dentro do método a variável é <code>Produto</code>, que não tem esse botão. É preciso fazer o caminho inverso: <strong>narrowing cast</strong> (<em>downcasting</em>), do genérico para o específico.</li>
+        <li><code>Tomate t = produto;</code> <strong>não compila</strong>: o Java sabe que é um produto, mas não qual. Como no primitivo (<code>int i = (int) umLong;</code>), é preciso o <strong>cast explícito</strong> <code>(Tomate) produto</code>, que diz "confia em mim".</li>
+        <li>Se o objeto for um <code>Computador</code>, o cast compila mas explode na execução com <strong><code>ClassCastException</code></strong>, porque Computador e Tomate são irmãos. Cast só funciona na mesma linha de herança (pai → filho → neto).</li>
+        <li><strong><code>instanceof</code></strong> é a palavra reservada que verifica se o objeto referenciado <strong>é uma instância</strong> daquele tipo. Sempre confira antes de fazer o downcast.</li>
+        <li>Em uma linha só: <code>((Tomate) produto).getDataValidade()</code>. Os parênteses externos fazem o cast acontecer antes do <code>.</code>.</li>
+        <li>No debug (breakpoint + F9), dá para ver que na segunda chamada o objeto é um <code>Computador</code> e o <code>if</code> é pulado.</li>
+      </ul>
+
+      <h3>94 · Programação orientada a interface</h3>
+<pre><code>// repositorio/Repositorio.java
+public interface Repositorio {
+    public abstract void salvar();
+}
+// servico: RepositorioBancoDeDados, RepositorioArquivo, RepositorioMemoria implementam salvar()
+
+Repositorio repositorio = new RepositorioMemoria();   // troque só o new
+repositorio.salvar();                                // Salvando em memória
+
+List&lt;String&gt; list = new LinkedList&lt;&gt;();                // ou new ArrayList&lt;&gt;()
+list.add("Goku");
+list.add("Vegeta");
+list.add("Kuririn");
+System.out.println(list);                            // [Goku, Vegeta, Kuririn]</code></pre>
+      <ul>
+        <li>No Spring e em outros frameworks, a camada que busca e grava os dados (banco, arquivo...) se chama <strong>repositório</strong>.</li>
+        <li>Com <code>RepositorioBancoDeDados repositorio = ...</code>, trocar para arquivo obriga a mudar o <strong>tipo da variável</strong> também, porque as classes não estão na mesma linha de herança. Com o tipo <strong>genérico</strong> <code>Repositorio</code>, <strong>só o objeto muda</strong> e o resto do código fica intacto.</li>
+        <li>A API de coleções usa exatamente isso: <code>List</code> é uma interface, e <code>ArrayList</code> e <code>LinkedList</code> são implementações com desempenho diferente para leitura e inserção. Com <code>List&lt;String&gt; list</code>, trocar a implementação não quebra nada. Coleções vêm em detalhe mais à frente.</li>
+        <li>Programar para a interface aumenta a <strong>manutenibilidade</strong> e facilita expandir. O William pede: "se não entendeu, assista às últimas aulas de novo até fixar", porque o conceito será usado o tempo todo.</li>
+      </ul>
+
+      <h3>Atenção</h3>
+      <ul>
+        <li><strong>A variável limita, o objeto executa.</strong> O compilador olha o tipo da <em>variável</em> para permitir a chamada. Na execução, roda o método do <em>objeto</em>.</li>
+        <li><strong>Upcast é automático, downcast é explícito.</strong> Downcast errado compila e dá <code>ClassCastException</code> em tempo de execução.</li>
+        <li><strong>Cast entre irmãos</strong> (<code>(Tomate)</code> num <code>Computador</code>) nunca funciona. Entre tipos sem nenhuma relação de herança, nem compila.</li>
+        <li><strong>Extra: <code>instanceof</code> com <code>null</code></strong> dá <code>false</code>, sem exceção.</li>
+        <li><strong>Extra: pattern matching (Java 16+):</strong> <code>if (produto instanceof Tomate t) { t.getDataValidade(); }</code> já testa e faz o cast numa tacada.</li>
+        <li><strong>Extra: polimorfismo vale para métodos sobrescritos, não para atributos nem métodos <code>static</code>.</strong> <code>IMPOSTO_POR_CENTO</code> e os <code>static</code> são resolvidos pelo tipo da variável ou da classe (como o <code>retrieveMaxDataSize</code> das aulas 87–89).</li>
+        <li><strong>Extra: usar muito <code>instanceof</code></strong> costuma indicar que o comportamento deveria estar num método sobrescrito. Prefira que cada objeto saiba se imprimir.</li>
+      </ul>
+
+      <h3>Paralelo com PHP</h3>
+      <ul>
+        <li><strong>O parâmetro polimórfico é igual:</strong> <code>public static function calcularImposto(Produto $produto)</code> com type hint aceita qualquer subclasse ou implementação.</li>
+        <li><strong>O PHP não tem cast de objeto:</strong> como a checagem é em tempo de execução, <code>$produto-&gt;getDataValidade()</code> "funciona" se o objeto tiver o método e dá <code>Error: Call to undefined method</code> se não tiver. O Java barra na compilação e exige o cast. No PHP, o <code>instanceof</code> faz o papel de proteção (e de "cast" para o PHPStan/Psalm e para a IDE).</li>
+        <li><strong><code>instanceof</code> existe igual:</strong> <code>if ($produto instanceof Tomate)</code>.</li>
+        <li><strong>Repositório no Laravel:</strong> <code>interface Repositorio</code> + <code>$this-&gt;app-&gt;bind(Repositorio::class, RepositorioBancoDeDados::class)</code>. Quem recebe <code>Repositorio $repo</code> no construtor não sabe qual implementação veio. Trocar o bind é o "trocar só o <code>new</code>" da aula 94. É o mesmo com <code>Storage</code> (disco local ou S3) e <code>Cache</code> (file, redis).</li>
+        <li><strong><code>List</code>:</strong> no PHP, o array faz tudo. Em Java você escolhe a estrutura (<code>ArrayList</code>, <code>LinkedList</code>) atrás de uma interface. A <code>Collection</code> do Laravel lembra a API, mas é uma classe só.</li>
+      </ul>
+    </section>
+
+    <section id="flashcards">
+      <h2>Flashcards</h2>
+      <p style="color:var(--muted);margin-top:-6px">Toque no cartão para virar.</p>
+      <div id="flashcards-app"></div>
+    </section>
+
+    <section id="quiz">
+      <h2>Quiz</h2>
+      <div id="quiz-app"></div>
+    </section>
+
+    <section id="estudo">
+      <h2>Material de estudo</h2>
+
+      <h3>Mapa mental</h3>
+<pre><code>Polimorfismo (múltiplas formas)
+├── Base (90)
+│   ├── Taxavel (interface) ← Produto (abstrata) ← Computador 21% / Tomate 6% / Televisao 21%
+│   └── camadas: dominio · servico · test
+├── Funcionamento (91)
+│   ├── Produto p = new Computador(...)
+│   ├── controle remoto (variável) → TV (objeto) executa
+│   ├── só os "botões" da variável estão disponíveis
+│   └── widening cast / upcasting: automático
+├── Parâmetros polimórficos (92)
+│   ├── calcularImposto(Produto produto): um método para todos
+│   ├── nova subclasse → zero mudança na calculadora
+│   └── \" = escape de aspas
+├── Cast e instanceof (93)
+│   ├── narrowing cast / downcasting: (Tomate) produto
+│   ├── errado → ClassCastException (irmãos)
+│   ├── if (produto instanceof Tomate)
+│   └── ((Tomate) produto).getDataValidade()
+└── Orientado a interface (94)
+    ├── Repositorio r = new RepositorioMemoria()
+    ├── trocar implementação = trocar só o new
+    └── List&lt;String&gt; = new ArrayList / new LinkedList</code></pre>
+
+      <h3>Prática no seu WSL (25 minutos)</h3>
+<pre><code>cd ~/java-lab
+N=src/academy/devdojo/maratonajava/javacore/Npolimorfismo
+mkdir -p $N/dominio $N/servico $N/test
+
+cat > $N/dominio/Taxavel.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Npolimorfismo.dominio;
+
+public interface Taxavel {
+    double calcularImposto();
+}
+EOF
+
+cat > $N/dominio/Produto.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Npolimorfismo.dominio;
+
+public abstract class Produto implements Taxavel {
+    protected String nome;
+    protected double valor;
+
+    public Produto(String nome, double valor) {
+        this.nome = nome;
+        this.valor = valor;
+    }
+
+    public String getNome() { return nome; }
+    public double getValor() { return valor; }
+}
+EOF
+
+cat > $N/dominio/Computador.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Npolimorfismo.dominio;
+
+public class Computador extends Produto {
+    public static final double IMPOSTO_POR_CENTO = 0.21;
+
+    public Computador(String nome, double valor) { super(nome, valor); }
+
+    @Override
+    public double calcularImposto() {
+        System.out.println("Calculando imposto do Computador");
+        return this.valor * IMPOSTO_POR_CENTO;
+    }
+}
+EOF
+
+cat > $N/dominio/Tomate.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Npolimorfismo.dominio;
+
+public class Tomate extends Produto {
+    public static final double IMPOSTO_POR_CENTO = 0.06;
+    private String dataValidade;
+
+    public Tomate(String nome, double valor) { super(nome, valor); }
+
+    @Override
+    public double calcularImposto() {
+        System.out.println("Calculando imposto do tomate");
+        return this.valor * IMPOSTO_POR_CENTO;
+    }
+
+    public String getDataValidade() { return dataValidade; }
+    public void setDataValidade(String dataValidade) { this.dataValidade = dataValidade; }
+}
+EOF
+
+cat > $N/servico/CalculadoraImposto.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Npolimorfismo.servico;
+
+import academy.devdojo.maratonajava.javacore.Npolimorfismo.dominio.Produto;
+import academy.devdojo.maratonajava.javacore.Npolimorfismo.dominio.Tomate;
+
+public class CalculadoraImposto {
+    public static void calcularImposto(Produto produto) {
+        System.out.println("Relatório de imposto");
+        double imposto = produto.calcularImposto();
+        System.out.println("Produto: " + produto.getNome());
+        System.out.println("Preço: " + produto.getValor());
+        System.out.println("Imposto a ser pago: " + imposto);
+        if (produto instanceof Tomate) {
+            System.out.println(((Tomate) produto).getDataValidade());
+        }
+    }
+}
+EOF
+
+cat > $N/test/ProdutoTest03.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.Npolimorfismo.test;
+
+import academy.devdojo.maratonajava.javacore.Npolimorfismo.dominio.Computador;
+import academy.devdojo.maratonajava.javacore.Npolimorfismo.dominio.Produto;
+import academy.devdojo.maratonajava.javacore.Npolimorfismo.dominio.Tomate;
+import academy.devdojo.maratonajava.javacore.Npolimorfismo.servico.CalculadoraImposto;
+
+public class ProdutoTest03 {
+    public static void main(String[] args) {
+        Produto produto = new Computador("Ryzen 9", 3000);
+
+        Tomate tomate = new Tomate("Americano", 20);
+        tomate.setDataValidade("11/12/2021");
+
+        CalculadoraImposto.calcularImposto(tomate);    // ?
+        System.out.println("-----------------");
+        CalculadoraImposto.calcularImposto(produto);   // ?
+    }
+}
+EOF
+
+javac -d out $(find src -name '*.java')
+java -cp out academy.devdojo.maratonajava.javacore.Npolimorfismo.test.ProdutoTest03</code></pre>
+      <details>
+        <summary>Ver a saída esperada</summary>
+<pre><code>Relatório de imposto
+Calculando imposto do tomate
+Produto: Americano
+Preço: 20.0
+Imposto a ser pago: 1.2
+11/12/2021
+-----------------
+Relatório de imposto
+Calculando imposto do Computador
+Produto: Ryzen 9
+Preço: 3000.0
+Imposto a ser pago: 630.0</code></pre>
+      </details>
+      <p><strong>Exercícios:</strong></p>
+      <ol>
+        <li>Crie <code>Televisao</code> (21%, "Calculando imposto da Televisão") e passe <code>new Televisao("Samsung 50\" ", 5000)</code> para a calculadora sem alterá-la. Imposto esperado: 1050.0.</li>
+        <li>Tire o <code>if (produto instanceof Tomate)</code>, deixe só o cast e rode o <code>ProdutoTest03</code>. Leia a <code>ClassCastException</code> e explique a linha.</li>
+        <li>Em um teste, escreva <code>Produto p = new Tomate("Italiano", 8); p.setDataValidade("01/01/2030");</code>. Por que não compila? Corrija de duas formas: mudando o tipo da variável e com cast.</li>
+        <li>Monte o <code>Repositorio</code> da aula 94 (pacote <code>repositorio</code> para a interface, <code>servico</code> para as três implementações) e um <code>RepositorioTeste</code>. Troque a implementação mudando só o <code>new</code>.</li>
+        <li>No <code>RepositorioTeste</code>, crie <code>List&lt;String&gt; list = new ArrayList&lt;&gt;();</code> com Goku, Vegeta e Kuririn, imprima e troque para <code>LinkedList</code>. Precisa importar <code>java.util.*</code>.</li>
+      </ol>
+
+      <h3>Glossário</h3>
+      <ul>
+        <li><strong>Polimorfismo</strong>: um tipo genérico (superclasse/interface) referenciando objetos de tipos específicos, e cada objeto executando a sua versão do método.</li>
+        <li><strong>Variável de referência</strong>: o "controle remoto"; o tipo dela define os métodos que podem ser chamados.</li>
+        <li><strong>Widening cast / upcasting</strong>: subclasse para superclasse; automático.</li>
+        <li><strong>Narrowing cast / downcasting</strong>: superclasse para subclasse; explícito, <code>(Tomate) produto</code>.</li>
+        <li><strong><code>instanceof</code></strong>: operador que testa se um objeto é instância de um tipo.</li>
+        <li><strong><code>ClassCastException</code></strong>: erro em tempo de execução ao fazer um cast para um tipo que o objeto não é.</li>
+        <li><strong>Parâmetro polimórfico</strong>: parâmetro de tipo genérico que aceita qualquer subtipo.</li>
+        <li><strong>Repositório</strong>: camada responsável por salvar e buscar dados (banco, arquivo, memória).</li>
+        <li><strong>Caractere de escape</strong>: <code>\</code> antes de um caractere especial dentro da String, como <code>\"</code>.</li>
+      </ul>
+
+      <h3>Revisão espaçada</h3>
+      <ul class="revisao">
+        <li><span class="dia">Dia 1</span><span>Todos os flashcards + a prática com previsões + desenhar o controle remoto e a TV.</span></li>
+        <li><span class="dia">Dia 3</span><span>Quiz + exercícios 1 a 3.</span></li>
+        <li><span class="dia">Dia 7</span><span>Exercícios 4 e 5 + explicar em voz alta "a variável limita, o objeto executa".</span></li>
+        <li><span class="dia">Dia 14</span><span>Flashcards que errou + questões discursivas.</span></li>
+      </ul>
+
+      <h3>Para aprofundar</h3>
+      <ul>
+        <li>O que é <em>dynamic dispatch</em> (ligação tardia) e como a JVM escolhe o método em tempo de execução?</li>
+        <li>Sobrecarga (aulas 54–57) é chamada de "polimorfismo estático". Qual a diferença para a sobrescrita?</li>
+        <li>O que é o Princípio da Substituição de Liskov (o "L" do SOLID) e como ele se relaciona com a aula 92?</li>
+        <li>Como o Spring injeta a implementação de uma interface (injeção de dependência), e por que isso é a aula 94 em escala?</li>
+        <li>Quando usar <code>ArrayList</code> e quando usar <code>LinkedList</code>?</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    window.AULA = {
+      flashcards: [
+        ["O que significa polimorfismo?", "Múltiplas formas: uma variável de tipo genérico referenciando objetos de tipos específicos"],
+        ["Polimorfismo funciona entre quaisquer classes?", "Não: só na mesma linha de herança (ou interface implementada)"],
+        ["Na analogia do William, o que é o controle remoto e o que é a TV?", "Controle = variável de referência; TV = objeto (quem executa)"],
+        ["Produto p = new Computador(...); p.calcularImposto() executa qual versão?", "A do Computador: quem executa é sempre o objeto"],
+        ["Por que p.getDataValidade() não compila se p é Produto e o objeto é Tomate?", "O tipo da variável (Produto) não tem esse método: o controle não tem o botão"],
+        ["O que decide quais métodos podem ser chamados?", "O tipo da variável de referência"],
+        ["O que decide qual implementação roda?", "O objeto"],
+        ["O que é widening cast (upcasting)?", "Guardar um objeto específico numa referência genérica; é automático"],
+        ["O que é narrowing cast (downcasting)?", "Voltar de genérico para específico: (Tomate) produto; precisa ser explícito"],
+        ["O que acontece com (Tomate) produto se o objeto é um Computador?", "ClassCastException em tempo de execução"],
+        ["Para que serve instanceof?", "Verificar se o objeto é uma instância de um tipo antes do cast"],
+        ["Como fazer cast e chamar o método em uma linha?", "((Tomate) produto).getDataValidade()"],
+        ["O que é um parâmetro polimórfico?", "Parâmetro de tipo genérico (Produto produto) que aceita qualquer subtipo"],
+        ["Vantagem de calcularImposto(Produto) sobre um método por tipo?", "Um método só, desacoplado; uma nova subclasse não exige mudar a calculadora"],
+        ["Como colocar aspas duplas dentro de uma String?", "Com o caractere de escape: \\\""],
+        ["Qual o imposto do Computador e do Tomate na aula?", "Computador 21% (NUC10i7 11000 → 2310.0), Tomate 6% (10 → 0.6)"],
+        ["Por que os métodos da CalculadoraImposto são static?", "Não usam atributos de instância; dispensa criar o objeto"],
+        ["Quais camadas o exemplo usa?", "dominio (modelo), servico (regra de negócio), test (visualização)"],
+        ["O que é programação orientada a interface?", "Usar a interface como tipo da variável (Repositorio r = new RepositorioMemoria())"],
+        ["Qual a vantagem de Repositorio r = new RepositorioArquivo()?", "Trocar a implementação é trocar só o new; o resto do código não muda"],
+        ["O que é um repositório (no Spring e em outros)?", "A camada que salva e busca dados (banco, arquivo, memória)"],
+        ["List, ArrayList e LinkedList: quem é interface?", "List; ArrayList e LinkedList são implementações"],
+        ["instanceof com null dá o quê?", "false (extra)"],
+        ["O que é o pattern matching do instanceof?", "if (produto instanceof Tomate t): testa e faz o cast (Java 16+, extra)"],
+        ["Atributos e métodos static são polimórficos?", "Não: são resolvidos pelo tipo, não pelo objeto (extra)"]
+      ],
+      quiz: [
+        { tipo: 'vf', pergunta: 'Produto produto = new Computador("Ryzen 9", 3000); compila, sendo Produto a superclasse abstrata de Computador.', correta: 0,
+          explicacao: 'Verdadeiro. Referência genérica para objeto específico (upcasting) é automática. Só não dá para fazer new Produto().' },
+        { tipo: 'multipla', pergunta: 'Na analogia do controle remoto, quem executa a ação quando você aperta o botão?', opcoes: ['O controle (variável de referência)', 'A TV (objeto)', 'O compilador', 'A classe da variável'], correta: 1,
+          explicacao: 'A variável só manda o sinal. Quem executa é sempre o objeto: produto.calcularImposto() roda a versão do Computador.' },
+        { tipo: 'multipla', pergunta: 'Produto produto2 = new Tomate("Americano", 20); Qual linha NÃO compila?', opcoes: ['produto2.getNome();', 'produto2.getValor();', 'produto2.calcularImposto();', 'produto2.getDataValidade();'], correta: 3,
+          explicacao: 'getDataValidade existe só em Tomate. O tipo da variável (Produto) não tem esse botão.' },
+        { tipo: 'multipla', pergunta: 'O que imprime System.out.println(produto.calcularImposto()) com Produto produto = new Computador("Ryzen 9", 3000) e imposto de 21%?', opcoes: ['630.0', '"Calculando imposto do Computador" e depois 630.0', '"Calculando imposto do Computador" e depois 3630.0', 'Não compila: Produto é abstrata'], correta: 1,
+          explicacao: 'O método do Computador imprime a mensagem e retorna 3000 * 0.21 = 630.0, que o println mostra.' },
+        { tipo: 'vf', pergunta: 'Para a calculadora aceitar uma nova Televisao extends Produto, é preciso criar um método calcularImpostoTelevisao.', correta: 1,
+          explicacao: 'Falso. Com o parâmetro polimórfico calcularImposto(Produto produto), qualquer subclasse de Produto já é aceita.' },
+        { tipo: 'multipla', pergunta: 'Qual é a forma segura de ler a data de validade dentro de calcularImposto(Produto produto)?', opcoes: ['Tomate t = produto; t.getDataValidade();', 'produto.getDataValidade();', 'if (produto instanceof Tomate) { ((Tomate) produto).getDataValidade(); }', '((Tomate) produto).getDataValidade(); sem verificação'], correta: 2,
+          explicacao: 'A 1ª e a 2ª não compilam. A 4ª compila, mas lança ClassCastException se o produto for um Computador. instanceof garante o tipo antes do cast.' },
+        { tipo: 'multipla', pergunta: 'Produto p = new Computador("X", 100); Tomate t = (Tomate) p; O que acontece?', opcoes: ['Não compila', 'Compila e t vira null', 'Compila e lança ClassCastException na execução', 'Compila e t passa a ser um Tomate com os dados do Computador'], correta: 2,
+          explicacao: 'O compilador aceita o cast explícito (um Produto pode ser um Tomate). Na execução, o objeto é um Computador, irmão de Tomate, e o cast falha.' },
+        { tipo: 'multipla', pergunta: 'Qual declaração segue a programação orientada a interface da aula 94?', opcoes: ['RepositorioBancoDeDados r = new RepositorioBancoDeDados();', 'Repositorio r = new RepositorioBancoDeDados();', 'Repositorio r = new Repositorio();', 'Object r = new RepositorioBancoDeDados(); r.salvar();'], correta: 1,
+          explicacao: 'O tipo da variável é a interface, então trocar para RepositorioArquivo muda só o new. Interface não se instancia, e Object não tem salvar().' },
+        { tipo: 'discursiva', pergunta: 'Explique polimorfismo com a analogia do controle remoto da Samsung 2019 e da TV 2020, e ligue cada parte ao código Produto p = new Tomate(...).',
+          explicacao: 'O controle é a variável de referência (Produto p) e a TV é o objeto (new Tomate). O controle 2019 funciona na TV 2020 porque ela é uma extensão (subclasse), assim como uma variável Produto pode apontar para um Tomate. Os botões que o controle tem (Netflix, Prime = getNome, getValor, calcularImposto) mandam um sinal, e quem executa é a TV (o objeto Tomate roda o seu calcularImposto). O botão que só a TV nova tem (YouTube = getDataValidade) não existe no controle, então não dá para chamar por p. Para isso é preciso um controle novo: o cast (Tomate) p, de preferência depois de instanceof.' },
+        { tipo: 'discursiva', pergunta: 'Compare a aula 94 com o que você faz no Laravel com interfaces e o service container. O que o PHP faz diferente do Java no downcast da aula 93?',
+          explicacao: 'No Laravel: interface Repositorio, implementações RepositorioBancoDeDados/Arquivo/Memoria e $this->app->bind(Repositorio::class, RepositorioBancoDeDados::class). Quem pede Repositorio no construtor recebe a implementação, e trocar o bind equivale a trocar o new da aula 94 (programar para a interface). No downcast: PHP não tem cast de objeto nem checagem em compilação. $produto->getDataValidade() é chamado direto e só falha na execução (Call to undefined method) se o objeto não tiver o método. Em Java, o compilador barra a chamada pela variável Produto e exige (Tomate) produto, e o instanceof evita a ClassCastException. No PHP, o instanceof protege a chamada e ajuda o PHPStan e a IDE.' }
+      ]
+    };
+  </script>
+  <script src="../js/app.js"></script>
+</body>
+</html>
