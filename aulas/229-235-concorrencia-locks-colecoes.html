@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>229–235 · Concorrência parte 1</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="topo">
+      <a class="voltar" href="../index.html">← Todas as aulas</a>
+      <h1>229–235 · Concorrência: atomics, locks e coleções concorrentes</h1>
+      <p>AtomicInteger, Lock e ReentrantLock, Condition, ReentrantReadWriteLock, CopyOnWriteArrayList, BlockingQueue e LinkedTransferQueue · <a href="https://www.youtube.com/playlist?list=PL62G310vn6nFIsOCC0H-C2infYgwm8SWW" target="_blank" rel="noopener">playlist</a></p>
+    </header>
+
+    <nav class="abas">
+      <a href="#resumo">Resumo</a>
+      <a href="#flashcards">Flashcards</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#estudo">Material de estudo</a>
+    </nav>
+
+    <p class="aviso">Junta as aulas 229 a 232 (AtomicInteger, Lock/ReentrantLock, Conditions, ReentrantReadWriteLock) e 233 a 235 (CopyOnWriteArrayList, ArrayBlockingQueue, LinkedTransferQueue). Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. O código (pacote <code>javacore.ZZGconcorrencia</code>: <code>AtomicIntegerTest01</code>, <code>ReentrantLockTest01</code>, <code>Members</code> com <code>Condition</code>, <code>ReentrantReadWriteLockTest01</code>, <code>CopyOnWriteTest01</code>, <code>BlockingQueueTest01</code>, <code>LinkedTransferQueueTest01</code>) foi conferido no <a href="https://github.com/devdojobr/maratona-java-virado-no-jiraya" target="_blank" rel="noopener">repositório do professor</a>. Os itens marcados como "extra" não estão nos vídeos.</p>
+
+    <section id="resumo">
+      <h2>Resumo</h2>
+      <p>Nas aulas de threads, tudo foi feito "no braço" com <code>synchronized</code>, <code>wait</code> e <code>notify</code>, o jeito "mais pedreiro", nas palavras do professor. O pacote <strong><code>java.util.concurrent</code></strong> é uma camada de abstração por cima disso: contadores atômicos, locks com mais recursos e coleções já feitas para várias threads. Ele avisa que o pacote <strong>não dispensa</strong> entender threads: é preciso saber o que é sincronismo, lock, <code>wait</code>/<code>notifyAll</code>, para usar bem o que vem pronto.</p>
+<pre><code>AtomicInteger c = new AtomicInteger(); c.incrementAndGet();   // 229 · contador atômico sem lock
+lock.lock(); try { ... } finally { lock.unlock(); }          // 230 · Lock explícito
+condition.await(); condition.signalAll();                     // 231 · wait/notifyAll do Lock
+rwl.readLock() · rwl.writeLock()                              // 232 · muitos leem, um escreve
+new CopyOnWriteArrayList&lt;&gt;()                                 // 233 · escrita copia a lista
+bq.put(x); bq.take();                                         // 234 · fila que bloqueia
+tq.transfer(x);                                               // 235 · entrega em mãos</code></pre>
+
+      <h3>229 · AtomicInteger</h3>
+      <p>A situação de um jogo: uma thread cria monstros no mapa e a thread do jogador os mata, e as duas mexem no mesmo contador. Para simplificar: duas threads incrementam o mesmo contador 10 000 vezes cada. O esperado seria 20 000.</p>
+<pre><code>class Counter {
+    private int count;
+    private AtomicInteger atomicInteger = new AtomicInteger();
+
+    void increment() {
+        count++;                              // NÃO é atômico
+        atomicInteger.incrementAndGet();      // atômico
+    }
+    public int getCount() { return count; }
+    public AtomicInteger getAtomicInteger() { return atomicInteger; }
+}
+
+Counter counter = new Counter();
+Runnable r = () -&gt; {
+    for (int i = 0; i &lt; 10000; i++) counter.increment();
+};
+Thread t1 = new Thread(r);
+Thread t2 = new Thread(r);
+t1.start(); t2.start();
+t1.join(); t2.join();                         // a main espera as duas
+System.out.println(counter.getCount());       // algo como 13587: varia e quase nunca dá 20000
+System.out.println(counter.getAtomicInteger()); // 20000, sempre</code></pre>
+      <ul>
+        <li><strong><code>count++</code> parece uma instrução, mas não é</strong>: na linguagem de máquina vira ler o valor, somar 1 e gravar. Duas threads leem o mesmo valor, somam e gravam, e um incremento se perde.</li>
+        <li>Uma solução é o <code>synchronized</code> no método, que funciona mas custa desempenho (uma thread por vez).</li>
+        <li><strong><code>AtomicInteger</code></strong> faz a conta de forma <strong>atômica sem lock</strong>, usando <strong>CAS (<em>compare-and-swap</em>)</strong>: lê o valor, calcula o novo e só grava se o valor na memória ainda for o que foi lido. Se outra thread mudou no meio, tenta de novo. "É bem mais complicado do que eu tô explicando", mas o resultado é sempre correto.</li>
+        <li><code>incrementAndGet()</code> ≈ <code>++x</code> (incrementa e devolve o novo); <code>getAndIncrement()</code> ≈ <code>x++</code> (devolve o antigo); <code>get()</code> lê.</li>
+        <li>Existe a família toda: <code>AtomicLong</code>, <code>AtomicBoolean</code>, <code>AtomicIntegerArray</code>, <code>AtomicLongArray</code>, <code>AtomicReference</code>... (O professor cita um "AtomicDouble", que não existe no JDK.)</li>
+      </ul>
+
+      <h3>230 · Lock e ReentrantLock</h3>
+      <p><code>Lock</code> (interface) e <code>ReentrantLock</code> (implementação) fazem o que o <code>synchronized</code> faz, mas com o lock <strong>explícito</strong>: você pega e você solta.</p>
+<pre><code>private Lock lock = new ReentrantLock(true);   // true = "fair"
+void increment() {
+    lock.lock();
+    try {
+        count++;
+        atomicInteger.incrementAndGet();
+    } finally {
+        lock.unlock();                         // SEMPRE no finally
+    }
+}</code></pre>
+      <p><strong>Vantagens sobre o <code>synchronized</code></strong>, segundo a aula:</p>
+      <ul>
+        <li><strong><em>Fairness</em></strong> (<code>new ReentrantLock(true)</code>): ao liberar, tenta dar o lock à thread que <strong>espera há mais tempo</strong>. Com <code>synchronized</code> não há isso. Não é garantido, mas tende a ser respeitado.</li>
+        <li><strong><code>tryLock()</code></strong> e <strong><code>tryLock(2, TimeUnit.SECONDS)</code></strong>: tenta pegar o lock (ou espera até um tempo) e, se não conseguir, <strong>segue a vida</strong> em vez de ficar bloqueada para sempre.</li>
+        <li>Dá para <strong>interromper</strong> uma thread que está esperando o lock (<code>lockInterruptibly()</code>).</li>
+      </ul>
+      <p><strong>Desvantagem</strong>: o código fica mais feio e a responsabilidade é sua. Se uma exceção acontecer entre <code>lock()</code> e <code>unlock()</code> sem <code>finally</code>, a thread fica com o lock para sempre e as outras travam. Por isso é sempre <code>lock()</code> + <code>try</code> + <code>finally { unlock() }</code>. A opinião do professor: se você não precisa de fairness, <code>tryLock</code> ou interrupção, <strong>use <code>synchronized</code></strong>. "Muita gente usa Lock porque parece avançado, mas desenvolvedores realmente avançados tentam manter o código o mais simples possível."</p>
+<pre><code>class Worker implements Runnable {
+    private String name;
+    private ReentrantLock lock;
+    public Worker(String name, ReentrantLock lock) { this.name = name; this.lock = lock; }
+
+    @Override
+    public void run() {
+        lock.lock();
+        try {
+            System.out.printf("Thread %s entrou em uma sessão crítica%n", name);
+            System.out.printf("%d Threads esperando na fila%n", lock.getQueueLength());
+            System.out.printf("Thread %s vai esperar 2s%n", name);
+            Thread.sleep(2000);
+            System.out.printf("Thread %s finalizou a espera%n", name);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
+            lock.unlock();
+        }
+    }
+}
+
+ReentrantLock lock = new ReentrantLock(true);
+new Thread(new Worker("A", lock)).start();
+// ... B, C, D, E, F, G
+// Thread A entrou em uma sessão crítica
+// 6 Threads esperando na fila
+// ... cada uma entra, espera 2 s e sai; a fila vai diminuindo</code></pre>
+      <ul>
+        <li><strong><code>printf</code></strong> aparece pela primeira vez no curso: <code>%s</code> é substituído por texto, <code>%d</code> por inteiro, <code>%f</code> por decimal e <code>%n</code> é a quebra de linha.</li>
+        <li><strong><code>getQueueLength()</code></strong> estima quantas threads esperam o lock; <strong><code>isHeldByCurrentThread()</code></strong> diz se a thread atual está segurando o lock (por isso ele troca a variável de <code>Lock</code> para <code>ReentrantLock</code>: esses métodos não estão na interface).</li>
+        <li>Sem fairness, a thread G costumava ser sempre a última; com fairness a ordem mudou, mas o professor reforça que não é garantido.</li>
+        <li><strong>"Reentrant"</strong> (extra): a mesma thread pode pegar o lock de novo sem travar em si mesma (e precisa soltar o mesmo número de vezes). O <code>synchronized</code> também é reentrante.</li>
+      </ul>
+
+      <h3>231 · Conditions</h3>
+      <p>Primeiro, uma pegadinha do <code>tryLock</code>: se a thread <strong>não conseguiu</strong> o lock e mesmo assim chama <code>unlock()</code> no <code>finally</code>, estoura <strong><code>IllegalMonitorStateException</code></strong> (não dá para soltar o que não se tem). A correção:</p>
+<pre><code>try {
+    lock.tryLock(2, TimeUnit.SECONDS);
+    ...
+} finally {
+    if (lock.isHeldByCurrentThread()) lock.unlock();
+}</code></pre>
+      <p>Depois, o equivalente a <code>wait</code>/<code>notify</code> para quem usa <code>Lock</code>: a <strong><code>Condition</code></strong>, obtida do próprio lock. O sistema de e-mails da aula 228 foi reescrito com ela:</p>
+<pre><code>public class Members {
+    private final Queue&lt;String&gt; emails = new ArrayBlockingQueue&lt;&gt;(10);
+    private final ReentrantLock lock = new ReentrantLock();
+    private final Condition condition = lock.newCondition();
+    private boolean open = true;
+
+    public void addMemberEmail(String email) {
+        lock.lock();
+        try {
+            System.out.println(Thread.currentThread().getName() + " Adicionou email na lista");
+            this.emails.add(email);
+            condition.signalAll();                 // era emails.notifyAll()
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public String retrieveEmail() throws InterruptedException {
+        lock.lock();
+        try {
+            while (this.emails.size() == 0) {
+                if (!open) return null;
+                condition.await();                 // era emails.wait()
+            }
+            return this.emails.poll();
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public void close() {
+        open = false;
+        lock.lock();
+        try {
+            System.out.println(Thread.currentThread().getName() + " Notificando todo mundo que não estamos mais pegando emails");
+            condition.signalAll();                 // acorda quem espera para ver que fechou
+        } finally {
+            lock.unlock();
+        }
+    }
+}</code></pre>
+      <ul>
+        <li><strong>Troca direta</strong>: <code>synchronized (obj)</code> → <code>lock.lock()</code>/<code>unlock()</code>; <code>obj.wait()</code> → <code>condition.await()</code>; <code>obj.notify()</code> → <code>condition.signal()</code>; <code>obj.notifyAll()</code> → <code>condition.signalAll()</code>.</li>
+        <li>A condição é criada com <code>lock.newCondition()</code>. Um mesmo lock pode ter <strong>várias</strong> condições (ex.: "fila não vazia" e "fila não cheia"), o que o <code>wait</code>/<code>notify</code> de um objeto não permite.</li>
+        <li>O comportamento ficou igual ao da aula 228, mas o código ficou "mais nervoso" (um <code>try/finally</code> em cada método). A opinião do professor continua: meça, e na dúvida, fique com o código mais limpo (<code>synchronized</code>).</li>
+        <li><strong>A correção da aula 228</strong>: durante a gravação o programa não terminava ao fechar a caixinha. Ele percebeu que faltava avisar todo mundo no <code>close()</code>, acrescentou o <code>signalAll()</code> aqui e <strong>também corrigiu o <code>close()</code> antigo</strong> do pacote de threads, com <code>this.emails.notifyAll()</code>. "Um pedacinho que você esquece e o programa fica travado."</li>
+      </ul>
+
+      <h3>232 · ReentrantReadWriteLock</h3>
+      <p>Um lock com <strong>dois modos</strong>: leitura e escrita. <strong>Vários</strong> podem ler ao mesmo tempo, mas enquanto alguém escreve, <strong>ninguém</strong> lê nem escreve, para não ler um valor pela metade.</p>
+<pre><code>class MapReadWrite {
+    private final Map&lt;String, String&gt; map = new LinkedHashMap&lt;&gt;();
+    private final ReentrantReadWriteLock rwl;
+    public MapReadWrite(ReentrantReadWriteLock rwl) { this.rwl = rwl; }
+
+    public void put(String key, String value) {
+        rwl.writeLock().lock();                    // exclusivo
+        try {
+            if (rwl.isWriteLocked()) {
+                System.out.printf("%s obteve o WRITE lock%n", Thread.currentThread().getName());
+            }
+            map.put(key, value);
+            Thread.sleep(500);                     // simula processamento
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
+            rwl.writeLock().unlock();
+        }
+    }
+
+    public Set&lt;String&gt; allKeys() {
+        rwl.readLock().lock();                     // compartilhado
+        try {
+            return map.keySet();
+        } finally {
+            rwl.readLock().unlock();
+        }
+    }
+}
+
+Runnable writer = () -&gt; {
+    for (int i = 0; i &lt; 20; i++) mapReadWrite.put(String.valueOf(i), String.valueOf(i));
+};
+Runnable reader = () -&gt; {
+    if (rwl.isWriteLocked()) System.out.println("WRITE LOCKED!");
+    rwl.readLock().lock();
+    System.out.println("FINALLY I GOT THE DAMN LOCK");
+    try {
+        System.out.println(Thread.currentThread().getName() + " " + mapReadWrite.allKeys());
+    } finally {
+        rwl.readLock().unlock();
+    }
+};
+// t1 = writer, t2 e t3 = reader</code></pre>
+      <ul>
+        <li>Na execução, a escritora pega o write lock, as leitoras veem "WRITE LOCKED!" e esperam. Quando a escrita termina, <strong>as duas leitoras pegam o read lock juntas</strong> e imprimem as chaves 0 a 19.</li>
+        <li>O read lock é reentrante: a leitora pega no <code>reader</code> e de novo dentro do <code>allKeys()</code>, sem travar.</li>
+        <li><strong>Dependendo do scheduler, uma leitora pode pegar o read lock antes da escrita começar</strong> e imprimir o mapa vazio ou parcial. O professor mostra isso acontecendo, e conta que num teste com 100 mil valores "deu capim na palheta".</li>
+      </ul>
+
+      <h3>233 · CopyOnWriteArrayList</h3>
+      <p>Antes, uma explicação de <strong>imutabilidade</strong>, a forma preferida de compartilhar dados entre threads: uma classe <code>final</code>, com atributos <code>final</code>, só construtor e getters (sem setters). Para "mudar" um objeto imutável, você cria outro. Se ninguém pode alterar, várias threads podem ler à vontade.</p>
+      <p>A <strong><code>CopyOnWriteArrayList</code></strong> segue essa ideia: <strong>toda escrita</strong> (<code>add</code>, <code>remove</code>, <code>set</code>) <strong>copia o array inteiro</strong> e troca a referência. Quem estava lendo continua com a versão antiga, intacta. O custo é óbvio: escrever muito fica caro. É para listas <strong>muito lidas e pouco alteradas</strong>. (Também existe a <code>CopyOnWriteArraySet</code>.)</p>
+<pre><code>List&lt;Integer&gt; list = new CopyOnWriteArrayList&lt;&gt;();
+for (int i = 0; i &lt; 2000; i++) list.add(i);
+
+Runnable runnableIterator = () -&gt; {
+    Iterator&lt;Integer&gt; iterator = list.iterator();   // "foto" da lista neste momento
+    try {
+        TimeUnit.SECONDS.sleep(2);                  // outra forma de sleep
+        iterator.forEachRemaining(System.out::println); // imprime os 2000, mesmo após remoções
+    } catch (InterruptedException e) {
+        e.printStackTrace();
+    }
+};
+Runnable runnableRemover = () -&gt; {
+    for (int i = 0; i &lt; 500; i++) {
+        System.out.printf("%s removed %d%n", Thread.currentThread().getName(), i);
+    }
+};
+new Thread(runnableIterator).start();
+new Thread(runnableIterator).start();
+new Thread(runnableRemover).start();</code></pre>
+      <ul>
+        <li><strong>O iterador é um <em>snapshot</em></strong>: guarda o array do momento da criação. Enquanto as duas iteradoras dormem, a outra thread remove 500 elementos, e mesmo assim elas imprimem os 2000 valores originais, sem <code>ConcurrentModificationException</code>.</li>
+        <li>O iterador dela <strong>não aceita</strong> <code>remove()</code> (<code>UnsupportedOperationException</code>): ele é só leitura.</li>
+        <li><strong>A lista é thread safe, os objetos dentro dela não necessariamente</strong>: se ela guardar objetos mutáveis (um <code>Anime</code> com <code>setName</code>), threads diferentes ainda podem alterá-los. Inteiros são imutáveis, então no exemplo não há problema.</li>
+        <li><code>TimeUnit.SECONDS.sleep(2)</code> é o mesmo que <code>Thread.sleep(2000)</code>, mais legível.</li>
+        <li><strong>Correção: no repositório, a thread removedora só imprime "removed" e não chama <code>remove</code></strong>. Para ver o efeito, acrescente a remoção no <code>for</code>. <strong>Cuidado:</strong> <code>list.remove(i)</code> com <code>int</code> remove pela <strong>posição</strong>, e como os elementos "andam" a cada remoção, <code>remove(0)</code>, <code>remove(1)</code>, <code>remove(2)</code>... tiram 0, 2, 4, ... (os pares). Para remover os <strong>valores</strong> 0 a 499, use <code>list.remove(Integer.valueOf(i))</code>.</li>
+      </ul>
+
+      <h3>234 · ArrayBlockingQueue</h3>
+      <p>O pacote de coleções concorrentes tem várias classes feitas para threads, e a <strong><code>BlockingQueue</code></strong> é especial por dois motivos: pode ter <strong>capacidade limitada</strong> (<em>bounded</em>), e as operações <strong>bloqueiam a thread</strong> quando não dá para prosseguir.</p>
+<pre><code>BlockingQueue&lt;String&gt; bq = new ArrayBlockingQueue&lt;&gt;(1);   // capacidade 1
+bq.put("William");
+System.out.printf("%s added the value %s%n", Thread.currentThread().getName(), bq.peek());
+System.out.println("Trying to add another value");
+new Thread(new RemoveFromQueue(bq)).start();
+bq.put("Suane");                   // fila cheia: a main BLOQUEIA aqui...
+System.out.printf("%s added the value %s%n", Thread.currentThread().getName(), bq.peek());
+
+static class RemoveFromQueue implements Runnable {
+    private final BlockingQueue&lt;String&gt; bq;
+    public RemoveFromQueue(BlockingQueue&lt;String&gt; bq) { this.bq = bq; }
+    @Override
+    public void run() {
+        System.out.printf("%s going to sleep for 5s %n", Thread.currentThread().getName());
+        try {
+            TimeUnit.SECONDS.sleep(5);
+            System.out.printf("%s removing value from queue %s%n",
+                    Thread.currentThread().getName(), bq.take());   // ...até alguém tirar
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+}
+// main added the value William
+// Trying to add another value
+// Thread-0 going to sleep for 5s
+// (5 segundos)
+// Thread-0 removing value from queue William
+// main added the value Suane</code></pre>
+      <ul>
+        <li><strong><code>put(x)</code></strong>: insere; se a fila está <strong>cheia</strong>, bloqueia até abrir espaço.</li>
+        <li><strong><code>take()</code></strong>: tira e devolve o primeiro; se está <strong>vazia</strong>, bloqueia até alguém colocar.</li>
+        <li><strong><code>peek()</code></strong>: mostra o primeiro <strong>sem remover</strong> (ou <code>null</code> se vazia).</li>
+        <li>É exatamente o que o sistema de e-mails fazia na mão com <code>wait</code>/<code>notifyAll</code>: <code>put</code>/<code>take</code> já fazem a espera e o aviso por dentro.</li>
+      </ul>
+
+      <h3>235 · LinkedTransferQueue</h3>
+      <p>Introduzida no <strong>Java 7</strong>, junta as funcionalidades de três filas: <code>ConcurrentLinkedQueue</code> (fila concorrente sem bloqueio), <code>SynchronousQueue</code> (entrega direta a um consumidor) e <code>LinkedBlockingQueue</code> (fila que bloqueia). Ela implementa a interface <code>TransferQueue</code>. A dica do professor: em coleções concorrentes, prefira as mais novas, porque quem as escreveu levou em conta o que aprendeu com as anteriores.</p>
+<pre><code>TransferQueue&lt;Object&gt; tq = new LinkedTransferQueue&lt;&gt;();
+System.out.println(tq.add("william"));                          // true (ou IllegalStateException se sem espaço)
+System.out.println(tq.offer("william"));                        // true (ou false se sem espaço)
+System.out.println(tq.offer("william", 10, TimeUnit.SECONDS));  // true (espera até 10 s por espaço)
+tq.put("DevDojo");                                              // insere; bloquearia se cheia
+if (tq.hasWaitingConsumer()) {
+    tq.transfer("Devojo");                                      // bloqueia até um consumidor pegar
+}
+System.out.println(tq.tryTransfer("Academy"));                  // false: ninguém esperando
+System.out.println(tq.tryTransfer("Academy", 5, TimeUnit.SECONDS)); // false, depois de esperar 5 s
+System.out.println(tq.element());   // william (primeiro, sem remover; exceção se vazia)
+System.out.println(tq.peek());      // william (primeiro, sem remover; null se vazia)
+System.out.println(tq.poll());      // william (remove; null se vazia)
+System.out.println(tq.remove());    // william (remove; exceção se vazia)
+System.out.println(tq.take());      // william (remove; BLOQUEIA se vazia)
+System.out.println(tq.remainingCapacity()); // 2147483647 (Integer.MAX_VALUE: sem limite)</code></pre>
+      <ul>
+        <li><strong>Inserir</strong>: <code>add</code> (exceção se não couber), <code>offer</code> (<code>false</code> se não couber), <code>offer(x, tempo)</code> (espera um tempo), <code>put</code> (bloqueia). Esta fila é ilimitada, então todos sempre conseguem.</li>
+        <li><strong><code>transfer(x)</code></strong>: produtor/consumidor em mãos. Coloca e <strong>bloqueia até um consumidor receber</strong>. Sem ninguém consumindo, trava o programa (o professor mostrou isso). Por isso o <code>hasWaitingConsumer()</code> antes.</li>
+        <li><strong><code>tryTransfer(x)</code></strong>: entrega só se já houver um consumidor esperando; senão devolve <code>false</code> <strong>e não coloca na fila</strong>. Com tempo, espera até lá.</li>
+        <li><strong>Ler/remover</strong>: <code>element</code> e <code>peek</code> olham o primeiro (exceção × <code>null</code> se vazia); <code>remove</code> e <code>poll</code> tiram o primeiro (exceção × <code>null</code>); <code>take</code> tira ou espera.</li>
+        <li>Os quatro primeiros "william" vêm das três inserções: <code>poll</code>, <code>remove</code> e <code>take</code> tiram um cada (o <code>element</code> e o <code>peek</code> só olham). O <code>take</code> devolve o <strong>terceiro</strong> "william", não "DevDojo", que continua na fila.</li>
+      </ul>
+
+      <h3>Atenção</h3>
+      <ul>
+        <li><strong><code>count++</code> não é atômico</strong>: use <code>AtomicInteger</code> (ou <code>synchronized</code>/<code>Lock</code>).</li>
+        <li><strong><code>lock()</code> sempre com <code>try/finally { unlock() }</code></strong>. Esquecer o <code>unlock</code> trava as outras threads para sempre.</li>
+        <li><strong><code>unlock()</code> sem segurar o lock</strong> → <code>IllegalMonitorStateException</code>. Com <code>tryLock</code>, confira com <code>isHeldByCurrentThread()</code> (ou use o <code>boolean</code> que o <code>tryLock</code> devolve).</li>
+        <li><strong>Fairness e prioridade não são garantias</strong>: são tendências.</li>
+        <li><strong><code>await</code>/<code>signal</code> só com o lock na mão</strong>, como <code>wait</code>/<code>notify</code> só dentro de <code>synchronized</code>. E o <code>await</code> fica num <code>while</code>.</li>
+        <li><strong>Read lock é compartilhado, write lock é exclusivo.</strong></li>
+        <li><strong>Extra: <code>allKeys()</code> devolve <code>map.keySet()</code></strong>, uma <em>visão</em> ao vivo do mapa, e não uma cópia. Quem imprime a visão depois de soltar o lock pode ler enquanto a escritora altera (<code>ConcurrentModificationException</code>, o "capim na palheta" com 100 mil valores). Devolva uma cópia dentro do lock: <code>return new ArrayList&lt;&gt;(map.keySet());</code> (ou <code>Set.copyOf</code>).</li>
+        <li><strong>CopyOnWrite é caro para escrever</strong>: cada escrita copia tudo. Use em listas muito lidas e raramente alteradas (ex.: lista de <em>listeners</em>).</li>
+        <li><strong><code>transfer</code> sem consumidor bloqueia para sempre</strong>; <code>tryTransfer</code> devolve <code>false</code> e descarta o elemento.</li>
+        <li><strong>Pares de métodos das filas</strong>: exceção × valor especial × bloqueia × espera com tempo, ou seja <code>add</code>/<code>offer</code>/<code>put</code>/<code>offer(t)</code> e <code>remove</code>/<code>poll</code>/<code>take</code>/<code>poll(t)</code>. Para olhar sem remover: <code>element</code>/<code>peek</code>.</li>
+      </ul>
+
+      <h3>Paralelo com PHP</h3>
+      <ul>
+        <li><strong>AtomicInteger ≈ incremento atômico no banco/cache</strong>: <code>$post-&gt;increment('views')</code> gera <code>UPDATE ... SET views = views + 1</code>, atômico no banco. <code>Cache::increment('contador')</code> (Redis <code>INCR</code>) também. Fazer <code>$post-&gt;views++; $post-&gt;save();</code> em dois requests simultâneos perde incrementos, o <code>count++</code> da aula 229.</li>
+        <li><strong>Lock/tryLock ≈ <code>Cache::lock()</code></strong>: <code>$lock = Cache::lock('relatorio', 10); if ($lock-&gt;get()) { try { ... } finally { $lock-&gt;release(); } }</code> é o <code>tryLock()</code> + <code>finally unlock()</code>; <code>$lock-&gt;block(5, fn() =&gt; ...)</code> é o <code>tryLock(5, SECONDS)</code>. E o <code>release()</code> fica no <code>finally</code> pelo mesmo motivo.</li>
+        <li><strong>ReadWriteLock ≈ locks do banco</strong>: <code>-&gt;sharedLock()</code> (<code>LOCK IN SHARE MODE</code>/<code>FOR SHARE</code>: vários leem, ninguém altera) × <code>-&gt;lockForUpdate()</code> (<code>FOR UPDATE</code>: exclusivo). Mesma ideia: leitura compartilhada, escrita exclusiva.</li>
+        <li><strong>Copy-on-write é o jeito do PHP tratar arrays</strong>: <code>$b = $a;</code> não copia nada até alguém alterar um dos dois, e o <code>foreach ($a as $v)</code> percorre o array como estava no início, mesmo que você altere <code>$a</code> no meio. É o snapshot do iterador da aula 233, embutido na linguagem.</li>
+        <li><strong>BlockingQueue ≈ filas</strong>: o worker do Laravel (<code>queue:work</code>) com Redis usa <code>BLPOP</code>, um <code>take()</code> que bloqueia até chegar um job. O limite de capacidade e o <code>put</code> bloqueante não têm equivalente direto (em Laravel você controla com <em>rate limiting</em> ou <code>WithoutOverlapping</code>).</li>
+      </ul>
+    </section>
+
+    <section id="flashcards">
+      <h2>Flashcards</h2>
+      <p style="color:var(--muted);margin-top:-6px">Toque no cartão para virar.</p>
+      <div id="flashcards-app"></div>
+    </section>
+
+    <section id="quiz">
+      <h2>Quiz</h2>
+      <div id="quiz-app"></div>
+    </section>
+
+    <section id="estudo">
+      <h2>Material de estudo</h2>
+
+      <h3>Mapa mental</h3>
+<pre><code>java.util.concurrent (229–235)
+├── Atômicos (229): AtomicInteger/Long/Boolean/Reference · CAS, sem lock
+│   └── incrementAndGet (++x) · getAndIncrement (x++) · get
+├── Locks
+│   ├── ReentrantLock (230): lock() + try/finally unlock()
+│   │   ├── fair (true): quem espera há mais tempo (tendência)
+│   │   ├── tryLock() · tryLock(tempo) · lockInterruptibly()
+│   │   └── getQueueLength · isHeldByCurrentThread
+│   ├── Condition (231): lock.newCondition() → await / signal / signalAll
+│   │   └── unlock sem ter o lock → IllegalMonitorStateException
+│   └── ReentrantReadWriteLock (232): readLock compartilhado · writeLock exclusivo
+└── Coleções concorrentes
+    ├── CopyOnWriteArrayList (233): escrita copia tudo · iterador = snapshot
+    ├── ArrayBlockingQueue (234): capacidade fixa · put bloqueia cheia · take bloqueia vazia
+    └── LinkedTransferQueue (235): ConcurrentLinked + Synchronous + LinkedBlocking
+        └── transfer (espera consumidor) · tryTransfer (false se ninguém)</code></pre>
+
+      <h3>Prática no seu WSL (20 minutos)</h3>
+<pre><code>cd ~/java-lab
+C=src/academy/devdojo/maratonajava/javacore/ZZGconcorrencia
+mkdir -p $C/test
+
+cat > $C/test/ConcorrenciaPraticaTest01.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.ZZGconcorrencia.test;
+
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.*;
+
+public class ConcorrenciaPraticaTest01 {
+    static int count = 0;
+
+    public static void main(String[] args) throws InterruptedException {
+        // 229 · AtomicInteger
+        AtomicInteger atomic = new AtomicInteger();
+        Runnable r = () -&gt; {
+            for (int i = 0; i &lt; 10_000; i++) { count++; atomic.incrementAndGet(); }
+        };
+        Thread t1 = new Thread(r), t2 = new Thread(r);
+        t1.start(); t2.start(); t1.join(); t2.join();
+        System.out.println("int: " + count + " | atomic: " + atomic);                  // ?
+        System.out.println(atomic.getAndIncrement() + " " + atomic.get());             // ?
+
+        // 230 · tryLock
+        ReentrantLock lock = new ReentrantLock(true);
+        lock.lock();
+        try {
+            Thread outra = new Thread(() -&gt; {
+                try {
+                    boolean conseguiu = lock.tryLock(100, TimeUnit.MILLISECONDS);
+                    System.out.println("outra conseguiu o lock? " + conseguiu);      // ?
+                    if (conseguiu) lock.unlock();
+                } catch (InterruptedException e) { e.printStackTrace(); }
+            });
+            outra.start();
+            outra.join();
+            System.out.println("main segura o lock? " + lock.isHeldByCurrentThread()); // ?
+        } finally {
+            lock.unlock();
+        }
+
+        // 231 · Condition
+        Condition pronto = lock.newCondition();
+        boolean[] ok = {false};
+        Thread esperando = new Thread(() -&gt; {
+            lock.lock();
+            try {
+                while (!ok[0]) pronto.await();
+                System.out.println("acordou com signalAll");                           // ?
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            } finally {
+                lock.unlock();
+            }
+        });
+        esperando.start();
+        lock.lock();
+        try { ok[0] = true; pronto.signalAll(); } finally { lock.unlock(); }
+        esperando.join();
+
+        // 232 · ReadWriteLock
+        ReentrantReadWriteLock rwl = new ReentrantReadWriteLock();
+        rwl.readLock().lock();
+        rwl.readLock().lock();                                     // reentrante
+        System.out.println("leituras: " + rwl.getReadLockCount() + " | write? " + rwl.isWriteLocked()); // ?
+        rwl.readLock().unlock();
+        rwl.readLock().unlock();
+
+        // 233 · CopyOnWriteArrayList × ArrayList
+        List&lt;Integer&gt; cow = new CopyOnWriteArrayList&lt;&gt;(List.of(1, 2, 3));
+        Iterator&lt;Integer&gt; foto = cow.iterator();
+        cow.add(4);
+        foto.forEachRemaining(n -&gt; System.out.print(n + " "));
+        System.out.println("| lista agora: " + cow);                                    // ?
+        List&lt;Integer&gt; comum = new ArrayList&lt;&gt;(List.of(1, 2, 3));
+        try {
+            for (Integer n : comum) if (n == 1) comum.add(99);
+        } catch (ConcurrentModificationException e) {
+            System.out.println("ArrayList: " + e.getClass().getSimpleName());          // ?
+        }
+
+        // 234 · BlockingQueue
+        BlockingQueue&lt;String&gt; bq = new ArrayBlockingQueue&lt;&gt;(1);
+        bq.put("William");
+        System.out.println("offer com fila cheia: " + bq.offer("Suane"));             // ?
+        System.out.println("take: " + bq.take() + " | poll vazia: " + bq.poll());     // ?
+
+        // 235 · LinkedTransferQueue
+        TransferQueue&lt;String&gt; tq = new LinkedTransferQueue&lt;&gt;();
+        System.out.println("tryTransfer sem consumidor: " + tq.tryTransfer("Academy") + " | tamanho: " + tq.size()); // ?
+        Thread consumidor = new Thread(() -&gt; {
+            try { System.out.println("consumidor recebeu " + tq.take()); }              // ?
+            catch (InterruptedException e) { e.printStackTrace(); }
+        });
+        consumidor.start();
+        tq.transfer("DevDojo");        // bloqueia até o consumidor pegar
+        consumidor.join();
+        System.out.println(tq.remainingCapacity());                                     // ?
+    }
+}
+EOF
+
+javac -d out $(find src -name '*.java')
+java -cp out academy.devdojo.maratonajava.javacore.ZZGconcorrencia.test.ConcorrenciaPraticaTest01</code></pre>
+      <details>
+        <summary>Ver a saída esperada</summary>
+<pre><code>int: 1xxxx | atomic: 20000     ← o int varia (quase sempre &lt; 20000)
+20000 20001
+outra conseguiu o lock? false
+main segura o lock? true
+acordou com signalAll
+leituras: 2 | write? false
+1 2 3 | lista agora: [1, 2, 3, 4]
+ArrayList: ConcurrentModificationException
+offer com fila cheia: false
+take: William | poll vazia: null
+tryTransfer sem consumidor: false | tamanho: 0
+consumidor recebeu DevDojo
+2147483647</code></pre>
+      </details>
+      <p>Repare no iterador da <code>CopyOnWriteArrayList</code>: ele foi criado com <code>[1, 2, 3]</code> e continua vendo só isso, mesmo depois do <code>add(4)</code>. A <code>ArrayList</code>, no mesmo cenário, estoura.</p>
+      <p><strong>Exercícios:</strong></p>
+      <ol>
+        <li>Troque o <code>AtomicInteger</code> por um <code>ReentrantLock</code> em volta do <code>count++</code> (com <code>try/finally</code>). O <code>int</code> chega a 20000?</li>
+        <li>Rode o <code>ReentrantLockTest01</code> da aula 230 com <code>new ReentrantLock(false)</code> e com <code>true</code>. A ordem de A a G muda?</li>
+        <li>No <code>tryLock</code> da prática, tire o <code>if (conseguiu)</code> e deixe só <code>lock.unlock()</code>. Qual exceção aparece e por quê?</li>
+        <li>No <code>CopyOnWriteTest01</code> da aula 233, acrescente <code>list.remove(i)</code> na removedora e imprima a lista no fim: quais valores sumiram? Agora troque por <code>list.remove(Integer.valueOf(i))</code>.</li>
+        <li>Reescreva o <code>Members</code> da aula 231 usando só <code>BlockingQueue</code> (<code>put</code>/<code>poll(1, SECONDS)</code>), sem <code>Lock</code> nem <code>Condition</code>.</li>
+      </ol>
+
+      <h3>Glossário</h3>
+      <ul>
+        <li><strong><code>java.util.concurrent</code></strong>: pacote de utilitários de concorrência (atômicos, locks, filas, executores).</li>
+        <li><strong>Operação atômica</strong>: acontece inteira, sem outra thread no meio.</li>
+        <li><strong>CAS (compare-and-swap)</strong>: grava o novo valor só se o atual ainda for o esperado; senão tenta de novo.</li>
+        <li><strong><code>ReentrantLock</code></strong>: lock explícito; a mesma thread pode adquiri-lo várias vezes.</li>
+        <li><strong>Fairness</strong>: política de dar o lock a quem espera há mais tempo.</li>
+        <li><strong><code>tryLock</code></strong>: tenta pegar o lock sem bloquear (ou por um tempo máximo).</li>
+        <li><strong><code>Condition</code></strong>: fila de espera ligada a um <code>Lock</code>; <code>await</code>/<code>signal</code>/<code>signalAll</code>.</li>
+        <li><strong>Read/write lock</strong>: leitura compartilhada, escrita exclusiva.</li>
+        <li><strong>Imutável</strong>: objeto que não muda depois de criado (classe e atributos <code>final</code>, sem setters).</li>
+        <li><strong>Copy-on-write</strong>: cada alteração cria uma cópia; leitores continuam com a versão antiga.</li>
+        <li><strong>Snapshot</strong>: fotografia dos dados num instante.</li>
+        <li><strong><code>BlockingQueue</code></strong>: fila cujas operações podem bloquear (cheia no <code>put</code>, vazia no <code>take</code>).</li>
+        <li><strong>Bounded</strong>: com capacidade máxima definida.</li>
+        <li><strong><code>TransferQueue</code></strong>: fila em que o produtor pode esperar o consumidor receber (<code>transfer</code>).</li>
+      </ul>
+
+      <h3>Revisão espaçada</h3>
+      <ul class="revisao">
+        <li><span class="dia">Dia 1</span><span>Todos os flashcards + a prática com previsões.</span></li>
+        <li><span class="dia">Dia 3</span><span>Quiz + exercícios 1 a 3.</span></li>
+        <li><span class="dia">Dia 7</span><span>Exercícios 4 e 5 + montar de memória a tabela add/offer/put × remove/poll/take × element/peek.</span></li>
+        <li><span class="dia">Dia 14</span><span>Flashcards que errou + questões discursivas.</span></li>
+      </ul>
+
+      <h3>Para aprofundar</h3>
+      <ul>
+        <li>O que é <code>LongAdder</code> e por que ele é mais rápido que <code>AtomicLong</code> quando muitas threads incrementam?</li>
+        <li>Qual a diferença entre <code>ConcurrentHashMap</code> e <code>Collections.synchronizedMap</code>?</li>
+        <li>O que é o problema ABA do CAS e como <code>AtomicStampedReference</code> o resolve?</li>
+        <li>O que é <code>StampedLock</code> (Java 8) e a "leitura otimista"?</li>
+        <li>Por que um <code>ReadWriteLock</code> pode causar <em>starvation</em> de escritores e como o modo fair ajuda?</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    window.AULA = {
+      flashcards: [
+        ["Por que count++ dá errado com várias threads?", "Não é atômico: vira ler, somar e gravar; duas threads leem o mesmo valor e um incremento se perde"],
+        ["Como o AtomicInteger resolve sem lock?", "Com CAS (compare-and-swap): só grava se o valor ainda for o lido; senão tenta de novo"],
+        ["incrementAndGet × getAndIncrement?", "incrementAndGet devolve o novo valor (++x); getAndIncrement devolve o antigo (x++)"],
+        ["Cite outras classes atômicas", "AtomicLong, AtomicBoolean, AtomicReference, AtomicIntegerArray, AtomicLongArray"],
+        ["Qual o padrão obrigatório ao usar Lock?", "lock.lock(); try { ... } finally { lock.unlock(); }"],
+        ["Vantagens do ReentrantLock sobre synchronized", "Fairness, tryLock (com ou sem tempo) e lockInterruptibly"],
+        ["O que faz new ReentrantLock(true)?", "Cria um lock fair: tende a dar o lock à thread que espera há mais tempo (sem garantia)"],
+        ["O que tryLock(2, TimeUnit.SECONDS) devolve?", "true se conseguiu o lock em até 2 s; false se não (e a thread segue)"],
+        ["Quando o professor recomenda synchronized em vez de Lock?", "Sempre que não precisar de fairness, tryLock ou interrupção: código mais simples"],
+        ["O que acontece com unlock() sem ter o lock?", "IllegalMonitorStateException"],
+        ["Para que servem getQueueLength e isHeldByCurrentThread?", "Estimar quantas threads esperam o lock; saber se a thread atual segura o lock"],
+        ["O que significa 'reentrant'?", "A mesma thread pode pegar o lock de novo sem travar (e deve soltar o mesmo número de vezes)"],
+        ["Como obter uma Condition?", "lock.newCondition()"],
+        ["Equivalentes de wait/notify/notifyAll na Condition?", "await(), signal() e signalAll()"],
+        ["Vantagem de Condition sobre wait/notify?", "Um mesmo lock pode ter várias condições (ex.: 'não vazia' e 'não cheia')"],
+        ["Como funciona o ReentrantReadWriteLock?", "readLock é compartilhado (várias leem); writeLock é exclusivo (ninguém lê nem escreve)"],
+        ["Como se faz uma classe imutável?", "Classe final, atributos final, só construtor e getters (sem setters)"],
+        ["Como a CopyOnWriteArrayList lida com escritas?", "Cada add/remove/set copia o array inteiro; leitores continuam com a versão antiga"],
+        ["O que o iterador da CopyOnWriteArrayList enxerga?", "Um snapshot da lista no momento em que foi criado; nunca lança ConcurrentModificationException"],
+        ["Quando usar CopyOnWriteArrayList?", "Listas muito lidas e raramente alteradas (escrita é cara)"],
+        ["put × take na BlockingQueue?", "put bloqueia se a fila estiver cheia; take bloqueia se estiver vazia"],
+        ["add × offer × put?", "add lança exceção se não couber; offer devolve false; put bloqueia até caber"],
+        ["remove × poll × take? element × peek?", "remove: exceção se vazia; poll: null; take: bloqueia. element: exceção; peek: null (ambos sem remover)"],
+        ["O que faz transfer na LinkedTransferQueue?", "Coloca o elemento e bloqueia até um consumidor recebê-lo"],
+        ["O que tryTransfer faz sem consumidor esperando?", "Devolve false e não coloca o elemento na fila"]
+      ],
+      quiz: [
+        { tipo: 'multipla', pergunta: 'Duas threads chamam 10 000 vezes cada count++ e atomicInteger.incrementAndGet(). O que é esperado?',
+          opcoes: ['Ambos dão 20000', 'count dá 20000 e o atomic varia', 'count costuma dar menos de 20000 e o atomic dá 20000', 'Ambos variam'],
+          correta: 2,
+          explicacao: 'count++ não é atômico e perde incrementos. O AtomicInteger usa CAS e sempre chega a 20000.' },
+        { tipo: 'vf', pergunta: 'Com ReentrantLock, basta chamar lock() no começo e unlock() no fim do método; o finally é opcional.',
+          correta: 1,
+          explicacao: 'Falso. Se uma exceção acontecer no meio, o unlock nunca roda e as outras threads travam para sempre. O padrão é lock(); try { ... } finally { unlock(); }.' },
+        { tipo: 'multipla', pergunta: 'Qual destes recursos o ReentrantLock oferece e o synchronized não?',
+          opcoes: ['Exclusão mútua', 'Reentrância', 'tryLock com tempo limite', 'Funcionar em métodos estáticos'],
+          correta: 2,
+          explicacao: 'Os dois garantem exclusão mútua e são reentrantes. tryLock (e fairness, e lockInterruptibly) são exclusivos do Lock.' },
+        { tipo: 'multipla', pergunta: 'Qual a troca correta ao migrar o Members da aula 228 para Lock + Condition?',
+          opcoes: ['wait → signal, notifyAll → await', 'wait → await, notifyAll → signalAll', 'wait → lock, notifyAll → unlock', 'wait → sleep, notifyAll → interrupt'],
+          correta: 1,
+          explicacao: 'await() espera (e solta o lock), signal() acorda uma e signalAll() acorda todas, e todos só podem ser chamados com o lock na mão.' },
+        { tipo: 'multipla', pergunta: 'Uma thread fez tryLock(2, SECONDS), não conseguiu o lock, e no finally chama lock.unlock(). O que acontece?',
+          opcoes: ['Nada', 'IllegalMonitorStateException', 'Deadlock', 'O lock é liberado para a outra thread'],
+          correta: 1,
+          explicacao: 'Não dá para soltar um lock que você não segura. A correção da aula 231 é if (lock.isHeldByCurrentThread()) lock.unlock().' },
+        { tipo: 'vf', pergunta: 'Com ReentrantReadWriteLock, duas threads podem segurar o read lock ao mesmo tempo.',
+          correta: 0,
+          explicacao: 'Verdadeiro. O read lock é compartilhado: várias leitoras juntas. Só o write lock é exclusivo.' },
+        { tipo: 'multipla', pergunta: 'Um iterador de CopyOnWriteArrayList foi criado com [1, 2, 3]; depois alguém fez add(4). O que o iterador percorre?',
+          opcoes: ['1 2 3', '1 2 3 4', 'Lança ConcurrentModificationException', 'Nada: o iterador é invalidado'],
+          correta: 0,
+          explicacao: 'O iterador é um snapshot do array no momento da criação. A escrita criou uma cópia nova, e o iterador continua vendo a antiga.' },
+        { tipo: 'multipla', pergunta: 'Numa ArrayBlockingQueue com capacidade 1 já cheia, o que faz put("Suane")?',
+          opcoes: ['Lança IllegalStateException', 'Devolve false', 'Bloqueia a thread até alguém remover um elemento', 'Substitui o elemento'],
+          correta: 2,
+          explicacao: 'put espera espaço. Quem lança exceção é o add e quem devolve false é o offer. Na aula, a main ficou bloqueada até a outra thread fazer take().' },
+        { tipo: 'discursiva', pergunta: 'Compare synchronized e ReentrantLock: vantagens, desvantagens e a recomendação do professor.',
+          explicacao: 'Os dois garantem exclusão mútua e são reentrantes. O ReentrantLock acrescenta fairness (new ReentrantLock(true), que tende a atender quem espera há mais tempo), tryLock com ou sem tempo (tenta e segue se não conseguir), lockInterruptibly, métodos de inspeção (getQueueLength, isHeldByCurrentThread) e várias Conditions por lock (await/signal/signalAll). A desvantagem é que o lock é manual: sempre lock(); try { } finally { unlock(); }, e unlock sem o lock dá IllegalMonitorStateException. O código fica maior e mais propenso a erro. O synchronized é gerenciado pela JVM e libera o lock sozinho, até em exceção. Recomendação do professor: use synchronized, que é mais simples, a não ser que precise de algum recurso exclusivo do Lock; e meça antes de trocar por desempenho. No Laravel, o paralelo é Cache::lock()->get()/block() com release() no finally.' },
+        { tipo: 'discursiva', pergunta: 'Explique a LinkedTransferQueue: de quais filas ela junta funcionalidades e a diferença entre put, transfer e tryTransfer.',
+          explicacao: 'Introduzida no Java 7, implementa TransferQueue e junta a ConcurrentLinkedQueue (fila concorrente sem bloqueio), a LinkedBlockingQueue (operações que bloqueiam) e a SynchronousQueue (entrega direta a um consumidor). É ilimitada (remainingCapacity = Integer.MAX_VALUE). put(x) insere e retorna na hora (bloquearia só se houvesse limite). transfer(x) insere e bloqueia o produtor até um consumidor receber o elemento: sem ninguém consumindo, trava, por isso a aula checa hasWaitingConsumer() antes. tryTransfer(x) só entrega se já houver consumidor esperando; senão devolve false e o elemento não entra na fila; a versão com tempo espera até o limite. Para ler e remover: element/peek olham (exceção × null), remove/poll tiram (exceção × null) e take tira ou bloqueia.' }
+      ]
+    };
+  </script>
+  <script src="../js/app.js"></script>
+</body>
+</html>

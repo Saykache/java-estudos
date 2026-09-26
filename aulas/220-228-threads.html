@@ -295,7 +295,7 @@ new Thread(r2).start();</code></pre>
         open = false;
         synchronized (this.emails) {
             System.out.println(Thread.currentThread().getName() + " Notificando todo mundo que não estamos mais pegando emails");
-            // falta aqui: this.emails.notifyAll();   (veja o Atenção)
+            // falta aqui: this.emails.notifyAll();   (corrigido na aula 231)
         }
     }
 }
@@ -353,7 +353,7 @@ while (true) {
         <li><strong><code>wait</code>/<code>notify</code>/<code>notifyAll</code> só dentro de <code>synchronized</code> do mesmo objeto</strong>, senão <code>IllegalMonitorStateException</code>.</li>
         <li><strong>Sincronize no mesmo objeto</strong>: duas threads que travam objetos diferentes não se bloqueiam. Por isso o lock deve ser <code>final</code>.</li>
         <li><strong>Coleção thread safe + "verificar e depois agir" ≠ thread safe</strong>: o conjunto precisa estar num <code>synchronized</code>.</li>
-        <li><strong>Correção: no repositório, o <code>close()</code> da aula 228 não chama <code>notifyAll()</code></strong>, embora o professor diga que o <code>notifyAll</code> precisa estar no contexto sincronizado. Sem ele, as threads que estão em <code>wait()</code> nunca acordam para ver que <code>open</code> virou <code>false</code>, e o programa não termina depois de fechar a caixinha. A linha que falta, dentro do <code>synchronized</code> do <code>close</code>, é <code>this.emails.notifyAll();</code>.</li>
+        <li><strong>Correção: no repositório, o <code>close()</code> da aula 228 não chama <code>notifyAll()</code></strong>, embora o professor diga que o <code>notifyAll</code> precisa estar no contexto sincronizado. Sem ele, as threads que estão em <code>wait()</code> nunca acordam para ver que <code>open</code> virou <code>false</code>, e o programa não termina depois de fechar a caixinha. A linha que falta, dentro do <code>synchronized</code> do <code>close</code>, é <code>this.emails.notifyAll();</code>. O próprio professor percebe e corrige isso na aula 231 (<a href="229-235-concorrencia-locks-colecoes.html">229–235</a>).</li>
         <li><strong>Extra: <code>open</code> deveria ser <code>volatile</code></strong> (ou lido dentro do <code>synchronized</code>): sem isso, a JVM pode deixar uma thread enxergar um valor antigo de uma variável que outra thread alterou (visibilidade de memória).</li>
         <li><strong>Extra: <code>ArrayBlockingQueue.add</code> com a fila cheia</strong> (o 11º e-mail) lança <code>IllegalStateException: Queue full</code>. Os métodos próprios da fila bloqueante, <code>put</code> e <code>take</code>, esperam sozinhos e dispensam o <code>wait</code>/<code>notify</code> manual.</li>
         <li><strong>Extra: <code>count++</code> não é atômico</strong> (ler, somar, gravar). Duas threads incrementando um <code>int</code> sem <code>synchronized</code> perdem incrementos. A prática abaixo mostra isso.</li>
