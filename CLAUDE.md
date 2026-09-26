@@ -6,6 +6,7 @@ Publicado via GitHub Pages (branch `main`, pasta raiz). Tudo em português do Br
 ## Estrutura
 - `index.html` — sumário + aulas agrupadas por módulo (`<section class="modulo">` com um `<li>` de uma linha por página, em ordem).
 - `aulas/NN-titulo-da-aula.html` — uma página por aula (ou `NN-MM-slug.html` para aulas agrupadas).
+- `README.md` — apresentação do repositório (módulos, estrutura, como o conteúdo é feito). Atualizar se mudar a estrutura.
 - `css/style.css` — estilo compartilhado (claro/escuro automático). Não duplicar CSS nas aulas.
 - `js/app.js` — componentes de flashcards e quiz. Não duplicar JS nas aulas.
 
