@@ -232,3 +232,16 @@ textarea {
 .revisao { display: grid; gap: 8px; padding: 0; list-style: none; }
 .revisao li { display: flex; gap: 10px; align-items: baseline; }
 .revisao .dia { flex: 0 0 64px; font-weight: 700; color: var(--accent); }
+
+/* Índice: sumário e módulos */
+.sumario { margin: 24px 0 8px; }
+.sumario h2 { font-size: 1.1rem; margin: 0 0 8px; }
+.sumario ol { margin: 0; padding-left: 1.4em; columns: 2; column-gap: 32px; }
+.sumario li { margin: 0 0 6px; break-inside: avoid; }
+.sumario a { text-decoration: none; }
+.sumario a:hover { text-decoration: underline; }
+.faixa { color: var(--muted); font-size: .85rem; font-weight: 400; white-space: nowrap; }
+section.modulo { background: none; border: 0; border-radius: 0; padding: 0; margin: 32px 0 0; scroll-margin-top: 16px; }
+.modulo h2 { font-size: 1.3rem; margin: 0 0 4px; }
+.modulo-desc { margin: 0 0 12px; color: var(--muted); }
+@media (max-width: 560px) { .sumario ol { columns: 1; } }

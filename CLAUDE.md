@@ -4,7 +4,7 @@ Site estático de estudos da playlist **Maratona Java Virado no Jiraya** (DevDoj
 Publicado via GitHub Pages (branch `main`, pasta raiz). Tudo em português do Brasil.
 
 ## Estrutura
-- `index.html` — lista de aulas (um `<li>` por aula, em ordem).
+- `index.html` — sumário + aulas agrupadas por módulo (`<section class="modulo">` com um `<li>` de uma linha por página, em ordem).
 - `aulas/NN-titulo-da-aula.html` — uma página por aula (ou `NN-MM-slug.html` para aulas agrupadas).
 - `css/style.css` — estilo compartilhado (claro/escuro automático). Não duplicar CSS nas aulas.
 - `js/app.js` — componentes de flashcards e quiz. Não duplicar JS nas aulas.
@@ -17,7 +17,7 @@ Publicado via GitHub Pages (branch `main`, pasta raiz). Tudo em português do Br
      - `{ tipo: 'multipla', pergunta, opcoes: [4 itens], correta: índice, explicacao }`
      - `{ tipo: 'vf', pergunta, correta: 0 (Verdadeiro) | 1 (Falso), explicacao }`
      - `{ tipo: 'discursiva', pergunta, explicacao }` (explicacao = resposta esperada)
-3. Adicionar o `<li>` correspondente no `index.html`.
+3. Adicionar o `<li>` (uma linha, no formato dos existentes) na `<section class="modulo">` do tema no `index.html`.
 4. Commit `Aula NN - Título` e push.
 
 ## Conteúdo de cada aula
