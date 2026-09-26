@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>263–267 · JDBC: ResultSet avançado</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="topo">
+      <a class="voltar" href="../index.html">← Todas as aulas</a>
+      <h1>263–267 · JDBC: metadados e ResultSet avançado</h1>
+      <p>ResultSetMetaData, DatabaseMetaData, tipos de ResultSet (FORWARD_ONLY, SCROLL_INSENSITIVE, SCROLL_SENSITIVE), navegação com last/first/absolute/relative/previous e atualizar, inserir e deletar pelo ResultSet · <a href="https://www.youtube.com/playlist?list=PL62G310vn6nFIsOCC0H-C2infYgwm8SWW" target="_blank" rel="noopener">playlist</a></p>
+    </header>
+
+    <nav class="abas">
+      <a href="#resumo">Resumo</a>
+      <a href="#flashcards">Flashcards</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#estudo">Material de estudo</a>
+    </nav>
+
+    <p class="aviso">Junta as aulas 263 (ResultSetMetaData), 264 (DatabaseMetaData), 265 (TYPE_SCROLL_INSENSITIVE), 266 (atualizando com ResultSet) e 267 (inserindo e deletando com ResultSet). Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. O código (<code>ProducerRepository</code> e <code>ProducerService</code> do pacote <code>javacore.ZZIjdbc</code>) foi conferido no <a href="https://github.com/devdojobr/maratona-java-virado-no-jiraya" target="_blank" rel="noopener">repositório do professor</a>. Os itens marcados como "extra" não estão nos vídeos.</p>
+
+    <section id="resumo">
+      <h2>Resumo</h2>
+      <p>O <code>ResultSet</code> "é bem mais poderoso" do que só trazer dados de volta. Ele informa <strong>metadados</strong> da consulta (quantas colunas, nomes, tipos, tamanhos), pode andar <strong>para frente e para trás</strong> e ir direto a uma linha, e pode até <strong>atualizar, inserir e apagar</strong> registros sem escrever outro SQL. O que ele consegue fazer depende do <strong>driver</strong>, e para saber isso existe o <code>DatabaseMetaData</code>.</p>
+<pre><code>ResultSetMetaData md = rs.getMetaData();              // 263 · colunas da consulta
+DatabaseMetaData dbmd = conn.getMetaData();           // 264 · o que o driver suporta
+conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE); // 265–267
+rs.last(); rs.first(); rs.absolute(2); rs.relative(-1); rs.previous();              // 265
+rs.updateString("name", ...); rs.updateRow();          // 266
+rs.moveToInsertRow(); rs.updateString(...); rs.insertRow(); rs.deleteRow();         // 267</code></pre>
+
+      <h3>263 · ResultSetMetaData</h3>
+<pre><code>public static void showProducerMetaData() {
+    log.info("Showing Producer Metadata");
+    String sql = "SELECT * FROM anime_store.producer";        // "não sei quais colunas vêm"
+    try (Connection conn = ConnectionFactory.getConnection();
+         Statement stmt = conn.createStatement();
+         ResultSet rs = stmt.executeQuery(sql)) {
+        ResultSetMetaData rsMetaData = rs.getMetaData();
+        int columnCount = rsMetaData.getColumnCount();
+        log.info("Columns count '{}'", columnCount);               // 2
+        for (int i = 1; i &lt;= columnCount; i++) {                  // colunas começam em 1
+            log.info("Table name '{}'", rsMetaData.getTableName(i));        // producer
+            log.info("Column name '{}'", rsMetaData.getColumnName(i));      // id / name
+            log.info("Column size '{}'", rsMetaData.getColumnDisplaySize(i)); // 10 / 255
+            log.info("Column type '{}'", rsMetaData.getColumnTypeName(i));  // INT / VARCHAR
+        }
+    } catch (SQLException e) {
+        log.error("Error while trying to find all producers", e);
+    }
+}</code></pre>
+      <ul>
+        <li><strong><code>rs.getMetaData()</code></strong> descreve as <strong>colunas do resultado</strong>: quantidade, nome da tabela, nome da coluna, tamanho de exibição e tipo.</li>
+        <li><code>getColumnType(i)</code> devolve um <strong>código numérico</strong> (o <code>4</code> que confundiu o professor é <code>java.sql.Types.INTEGER</code>; <code>VARCHAR</code> é <code>12</code>). O nome legível vem de <code>getColumnTypeName(i)</code>.</li>
+        <li>Na primeira versão havia um <code>rs.next()</code> antes de ler os metadados, e na aula 264 o professor conta que testou e <strong>não precisa</strong>: os metadados existem mesmo sem ler nenhuma linha (e até com resultado vazio).</li>
+        <li><strong>Para que serve</strong>: quando você não sabe exatamente quais colunas a consulta traz, por exemplo em relatórios gigantes com junção de várias tabelas vindos de outro sistema. Dá para descobrir as colunas em tempo de execução.</li>
+      </ul>
+
+      <h3>264 · DatabaseMetaData</h3>
+      <p>Quem decide como o <code>ResultSet</code> se comporta é o <strong>driver</strong> (a implementação do JDBC). O <code>conn.getMetaData()</code> pergunta a ele o que é suportado.</p>
+<pre><code>public static void showDriverMetaData() {
+    log.info("Showing Driver Metadata");
+    try (Connection conn = ConnectionFactory.getConnection()) {
+        DatabaseMetaData dbMetaData = conn.getMetaData();
+        if (dbMetaData.supportsResultSetType(ResultSet.TYPE_FORWARD_ONLY)) {
+            log.info("Supports TYPE_FORWARD_ONLY");
+            if (dbMetaData.supportsResultSetConcurrency(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_UPDATABLE)) {
+                log.info("And Supports CONCUR_UPDATABLE");
+            }
+        }
+        // ... o mesmo para TYPE_SCROLL_INSENSITIVE e TYPE_SCROLL_SENSITIVE
+    } catch (SQLException e) { ... }
+}
+// Supports TYPE_FORWARD_ONLY
+// And Supports CONCUR_UPDATABLE
+// Supports TYPE_SCROLL_INSENSITIVE
+// And Supports CONCUR_UPDATABLE
+// (TYPE_SCROLL_SENSITIVE: não suportado pelo driver do MySQL)</code></pre>
+      <p><strong>Tipo</strong> (como o cursor anda e se vê mudanças):</p>
+      <ul>
+        <li><strong><code>TYPE_FORWARD_ONLY</code></strong> (padrão): só para frente, uma linha por vez, com <code>next()</code>.</li>
+        <li><strong><code>TYPE_SCROLL_INSENSITIVE</code></strong>: navega para frente, para trás e para uma posição específica, mas é <strong>insensível</strong> a mudanças: é "como uma foto" guardada na memória. Se outra conexão alterar o banco enquanto você navega, você não vê.</li>
+        <li><strong><code>TYPE_SCROLL_SENSITIVE</code></strong>: navega livremente <strong>e</strong> enxerga as alterações feitas por outros enquanto o <code>ResultSet</code> está aberto. É muito difícil de implementar, e pouquíssimos drivers suportam; o do MySQL não.</li>
+      </ul>
+      <p><strong>Concorrência</strong> (se dá para alterar pelo <code>ResultSet</code>): <strong><code>CONCUR_READ_ONLY</code></strong> (padrão, só leitura) ou <strong><code>CONCUR_UPDATABLE</code></strong> (dá para atualizar, inserir e deletar enquanto navega). O nome das constantes é esse mesmo, embora não tenha nada a ver com concorrência de threads.</p>
+
+      <h3>265 · Navegando com TYPE_SCROLL_INSENSITIVE</h3>
+<pre><code>try (Connection conn = ConnectionFactory.getConnection();
+     Statement stmt = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
+     ResultSet rs = stmt.executeQuery("SELECT * FROM anime_store.producer;")) {
+    log.info("Last row? '{}'", rs.last());              // true: foi para a última linha
+    log.info("Row number '{}'", rs.getRow());            // 3
+    log.info(Producer.builder().id(rs.getInt("id")).name(rs.getString("name")).build());
+
+    log.info("First row? '{}'", rs.first());             // vai para a primeira · getRow() = 1
+    log.info("Row Absolute? '{}'", rs.absolute(2));      // pula para a linha 2
+    log.info("Row relative ? '{}'", rs.relative(-1));    // volta uma, relativo à atual · linha 1
+    log.info("is last? '{}'", rs.isLast());              // false (só consulta, não move)
+    log.info("is first? '{}'", rs.isFirst());            // true
+
+    log.info("Last row? '{}'", rs.last());
+    rs.next();                                           // passa da última
+    log.info("After last row? '{}'", rs.isAfterLast());  // true
+    while (rs.previous()) {                              // de baixo para cima
+        log.info(Producer.builder().id(rs.getInt("id")).name(rs.getString("name")).build());
+    }
+}</code></pre>
+      <ul>
+        <li><strong>Mover</strong>: <code>next()</code>, <code>previous()</code>, <code>first()</code>, <code>last()</code>, <code>absolute(n)</code> (linha n; aceita negativo, a partir do fim), <code>relative(n)</code> (n linhas a partir da atual; negativo volta), <code>beforeFirst()</code>, <code>afterLast()</code>. Todos devolvem <code>boolean</code> (se caiu numa linha válida).</li>
+        <li><strong>Consultar sem mover</strong>: <code>getRow()</code> (número da linha atual), <code>isFirst()</code>, <code>isLast()</code>, <code>isBeforeFirst()</code>, <code>isAfterLast()</code>.</li>
+        <li><strong>"Última" é da consulta, não da tabela</strong>: com <code>ORDER BY name DESC</code>, a última linha passa a ser outra. O cursor anda sobre o <strong>resultado</strong>.</li>
+        <li><strong>A pegadinha do <code>previous()</code></strong>: se o cursor está <strong>na</strong> última linha, <code>while (rs.previous())</code> começa pela <strong>penúltima</strong> e pula a última. Para percorrer tudo de baixo para cima, vá <strong>depois</strong> da última (<code>rs.afterLast()</code>, ou <code>last()</code> e depois <code>next()</code>, como no vídeo) e aí use <code>previous()</code>.</li>
+      </ul>
+
+      <h3>266 · Atualizando registros com o ResultSet</h3>
+<pre><code>public static List&lt;Producer&gt; findByNameAndUpdateToUpperCase(String name) {
+    String sql = "SELECT * FROM anime_store.producer where name like '%%%s%%';".formatted(name);
+    List&lt;Producer&gt; producers = new ArrayList&lt;&gt;();
+    try (Connection conn = ConnectionFactory.getConnection();
+         Statement stmt = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
+         ResultSet rs = stmt.executeQuery(sql)) {
+        while (rs.next()) {
+            rs.updateString("name", rs.getString("name").toUpperCase());  // altera na memória
+//          rs.cancelRowUpdates();                                        // desfaria a alteração
+            rs.updateRow();                                               // grava no banco
+            producers.add(Producer.builder().id(rs.getInt("id")).name(rs.getString("name")).build());
+        }
+    } catch (SQLException e) { ... }
+    return producers;
+}
+
+ProducerService.findByNameAndUpdateToUpperCase("Deen");   // Studio Deen → STUDIO DEEN</code></pre>
+      <ul>
+        <li>Caso de uso: você <strong>já está percorrendo</strong> os registros e quer aproveitar para alterá-los, sem escrever um UPDATE à parte.</li>
+        <li><strong><code>rs.updateString("coluna", valor)</code></strong> (e <code>updateInt</code>, <code>updateDouble</code>...) muda o valor <strong>só no <code>ResultSet</code></strong>, e o <code>getString</code> em seguida já devolve o novo valor. <strong>Sem <code>rs.updateRow()</code> nada vai para o banco</strong>, e foi exatamente o que aconteceu na primeira execução do professor.</li>
+        <li><strong><code>rs.cancelRowUpdates()</code></strong> desfaz as alterações da linha <strong>antes</strong> do <code>updateRow()</code>. Use-o em vez de tentar "voltar" o valor à mão com outro <code>updateString</code>. Depois do <code>updateRow()</code>, não dá mais para cancelar.</li>
+        <li>O driver gera o UPDATE por baixo; você não escreve SQL de atualização.</li>
+      </ul>
+
+      <h3>267 · Inserindo e deletando registros com o ResultSet</h3>
+<pre><code>public static List&lt;Producer&gt; findByNameAndInsertWhenNotFound(String name) {
+    String sql = "SELECT * FROM anime_store.producer where name like '%%%s%%';".formatted(name);
+    List&lt;Producer&gt; producers = new ArrayList&lt;&gt;();
+    try (Connection conn = ConnectionFactory.getConnection();
+         Statement stmt = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
+         ResultSet rs = stmt.executeQuery(sql)) {
+        if (rs.next()) return producers;          // já existe: não insere
+        insertNewProducer(name, rs);
+        producers.add(getProducer(rs));
+    } catch (SQLException e) { ... }
+    return producers;
+}
+
+private static void insertNewProducer(String name, ResultSet rs) throws SQLException {
+    rs.moveToInsertRow();                          // linha temporária especial
+    rs.updateString("name", name);                 // preenche as colunas
+    rs.insertRow();                                // INSERT no banco
+}
+
+private static Producer getProducer(ResultSet rs) throws SQLException {
+    rs.beforeFirst();                              // volta ao início
+    rs.next();                                     // a linha inserida, já com o id gerado
+    return Producer.builder().id(rs.getInt("id")).name(rs.getString("name")).build();
+}
+
+public static void findByNameAndDelete(String name) {
+    ... // mesmo Statement atualizável
+    while (rs.next()) {
+        log.info("Deleting '{}'", rs.getString("name"));
+        rs.deleteRow();                            // DELETE direto, sem "confirmar"
+    }
+}
+
+ProducerService.findByNameAndInsertWhenNotFound("A-1 pictures");  // Producer(id=13, name=A-1 pictures)
+ProducerService.findByNameAndDelete("A-1 pictures");</code></pre>
+      <ul>
+        <li><strong>Inserir</strong>: <code>moveToInsertRow()</code> leva o cursor para uma <strong>linha temporária</strong>, os <code>updateXxx</code> preenchem as colunas e <code>insertRow()</code> grava. Depois, <code>moveToCurrentRow()</code> (extra) volta à posição de antes.</li>
+        <li>Para devolver o registro com o <code>id</code> gerado sem fazer outra consulta, o professor volta com <code>beforeFirst()</code> e lê a linha (o driver do MySQL acrescenta a linha inserida ao resultado).</li>
+        <li><strong>Refatoração ao vivo</strong>: o método ficou grande, então ele trocou o <code>if/else</code> por um <strong>retorno antecipado</strong> (<code>if (rs.next()) return producers;</code>) e extraiu <code>insertNewProducer</code> e <code>getProducer</code> com o IntelliJ (<em>Refactor, Extract Method</em>). "É assim que funciona refatoração."</li>
+        <li><strong>Deletar</strong>: <code>rs.deleteRow()</code> apaga a linha atual <strong>direto no banco</strong>.</li>
+        <li>Com isso, "fizemos praticamente tudo com o <code>ResultSet</code>, sem escrever outra linha de SQL".</li>
+      </ul>
+
+      <h3>Atenção</h3>
+      <ul>
+        <li><strong>Colunas de metadados começam em 1</strong>, como no <code>getInt(1)</code>.</li>
+        <li><strong><code>ResultSet</code> padrão é <code>FORWARD_ONLY</code> e <code>READ_ONLY</code></strong>. Para <code>previous()</code>/<code>absolute()</code>/<code>updateRow()</code>, crie o <code>Statement</code> com <code>createStatement(TYPE_SCROLL_INSENSITIVE, CONCUR_UPDATABLE)</code>. Se não, vem <code>SQLException</code>.</li>
+        <li><strong><code>updateXxx</code> sem <code>updateRow()</code> não grava.</strong> <code>cancelRowUpdates()</code> só funciona antes do <code>updateRow()</code>.</li>
+        <li><strong><code>previous()</code> a partir da última linha pula a última.</strong> Comece de <code>afterLast()</code>.</li>
+        <li><strong><code>findByNameAndDelete("")</code> apaga todos</strong>: <code>LIKE '%%'</code> casa com tudo. O professor avisa: "se passar vazio, deleta todo mundo". Valide a entrada.</li>
+        <li><strong>O <code>findByNameAndInsertWhenNotFound</code> devolve lista vazia quando o nome já existe</strong>: o <code>return producers;</code> sai antes de ler as linhas. Se a intenção é "buscar ou criar", o certo seria devolver os encontrados (como o <code>firstOrCreate</code> do Laravel).</li>
+        <li><strong>Extra: <code>ResultSet</code> atualizável tem requisitos</strong>: a consulta deve vir de <strong>uma única tabela</strong> e incluir a <strong>chave primária</strong> (sem <code>JOIN</code>, sem colunas calculadas). É por isso que os exemplos usam <code>SELECT *</code> de <code>producer</code>.</li>
+        <li><strong>Extra: cuidado com o "insensível"</strong>: o <code>TYPE_SCROLL_INSENSITIVE</code> do MySQL carrega o resultado inteiro na memória. Com milhões de linhas, isso pesa.</li>
+        <li><strong>SQL injection continua</strong>: estes métodos ainda montam o <code>WHERE</code> com <code>formatted</code>, e o <code>PreparedStatement</code> vem na aula 268.</li>
+      </ul>
+
+      <h3>Paralelo com PHP</h3>
+      <ul>
+        <li><strong>Metadados</strong>: no PDO, <code>$stmt-&gt;columnCount()</code> e <code>$stmt-&gt;getColumnMeta($i)</code> (que começa em <strong>0</strong>) devolvem nome, tabela, tipo e tamanho, o <code>ResultSetMetaData</code>. Do servidor e do driver: <code>$pdo-&gt;getAttribute(PDO::ATTR_SERVER_VERSION)</code> e <code>ATTR_DRIVER_NAME</code>. No Laravel, <code>Schema::getColumnListing('producer')</code> e <code>Schema::getColumns('producer')</code> descrevem a tabela.</li>
+        <li><strong>Cursor rolável</strong>: o PDO tem <code>PDO::ATTR_CURSOR =&gt; PDO::CURSOR_SCROLL</code> e <code>fetch(PDO::FETCH_ASSOC, PDO::FETCH_ORI_LAST)</code>/<code>FETCH_ORI_ABS</code>, mas o <code>pdo_mysql</code> não suporta. Na prática, no PHP você faz <code>fetchAll()</code> e navega no array (<code>end($rows)</code>, <code>$rows[1]</code>, <code>array_reverse</code>), que é o equivalente ao "insensível": uma foto na memória.</li>
+        <li><strong>Alterar pelo resultado ≈ Eloquent</strong>: <code>foreach (Producer::where('name', 'like', '%Deen%')-&gt;get() as $p) { $p-&gt;name = strtoupper($p-&gt;name); $p-&gt;save(); }</code> é o <code>updateString</code> + <code>updateRow</code>. O <code>$p-&gt;refresh()</code> (ou simplesmente não chamar <code>save()</code>) ≈ <code>cancelRowUpdates</code>. <code>Producer::firstOrCreate(['name' =&gt; 'A-1 Pictures'])</code> é o "busca e insere se não achar" feito do jeito certo, e <code>Producer::where('name', 'like', '%A-1%')-&gt;delete()</code> ≈ o <code>deleteRow</code> em loop.</li>
+      </ul>
+    </section>
+
+    <section id="flashcards">
+      <h2>Flashcards</h2>
+      <p style="color:var(--muted);margin-top:-6px">Toque no cartão para virar.</p>
+      <div id="flashcards-app"></div>
+    </section>
+
+    <section id="quiz">
+      <h2>Quiz</h2>
+      <div id="quiz-app"></div>
+    </section>
+
+    <section id="estudo">
+      <h2>Material de estudo</h2>
+
+      <h3>Mapa mental</h3>
+<pre><code>ResultSet avançado (263–267)
+├── ResultSetMetaData (263): rs.getMetaData()
+│   └── getColumnCount · getTableName(i) · getColumnName(i) · getColumnDisplaySize(i) · getColumnTypeName(i)
+├── DatabaseMetaData (264): conn.getMetaData() → o que o DRIVER suporta
+│   ├── tipo: FORWARD_ONLY (padrão) · SCROLL_INSENSITIVE (foto) · SCROLL_SENSITIVE (vê mudanças; MySQL não)
+│   └── concorrência: CONCUR_READ_ONLY (padrão) · CONCUR_UPDATABLE
+├── Navegar (265): createStatement(TYPE_SCROLL_INSENSITIVE, CONCUR_UPDATABLE)
+│   ├── mover: next · previous · first · last · absolute(n) · relative(±n) · beforeFirst · afterLast
+│   ├── consultar: getRow · isFirst · isLast · isBeforeFirst · isAfterLast
+│   └── previous a partir de afterLast (senão pula a última)
+└── Alterar pelo ResultSet (266–267)
+    ├── update: updateString(col, v) → updateRow() · cancelRowUpdates() antes
+    ├── insert: moveToInsertRow → updateXxx → insertRow (→ moveToCurrentRow)
+    ├── delete: deleteRow()
+    └── requisitos: uma tabela, com a chave primária</code></pre>
+
+      <h3>Prática no seu WSL (25 minutos)</h3>
+      <p>Continua o projeto <code>~/java-lab-jdbc</code> (MySQL no Docker, Lombok e Log4j das páginas anteriores). Primeiro, deixe a tabela com três produtores conhecidos:</p>
+<pre><code>cd ~/java-lab-jdbc
+docker compose up -d
+docker exec mysql mysql -uroot -proot -e "DELETE FROM anime_store.anime; DELETE FROM anime_store.producer; ALTER TABLE anime_store.producer AUTO_INCREMENT = 1; INSERT INTO anime_store.producer (name) VALUES ('NHK'), ('Studio Deen'), ('Madhouse');"
+
+J=src/main/java/academy/devdojo/maratonajava/javacore/ZZIjdbc
+cat > $J/test/ResultSetPraticaTest01.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.ZZIjdbc.test;
+
+import academy.devdojo.maratonajava.javacore.ZZIjdbc.conn.ConnectionFactory;
+import academy.devdojo.maratonajava.javacore.ZZIjdbc.dominio.Producer;
+
+import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
+
+public class ResultSetPraticaTest01 {
+    static final String SELECT = "SELECT * FROM anime_store.producer ORDER BY id";
+
+    static Producer producer(ResultSet rs) throws SQLException {
+        return Producer.builder().id(rs.getInt("id")).name(rs.getString("name")).build();
+    }
+
+    static List&lt;Producer&gt; findAll(Connection conn) throws SQLException {
+        List&lt;Producer&gt; list = new ArrayList&lt;&gt;();
+        try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(SELECT)) {
+            while (rs.next()) list.add(producer(rs));
+        }
+        return list;
+    }
+
+    public static void main(String[] args) throws SQLException {
+        try (Connection conn = ConnectionFactory.getConnection()) {
+            // 263 · ResultSetMetaData (sem ler nenhuma linha)
+            try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(SELECT)) {
+                ResultSetMetaData md = rs.getMetaData();
+                System.out.println("colunas: " + md.getColumnCount());                          // ?
+                for (int i = 1; i &lt;= md.getColumnCount(); i++) {
+                    System.out.println(md.getTableName(i) + "." + md.getColumnName(i) + " "
+                            + md.getColumnTypeName(i) + " (Types=" + md.getColumnType(i) + ")"); // ?
+                }
+                System.out.println("tamanho de name: " + md.getColumnDisplaySize(2));           // ?
+            }
+
+            // 264 · DatabaseMetaData
+            DatabaseMetaData db = conn.getMetaData();
+            System.out.println(db.getDatabaseProductName() + " / " + db.getDriverName());       // ?
+            System.out.println("FORWARD_ONLY? " + db.supportsResultSetType(ResultSet.TYPE_FORWARD_ONLY)
+                    + " | SCROLL_INSENSITIVE? " + db.supportsResultSetType(ResultSet.TYPE_SCROLL_INSENSITIVE)
+                    + " | SCROLL_SENSITIVE? " + db.supportsResultSetType(ResultSet.TYPE_SCROLL_SENSITIVE)); // ?
+
+            try (Statement stmt = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
+                 ResultSet rs = stmt.executeQuery(SELECT)) {
+                // 265 · navegando
+                rs.last();        System.out.println(rs.getRow() + " " + producer(rs));        // ?
+                rs.first();       System.out.println(rs.getRow() + " " + producer(rs));        // ?
+                rs.absolute(2);   System.out.println(rs.getRow() + " " + producer(rs));        // ?
+                rs.relative(-1);  System.out.println(rs.getRow() + " isFirst=" + rs.isFirst() + " isLast=" + rs.isLast()); // ?
+                rs.afterLast();
+                StringBuilder reverso = new StringBuilder();
+                while (rs.previous()) reverso.append(rs.getString("name")).append(" | ");
+                System.out.println("de baixo para cima: " + reverso);                          // ?
+
+                // 266 · update pelo ResultSet
+                rs.absolute(1);
+                rs.updateString("name", "NHK ALTERADO");
+                System.out.println("antes de cancelar: " + rs.getString("name"));              // ?
+                rs.cancelRowUpdates();
+                System.out.println("depois de cancelar: " + rs.getString("name"));             // ?
+                rs.absolute(2);
+                rs.updateString("name", rs.getString("name").toUpperCase());
+                rs.updateRow();                                                                // grava
+
+                // 267 · insert e delete pelo ResultSet
+                rs.moveToInsertRow();
+                rs.updateString("name", "A-1 Pictures");
+                rs.insertRow();
+                rs.moveToCurrentRow();
+            }
+            System.out.println("depois do insert: " + findAll(conn));                          // ?
+
+            try (Statement stmt = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
+                 ResultSet rs = stmt.executeQuery("SELECT * FROM anime_store.producer WHERE name LIKE '%A-1%'")) {
+                while (rs.next()) {
+                    System.out.println("deletando " + rs.getString("name"));                    // ?
+                    rs.deleteRow();
+                }
+            }
+            System.out.println("final: " + findAll(conn));                                     // ?
+        }
+    }
+}
+EOF
+
+mvn -q compile
+java -cp target/classes:$(cat cp.txt) academy.devdojo.maratonajava.javacore.ZZIjdbc.test.ResultSetPraticaTest01</code></pre>
+      <details>
+        <summary>Ver a saída esperada</summary>
+<pre><code>colunas: 2
+producer.id INT (Types=4)
+producer.name VARCHAR (Types=12)
+tamanho de name: 255
+MySQL / MySQL Connector/J
+FORWARD_ONLY? true | SCROLL_INSENSITIVE? true | SCROLL_SENSITIVE? false
+3 Producer(id=3, name=Madhouse)
+1 Producer(id=1, name=NHK)
+2 Producer(id=2, name=Studio Deen)
+1 isFirst=true isLast=false
+de baixo para cima: Madhouse | Studio Deen | NHK |
+antes de cancelar: NHK ALTERADO
+depois de cancelar: NHK
+depois do insert: [Producer(id=1, name=NHK), Producer(id=2, name=STUDIO DEEN), Producer(id=3, name=Madhouse), Producer(id=4, name=A-1 Pictures)]
+deletando A-1 Pictures
+final: [Producer(id=1, name=NHK), Producer(id=2, name=STUDIO DEEN), Producer(id=3, name=Madhouse)]</code></pre>
+      </details>
+      <p>O <code>cp.txt</code> (classpath) é o da página 257–262. Se você mudou o <code>pom.xml</code> depois, gere de novo com <code>mvn -q dependency:build-classpath -Dmdep.outputFile=cp.txt</code>.</p>
+      <p><strong>Exercícios:</strong></p>
+      <ol>
+        <li>Crie o <code>Statement</code> sem argumentos (<code>conn.createStatement()</code>) e chame <code>rs.last()</code>. Qual exceção aparece?</li>
+        <li>Troque o <code>rs.afterLast()</code> por <code>rs.last()</code> antes do <code>while (rs.previous())</code>. Qual nome some?</li>
+        <li>Tire o <code>rs.updateRow()</code> do <code>STUDIO DEEN</code> e confira no banco se a alteração ficou.</li>
+        <li>Tente um <code>ResultSet</code> atualizável com <code>SELECT name FROM anime_store.producer</code> (sem o <code>id</code>) e chame <code>updateRow()</code>. O que o driver diz?</li>
+        <li>Abra duas janelas: numa, pause o programa (breakpoint) depois do <code>executeQuery</code>; na outra, altere um nome pelo cliente do MySQL. O <code>ResultSet</code> "insensível" enxerga a mudança?</li>
+      </ol>
+
+      <h3>Glossário</h3>
+      <ul>
+        <li><strong>Metadados</strong>: dados sobre os dados (colunas, tipos, tamanhos, recursos do driver).</li>
+        <li><strong><code>ResultSetMetaData</code></strong>: descrição das colunas de um resultado.</li>
+        <li><strong><code>DatabaseMetaData</code></strong>: informações e recursos do banco/driver da conexão.</li>
+        <li><strong><code>java.sql.Types</code></strong>: constantes numéricas dos tipos SQL (INTEGER = 4, VARCHAR = 12...).</li>
+        <li><strong>TYPE_FORWARD_ONLY</strong>: cursor que só anda para frente (padrão).</li>
+        <li><strong>TYPE_SCROLL_INSENSITIVE</strong>: cursor livre que não vê alterações feitas depois da consulta.</li>
+        <li><strong>TYPE_SCROLL_SENSITIVE</strong>: cursor livre que vê as alterações (raro nos drivers).</li>
+        <li><strong>CONCUR_READ_ONLY / CONCUR_UPDATABLE</strong>: resultado só de leitura / alterável.</li>
+        <li><strong><code>absolute(n)</code> × <code>relative(n)</code></strong>: ir à linha n × andar n linhas a partir da atual.</li>
+        <li><strong>Linha de inserção</strong>: linha temporária (<code>moveToInsertRow</code>) usada para montar um INSERT.</li>
+        <li><strong>Refatoração</strong>: melhorar a estrutura do código sem mudar o comportamento (ex.: extrair método).</li>
+      </ul>
+
+      <h3>Revisão espaçada</h3>
+      <ul class="revisao">
+        <li><span class="dia">Dia 1</span><span>Todos os flashcards + a prática com previsões.</span></li>
+        <li><span class="dia">Dia 3</span><span>Quiz + exercícios 1 a 3.</span></li>
+        <li><span class="dia">Dia 7</span><span>Exercícios 4 e 5 + listar de memória os métodos de mover e de consultar o cursor.</span></li>
+        <li><span class="dia">Dia 14</span><span>Flashcards que errou + questões discursivas.</span></li>
+      </ul>
+
+      <h3>Para aprofundar</h3>
+      <ul>
+        <li>Como o <code>DatabaseMetaData.getTables</code>/<code>getColumns</code> permite listar todas as tabelas e colunas de um banco (é o que IDEs como o DBeaver fazem)?</li>
+        <li>Por que ferramentas de migração e ORMs usam metadados para comparar o banco com o código?</li>
+        <li>O que é <code>setFetchSize</code> e o <em>streaming</em> de resultados do Connector/J para consultas enormes?</li>
+        <li>Quando alterar pelo <code>ResultSet</code> é melhor que um <code>UPDATE ... WHERE</code> único? (Dica: quase nunca para muitos registros.)</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    window.AULA = {
+      flashcards: [
+        ["Como obter os metadados das colunas de uma consulta?", "rs.getMetaData(), que devolve um ResultSetMetaData"],
+        ["Quais informações o ResultSetMetaData dá?", "getColumnCount, getTableName(i), getColumnName(i), getColumnDisplaySize(i), getColumnType(i)/getColumnTypeName(i)"],
+        ["Precisa chamar rs.next() antes de ler os metadados?", "Não: eles existem mesmo sem ler linhas (e com resultado vazio)"],
+        ["O que significa o tipo 4 em getColumnType?", "java.sql.Types.INTEGER (VARCHAR é 12); getColumnTypeName dá o nome"],
+        ["Para que serve o ResultSetMetaData?", "Descobrir as colunas em tempo de execução, ex.: relatórios de outro sistema"],
+        ["Como saber o que o driver suporta?", "conn.getMetaData() → DatabaseMetaData.supportsResultSetType / supportsResultSetConcurrency"],
+        ["TYPE_FORWARD_ONLY?", "Padrão: o cursor só anda para frente com next()"],
+        ["TYPE_SCROLL_INSENSITIVE?", "Anda livremente, mas não vê alterações feitas no banco depois da consulta ('foto')"],
+        ["TYPE_SCROLL_SENSITIVE?", "Anda livremente e vê as alterações feitas por outros; o driver do MySQL não suporta"],
+        ["CONCUR_READ_ONLY × CONCUR_UPDATABLE?", "Só leitura (padrão) × permite atualizar, inserir e deletar pelo ResultSet"],
+        ["Como criar um Statement rolável e atualizável?", "conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE)"],
+        ["absolute(2) × relative(-1)?", "absolute vai para a linha 2; relative anda uma linha para trás a partir da atual"],
+        ["Quais métodos consultam a posição sem mover?", "getRow, isFirst, isLast, isBeforeFirst, isAfterLast"],
+        ["Por que while (rs.previous()) a partir da última linha pula a última?", "O primeiro previous() já vai para a penúltima; comece de afterLast()"],
+        ["'Última linha' é da tabela ou da consulta?", "Da consulta: depende do ORDER BY"],
+        ["Como atualizar uma coluna pelo ResultSet?", "rs.updateString(\"name\", valor) e depois rs.updateRow()"],
+        ["O que acontece se esquecer o updateRow()?", "A alteração fica só no ResultSet e não vai para o banco"],
+        ["Para que serve cancelRowUpdates()?", "Desfazer as alterações da linha antes do updateRow()"],
+        ["Como inserir pelo ResultSet?", "moveToInsertRow(), updateXxx(...), insertRow() (e moveToCurrentRow() para voltar)"],
+        ["Como deletar pelo ResultSet?", "rs.deleteRow() na linha atual; apaga direto no banco"],
+        ["Qual o perigo de findByNameAndDelete(\"\")?", "LIKE '%%' casa com tudo: apaga todos os registros"],
+        ["Quais os requisitos de um ResultSet atualizável?", "Consulta de uma única tabela, incluindo a chave primária"],
+        ["Qual o problema do findByNameAndInsertWhenNotFound?", "Quando o nome já existe, devolve lista vazia em vez dos encontrados"],
+        ["Que refatoração o professor fez na aula 267?", "Retorno antecipado no lugar do if/else e Extract Method (insertNewProducer, getProducer)"],
+        ["Equivalente Laravel de 'busca ou cria'?", "Producer::firstOrCreate(['name' => ...])"]
+      ],
+      quiz: [
+        { tipo: 'multipla', pergunta: 'Com rs.getMetaData(), qual método dá o número de colunas do resultado?',
+          opcoes: ['getColumnCount()', 'getRow()', 'getColumnDisplaySize()', 'getFetchSize()'],
+          correta: 0,
+          explicacao: 'getColumnCount() devolve quantas colunas a consulta trouxe; depois se percorre de 1 até esse número com getColumnName(i), getColumnTypeName(i)...' },
+        { tipo: 'vf', pergunta: 'O driver do MySQL suporta ResultSet do tipo TYPE_SCROLL_SENSITIVE.',
+          correta: 1,
+          explicacao: 'Falso. O DatabaseMetaData mostrou suporte a FORWARD_ONLY e SCROLL_INSENSITIVE (ambos atualizáveis), mas não a SCROLL_SENSITIVE, que é difícil de implementar e raro nos drivers.' },
+        { tipo: 'multipla', pergunta: 'O que significa um ResultSet TYPE_SCROLL_INSENSITIVE?',
+          opcoes: ['Só anda para frente', 'Anda livremente, mas não vê alterações feitas no banco depois da consulta', 'Anda livremente e vê alterações em tempo real', 'Não permite ler dados'],
+          correta: 1,
+          explicacao: 'É como uma foto do resultado na memória: permite next, previous, absolute..., mas mudanças feitas por outras conexões não aparecem.' },
+        { tipo: 'multipla', pergunta: 'Com 3 linhas, após rs.absolute(2) e rs.relative(-1), em qual linha o cursor está?',
+          opcoes: ['Linha 1', 'Linha 2', 'Linha 3', 'Antes da primeira'],
+          correta: 0,
+          explicacao: 'absolute(2) vai para a linha 2; relative(-1) volta uma linha a partir da atual, então linha 1 (isFirst() = true).' },
+        { tipo: 'multipla', pergunta: 'O cursor está NA última linha. O que while (rs.previous()) imprime?',
+          opcoes: ['Todas as linhas de baixo para cima', 'Todas menos a última', 'Só a última', 'Nada'],
+          correta: 1,
+          explicacao: 'O primeiro previous() já move para a penúltima. Para incluir a última, comece de afterLast() (no vídeo, last() seguido de next()).' },
+        { tipo: 'vf', pergunta: 'Depois de rs.updateString("name", "X"), o valor já está gravado no banco.',
+          correta: 1,
+          explicacao: 'Falso. updateString muda só o ResultSet; é o rs.updateRow() que grava. Foi o que aconteceu na primeira execução do professor.' },
+        { tipo: 'multipla', pergunta: 'Qual a sequência correta para inserir um registro pelo ResultSet?',
+          opcoes: ['insertRow → updateString → moveToInsertRow', 'moveToInsertRow → updateString → insertRow', 'updateRow → insertRow', 'next → insertRow'],
+          correta: 1,
+          explicacao: 'moveToInsertRow leva a uma linha temporária, updateString preenche e insertRow grava. moveToCurrentRow volta à posição anterior.' },
+        { tipo: 'multipla', pergunta: 'Qual o risco de chamar findByNameAndDelete("") da aula 267?',
+          opcoes: ['Nenhum, não acha nada', 'Lança exceção', "Apaga todos os produtores, porque LIKE '%%' casa com tudo", 'Apaga só o primeiro'],
+          correta: 2,
+          explicacao: 'O próprio professor avisa. Com texto vazio o filtro vira "tudo", e o deleteRow em loop apaga a tabela inteira. Valide a entrada.' },
+        { tipo: 'discursiva', pergunta: 'Explique a diferença entre ResultSetMetaData e DatabaseMetaData e dê um uso real de cada.',
+          explicacao: 'ResultSetMetaData vem de rs.getMetaData() e descreve o resultado de uma consulta específica: quantidade de colunas (getColumnCount), tabela de origem, nome, tamanho de exibição e tipo de cada coluna (getColumnName(i), getColumnDisplaySize(i), getColumnType/getColumnTypeName(i)), com índices a partir de 1. Não precisa de rs.next(). Uso: montar relatórios ou exportações de consultas cujas colunas você não conhece de antemão, como um SELECT gigante vindo de outro sistema. DatabaseMetaData vem de conn.getMetaData() e descreve o banco e o driver: nome e versão do produto, nome do driver, e principalmente o que é suportado (supportsResultSetType para FORWARD_ONLY/SCROLL_INSENSITIVE/SCROLL_SENSITIVE, supportsResultSetConcurrency para CONCUR_UPDATABLE), além de listar tabelas e colunas. Uso: decidir em tempo de execução se pode usar um ResultSet rolável/atualizável, ou ferramentas como IDEs de banco e migrações. No PHP, o equivalente é $stmt->getColumnMeta($i) e $pdo->getAttribute(PDO::ATTR_SERVER_VERSION).' },
+        { tipo: 'discursiva', pergunta: 'Descreva como atualizar, inserir e deletar registros usando só o ResultSet (aulas 266 e 267), com os cuidados de cada operação.',
+          explicacao: 'Primeiro, o Statement deve ser criado com conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE), e a consulta deve vir de uma única tabela, incluindo a chave primária. Atualizar: posicionado na linha, rs.updateString("name", novoValor) muda o valor no ResultSet, e rs.updateRow() grava no banco. Sem o updateRow nada é persistido, e rs.cancelRowUpdates() desfaz as mudanças antes do updateRow. Inserir: rs.moveToInsertRow() vai para uma linha temporária, rs.updateString("name", nome) preenche, rs.insertRow() grava (e rs.moveToCurrentRow() volta). Para ler o id gerado, o professor faz beforeFirst() e next(). Deletar: rs.deleteRow() apaga a linha atual direto no banco. Cuidados: com um filtro LIKE vazio, o loop de deleteRow apaga tudo; o método insert-when-not-found devolve lista vazia quando o nome já existe; e o WHERE ainda é montado com formatted, com risco de SQL injection até o PreparedStatement da aula 268. No Laravel, o equivalente é $model->name = ...; $model->save(), firstOrCreate e ->delete().' }
+      ]
+    };
+  </script>
+  <script src="../js/app.js"></script>
+</body>
+</html>
