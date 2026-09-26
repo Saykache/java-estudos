@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>280–284 · jUnit, Record e instanceof</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="topo">
+      <a class="voltar" href="../index.html">← Todas as aulas</a>
+      <h1>280–284 · jUnit, JDK 16, Record e pattern matching</h1>
+      <p>Testes unitários com JUnit 5 (assertions, @DisplayName, @BeforeEach, assertThrows, cobertura), atualizando para o JDK 16, record classes e pattern matching para instanceof: o fim da Maratona · <a href="https://www.youtube.com/playlist?list=PL62G310vn6nFIsOCC0H-C2infYgwm8SWW" target="_blank" rel="noopener">playlist</a></p>
+    </header>
+
+    <nav class="abas">
+      <a href="#resumo">Resumo</a>
+      <a href="#flashcards">Flashcards</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#estudo">Material de estudo</a>
+    </nav>
+
+    <p class="aviso">Junta as aulas 280 e 281 (testes unitários com jUnit), 282 (atualizando JDK), 283 (Record Class) e 284 (Pattern Matching for instanceof), as últimas do curso. Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. O código (pacote <code>javacore.ZZKjunit</code>: <code>Person</code>, <code>PersonService</code>, <code>PersonServiceTest</code>, <code>Manga</code>, <code>MangaTest</code>, <code>Employee</code>, <code>Developer</code>, <code>DeveloperTest</code> e o <code>pom.xml</code>) foi conferido no <a href="https://github.com/devdojobr/maratona-java-virado-no-jiraya" target="_blank" rel="noopener">repositório do professor</a>. Os itens marcados como "extra" não estão nos vídeos.</p>
+
+    <section id="resumo">
+      <h2>Resumo</h2>
+      <p>O fecho da Maratona tem duas partes. A primeira são os <strong>testes unitários</strong>: até aqui, cada funcionalidade era "testada" num <code>main</code> olhando o console. O <strong>JUnit</strong> transforma isso em testes automáticos que dizem sozinhos se o comportamento continua certo, e é algo que "tem que estar no sangue". A segunda é atualizar para o <strong>Java 16</strong> e conhecer dois recursos que ficaram definitivos nele: <strong><code>record</code></strong> (classes imutáveis de dados sem boilerplate) e <strong>pattern matching para <code>instanceof</code></strong> (testar e fazer o cast numa linha só).</p>
+<pre><code>@Test void isAdult_ReturnFalse_WhenAgeIsLowerThan18() {        // 280 · teste unitário
+    Assertions.assertFalse(personService.isAdult(new Person(15)));
+}
+@BeforeEach void setUp() { ... }                                 // 281 · cada teste do zero
+public record Manga(String name, int episodes) { }               // 283 · record
+if (employee instanceof Developer developer) developer.getMainLanguage(); // 284</code></pre>
+
+      <h3>280 · Testes unitários com jUnit pt 01</h3>
+      <p><strong>Por que testar</strong>: o professor gravou as aulas de introdução há mais de seis meses e "não lembra mais" como <code>Carro</code> ou <code>Estudante</code> deveriam se comportar. No trabalho é igual: você dá manutenção em código antigo, outras pessoas mexem no mesmo repositório, e alguém precisa garantir que o comportamento não mudou sem querer. Existem vários tipos de teste (integração, componente, comportamento...), e o <strong>unitário</strong> é o mais básico: testa <strong>uma unidade</strong>, geralmente um método. "90% das pessoas que eu rejeito em entrevista são pessoas que não escrevem testes unitários."</p>
+<pre><code>@Data @AllArgsConstructor
+public class Person {
+    private int age;
+}
+
+public class PersonService {
+    public boolean isAdult(Person person) {
+        Objects.requireNonNull(person, "Person can't be null");
+        return person.getAge() &gt;= 18;
+    }
+}
+
+// o jeito "antigo": um main e o olho no console
+Person person = new Person(15);
+log.info("Is Adult? '{}'", new PersonService().isAdult(person));   // false</code></pre>
+      <p>O problema do <code>main</code>: se alguém trocar o <code>18</code> por <code>21</code> ("nos Estados Unidos é 21"), o <code>main</code> com 15 anos continua imprimindo <code>false</code> e ninguém percebe. O teste automático percebe.</p>
+<pre><code>&lt;dependency&gt;
+    &lt;groupId&gt;org.junit.jupiter&lt;/groupId&gt;
+    &lt;artifactId&gt;junit-jupiter-api&lt;/artifactId&gt;
+    &lt;version&gt;5.7.2&lt;/version&gt;
+    &lt;scope&gt;test&lt;/scope&gt;                   &lt;!-- só existe para os testes --&gt;
+&lt;/dependency&gt;
+
+// src/test/java/.../ZZKjunit/service/PersonServiceTest.java (mesmo pacote da classe testada)
+class PersonServiceTest {
+    @Test
+    @DisplayName("A person should be not adult when age is lower than 18")
+    void isAdult_ReturnFalse_WhenAgeIsLowerThan18() {
+        Person person = new Person(15);
+        PersonService personService = new PersonService();
+        Assertions.assertFalse(personService.isAdult(person));
+    }
+}</code></pre>
+      <ul>
+        <li><strong>JUnit 5</strong> (o módulo se chama <em>Jupiter</em>) é a biblioteca de testes mais famosa. Evite versões <code>-M1</code>/<code>-RC</code> (<em>milestone</em>, ainda em desenvolvimento), e o <code>scope</code> <code>test</code> deixa a dependência fora do código de produção.</li>
+        <li><strong>Onde ficam</strong>: em <code>src/test/java</code>, <strong>no mesmo pacote</strong> da classe testada, com o nome <code>ClasseTest</code>. No IntelliJ: <code>Alt+Enter</code> (ou <code>Ctrl+Shift+T</code>) na classe, <em>Create Test</em>, escolher JUnit 5 e os métodos.</li>
+        <li><strong>O que testar</strong>: o professor foca na <strong>camada de negócio</strong> (o <code>PersonService</code>), e não em getters e setters.</li>
+        <li><strong>Assertivas</strong> (<code>Assertions</code>): "tem que ser assim, se não for, falhou". <code>assertEquals(esperado, obtido)</code>, <code>assertTrue</code>, <code>assertFalse</code>, <code>assertThrows</code>... Dá para importar estaticamente (<code>import static org.junit.jupiter.api.Assertions.*</code>) e escrever só <code>assertFalse(...)</code>.</li>
+        <li><strong>Nome do teste</strong>: não há uma convenção única. A do professor é <code>metodo_OQueDeveFazer_QuandoCondicao</code> (<code>isAdult_ReturnFalse_WhenAgeIsLowerThan18</code>), com <em>underscore</em> separando as partes. Se preferir um texto livre, use <strong><code>@DisplayName("...")</code></strong>.</li>
+        <li>Os testes rodam a cada <em>push</em> no servidor (integração contínua), e é aí que um nome descritivo faz diferença: você não tem o código na frente, só o relatório. "Hoje em dia muito difícil uma empresa que não faz isso."</li>
+      </ul>
+
+      <h3>281 · Testes unitários com jUnit pt 02</h3>
+<pre><code>class PersonServiceTest {
+    private Person adult;
+    private Person notAdult;
+    private PersonService personService;
+
+    @BeforeEach                                   // roda ANTES de CADA @Test
+    public void setUp() {
+        adult = new Person(18);
+        notAdult = new Person(15);
+        personService = new PersonService();
+    }
+
+    @Test
+    @DisplayName("A person should be not adult when age is lower than 18")
+    void isAdult_ReturnFalse_WhenAgeIsLowerThan18() {
+        Assertions.assertFalse(personService.isAdult(notAdult));
+    }
+
+    @Test
+    @DisplayName("A person should be adult when age is greater or equal than 18")
+    void isAdult_ReturnTrue_WhenAgeIsGreaterOrEqualsThan18() {
+        Assertions.assertTrue(personService.isAdult(adult));
+    }
+
+    @Test
+    @DisplayName("Should throw NullPointerException with message when person is null")
+    void isAdult_ThrowException_WhenPersonIsNull() {
+        Assertions.assertThrows(IllegalArgumentException.class,
+                () -&gt; personService.isAdult(null), "Person can't be null");
+    }
+
+    @Test
+    @DisplayName("Should return list with only adults")
+    void filterRemovingNotAdult_ReturnListWithAdultOnly_WhenListOfPersonWithAdultIsPassed() {
+        List&lt;Person&gt; personList = List.of(new Person(17), new Person(18), new Person(21));
+        Assertions.assertEquals(2, personService.filterRemovingNotAdult(personList).size());
+    }
+}
+
+// PersonService ganhou:
+public List&lt;Person&gt; filterRemovingNotAdult(List&lt;Person&gt; personList) {
+    return personList.stream().filter(this::isAdult).collect(Collectors.toList());
+}</code></pre>
+      <ul>
+        <li><strong>Cobertura</strong> (<em>Run with Coverage</em>): mostra quantas linhas os testes executaram. O primeiro teste já dava <strong>100%</strong>, e mesmo assim "os testes estão uma bosta": não havia teste para maior de 18 nem para <code>null</code>. <strong>Cobertura alta não é teste bom</strong>; o que vale é cobrir os <strong>casos</strong>, principalmente os que não são óbvios. É isso que chama a atenção de quem avalia seu código.</li>
+        <li><strong><code>@BeforeEach</code></strong> (o nome <code>setUp</code> é convenção): roda antes de <strong>cada</strong> teste e recria os objetos. Parece o mesmo que inicializar no atributo, mas garante a <strong>independência</strong>: um teste que altera um objeto não afeta o próximo. Com milhares de testes, isso importa.</li>
+        <li><strong>O teste pegando a mudança</strong>: trocando o <code>18</code> por <code>21</code> no serviço, o teste "deveria ser adulto com 18" falha na hora. Às vezes a mudança é necessária (um requisito do <em>product owner</em>), mas agora você <strong>sabe</strong> que ela impacta outros lugares. Mais testes, mais chances de pegar o problema antes do usuário.</li>
+        <li><strong><code>assertThrows(TipoDaExceção.class, () -&gt; código)</code></strong>: o código dentro da lambda (um <code>Executable</code>) tem que lançar aquela exceção. Quando alguém trocou o <code>requireNonNull</code> (que lança <code>NullPointerException</code>) por <code>if (person == null) throw new IllegalArgumentException()</code>, o teste que esperava <code>NullPointerException</code> falhou, como deveria. Mudar o tipo de exceção pode quebrar quem depende dela (um front-end que mostra uma mensagem conforme o erro, ou um 404 que vira 500).</li>
+        <li>O professor descobre na gravação que o <strong>terceiro argumento do <code>assertThrows</code> não é a mensagem esperada da exceção</strong>: é a mensagem exibida <strong>se o teste falhar</strong>.</li>
+      </ul>
+
+      <h3>282 · Atualizando o JDK</h3>
+      <ul>
+        <li>O curso começou no Java 15; aqui passa para o <strong>16</strong>. Se você está vendo depois, "provavelmente já tem uma versão superior".</li>
+        <li><strong>Instalar</strong>: baixar o JDK (Windows x64), <em>next, next, install</em>. Não precisa desinstalar o anterior. Atualizar a variável de ambiente (o <code>JAVA_HOME</code>/<code>Path</code>) e conferir com <code>java -version</code> e <code>mvn -version</code>.</li>
+        <li><strong>No IntelliJ</strong>: <code>F4</code> no projeto (<em>Project Structure</em>) → <em>SDK</em> 16 e <em>language level</em> 16 (tem a opção "16 preview", mas ele usa a 16 normal), e o mesmo nos módulos. No <code>pom.xml</code>, <code>maven.compiler.source</code> e <code>target</code> para 16, porque o Maven "manda" no build.</li>
+        <li>Antes de recompilar, o <strong><code>clean</code></strong> do Maven apaga a pasta <code>target</code>. Depois, <strong>rode os testes</strong> para ver se nada quebrou. Como o projeto quase não tem testes, "não tem como saber se o resto das classes teve algum problema": outra vantagem de ter testes unitários.</li>
+        <li>Na aula 283 aparece mais um lugar: <em>Settings, Build, Compiler, Java Compiler</em>, onde o <em>target bytecode</em> ainda estava 15.</li>
+      </ul>
+
+      <h3>283 · Record Class</h3>
+      <p>Preview no Java 14, segundo preview no 15 e <strong>definitivo no 16</strong>. É um novo tipo de classe que faz "o mesmo que o <code>@Value</code> do Lombok": uma classe <strong>imutável</strong> de dados.</p>
+<pre><code>public record Manga(String name, int episodes) {        // os componentes vão no "cabeçalho"
+
+    public Manga {                                        // construtor COMPACTO: só validação
+        Objects.requireNonNull(name);
+    }
+}
+
+// o que o compilador gera (javap Manga.class):
+// public final class Manga extends java.lang.Record {
+//     private final String name;  private final int episodes;
+//     public Manga(String, int);
+//     public String name();  public int episodes();      ← accessors, sem "get"
+//     equals, hashCode, toString
+// }
+
+new Manga("Kimetsu no Yaiba", 24).name();              // "Kimetsu no Yaiba"
+new Manga("Kimetsu no Yaiba", 24).toString();          // Manga[name=Kimetsu no Yaiba, episodes=24]</code></pre>
+<pre><code>class MangaTest {
+    private Manga manga1;
+    private Manga manga2;
+
+    @BeforeEach
+    public void setUp() {
+        manga1 = new Manga("Kimetsu no Yaiba", 24);
+        manga2 = new Manga("Kimetsu no Yaiba", 24);
+    }
+
+    @Test public void accessors_ReturnData_WhenInitialized() {
+        Assertions.assertEquals("Kimetsu no Yaiba", manga1.name());
+        Assertions.assertEquals(24, manga1.episodes());
+    }
+    @Test public void equals_ReturnTrue_WhenObjectsAreTheSame() { Assertions.assertEquals(manga1, manga2); }
+    @Test public void hashCode_ReturnTrue_WhenObjectsAreTheSame() { Assertions.assertEquals(manga1.hashCode(), manga2.hashCode()); }
+    @Test public void constructor_ThrowNullPointerException_WhenNameIsNull() {
+        Assertions.assertThrows(NullPointerException.class, () -&gt; new Manga(null, 12));
+    }
+    @Test public void isRecord_ReturnTrue_WhenCalledFromManga() { Assertions.assertTrue(Manga.class.isRecord()); }
+}</code></pre>
+      <ul>
+        <li><strong>O que o compilador gera</strong> (o professor mostra com <code>javap</code> no <code>.class</code>): classe <strong><code>final</code></strong> que estende <strong><code>java.lang.Record</code></strong>, atributos <strong><code>private final</code></strong>, um construtor com todos os componentes, <strong>accessors</strong> com o nome do componente (<code>name()</code>, não <code>getName()</code>), <code>equals</code>, <code>hashCode</code> e <code>toString</code>. Não há setters. "Todo mundo falava que o Java é verboso", e o record veio para resolver isso.</li>
+        <li><strong>Restrições</strong>: não pode declarar <strong>atributos de instância</strong> nem <strong>blocos de inicialização de instância</strong> além dos componentes; <code>static</code> pode (atributos e blocos). Pode ter métodos, implementar interfaces e usar <strong>generics</strong> (<code>record Par&lt;T&gt;(T a, T b)</code>). Não pode estender outra classe (já estende <code>Record</code>).</li>
+        <li><strong>Construtores</strong>: o IntelliJ oferece o <em>canônico</em> (repete todos os parâmetros e atribuições, que não é recomendado) e o <strong><em>compacto</em></strong> (<code>public Manga { ... }</code>, sem parênteses), ideal para <strong>validações</strong>. As atribuições acontecem sozinhas depois dele.</li>
+        <li><strong><code>Manga.class.isRecord()</code></strong>: o professor testa isso porque, se alguém trocar o <code>record</code> por uma <code>class</code> comum, a imutabilidade em que o sistema confiava some, e o teste avisa.</li>
+        <li>Dá para declarar records <strong>aninhados</strong> dentro de outra classe (são implicitamente <code>static</code>). Quem conhece Kotlin vai achar parecido com as <code>data class</code>.</li>
+      </ul>
+
+      <h3>284 · Pattern matching para instanceof</h3>
+      <p>Também definitivo no 16 (preview no 14 e 15). Resolve a repetição do polimorfismo (aula 94): testar o tipo com <code>instanceof</code> e logo em seguida fazer o <em>cast</em> para o mesmo tipo.</p>
+<pre><code>public class Employee {
+    private String id;
+    public Employee(String id) { this.id = id; }
+    public String getId() { return id; }
+}
+public class Developer extends Employee {
+    private String mainLanguage;
+    public Developer(String id, String mainLanguage) { super(id); this.mainLanguage = mainLanguage; }
+    public String getMainLanguage() { return mainLanguage; }
+}
+
+@Test
+public void instanceOf_ExecutesChildClassMethod_WhenObjectIsOfChildType() {
+    Employee employeeDeveloper = new Developer("1", "Java");
+
+    if (employeeDeveloper instanceof Developer) {                 // antes
+        Developer developer = (Developer) employeeDeveloper;       // cast repetido
+        Assertions.assertEquals("Java", developer.getMainLanguage());
+    }
+
+    if (employeeDeveloper instanceof Developer developer) {       // Java 16: testa E declara
+        Assertions.assertEquals("Java", developer.getMainLanguage());
+    }
+}</code></pre>
+      <ul>
+        <li><strong><code>objeto instanceof Tipo variavel</code></strong>: se o teste der <code>true</code>, a variável já existe <strong>com o cast feito</strong>. Uma linha a menos e nenhum cast manual.</li>
+        <li>A variável <strong>só existe onde o teste é verdadeiro</strong> (dentro do <code>if</code>, ou depois dele num <code>if (!(x instanceof T t)) return;</code>).</li>
+        <li><strong>A pegadinha que o professor mostra</strong>: trocando o objeto por um <code>new Employee("1")</code>, nenhum <code>if</code> entra, nenhuma assertiva roda, e o teste <strong>passa</strong> mesmo assim (no debug, os breakpoints dentro dos <code>if</code> nunca são atingidos). Um teste sem assertiva executada não testa nada.</li>
+      </ul>
+
+      <h3>Atenção</h3>
+      <ul>
+        <li><strong>Cobertura de 100% não significa bons testes</strong>: teste os casos (limite, maior, menor, <code>null</code>, lista vazia).</li>
+        <li><strong>Testes independentes</strong>: use <code>@BeforeEach</code> para recriar o estado; não dependa da ordem de execução.</li>
+        <li><strong>Correção: o <code>@DisplayName</code> do teste de <code>null</code> diz "Should throw NullPointerException"</strong>, mas o teste espera <code>IllegalArgumentException</code> (o serviço foi alterado no meio da aula). Nome e verificação devem contar a mesma história.</li>
+        <li><strong>O terceiro argumento do <code>assertThrows</code> é a mensagem de falha</strong>, e não a mensagem esperada da exceção. <strong>Extra</strong>: para verificar a mensagem, use o retorno: <code>var e = assertThrows(IllegalArgumentException.class, () -&gt; ...); assertEquals("Person can't be null", e.getMessage());</code></li>
+        <li><strong>Extra: <code>if (x instanceof T t) { assert... }</code> passa em silêncio</strong> quando o <code>if</code> não entra (a pegadinha da aula 284). Em teste, prefira <code>Developer d = assertInstanceOf(Developer.class, employee);</code> (JUnit 5.8+), que falha se o tipo não bater.</li>
+        <li><strong>Extra: <code>junit-jupiter-api</code> sozinho só compila os testes.</strong> Para o <code>mvn test</code> executá-los é preciso o motor (<code>junit-jupiter-engine</code>, ou o agregador <code>junit-jupiter</code>) e um <code>maven-surefire-plugin</code> recente (2.22+). No IntelliJ funciona porque a IDE traz o motor. A prática abaixo já vem configurada.</li>
+        <li><strong>Record não é setter-friendly</strong>: não há <code>setName</code>. Para "mudar", crie outro record. Accessor é <code>name()</code>, não <code>getName()</code>.</li>
+        <li><strong>Extra: Java 16 não é LTS</strong>. Hoje o recomendado é uma versão LTS: 17, 21 ou 25. Tudo das aulas funciona nelas, e o Java 21 ainda estende o pattern matching ao <code>switch</code> e aos <em>record patterns</em>.</li>
+      </ul>
+
+      <h3>Paralelo com PHP</h3>
+      <ul>
+        <li><strong>JUnit ≈ PHPUnit / Pest</strong>: <code>class PersonServiceTest extends TestCase</code> com métodos <code>test_...</code> ou <code>#[Test]</code>; <code>$this-&gt;assertFalse(...)</code>, <code>assertEquals</code>, <code>$this-&gt;expectException(InvalidArgumentException::class)</code> (≈ <code>assertThrows</code>); <code>setUp()</code> ≈ <code>@BeforeEach</code>; <code>--coverage</code> ≈ <em>Run with Coverage</em>. No Pest: <code>it('is not adult when age &lt; 18', fn() =&gt; expect($service-&gt;isAdult(new Person(15)))-&gt;toBeFalse());</code>, e o texto do <code>it</code> faz o papel do <code>@DisplayName</code>. <code>php artisan test</code> ≈ <code>mvn test</code>.</li>
+        <li><strong>Atualizar a versão ≈ subir o PHP</strong>: mudar o <code>"php": "^8.3"</code> do <code>composer.json</code> (≈ <code>maven.compiler.source</code>), a versão no Docker/Sail e rodar a suíte de testes para ver o que quebrou. É a mesma lição da aula 282.</li>
+        <li><strong>Record ≈ classe <code>readonly</code> do PHP 8.2</strong>: <code>final readonly class Manga { public function __construct(public string $name, public int $episodes) {} }</code>. No PHP não há <code>equals</code>/<code>hashCode</code> gerados (compara-se com <code>==</code>), e acessa-se <code>$manga-&gt;name</code> direto.</li>
+        <li><strong>Pattern matching ≈ PHP sem cast</strong>: no PHP, <code>if ($employee instanceof Developer) { $employee-&gt;getMainLanguage(); }</code> já funciona sem cast, porque a tipagem é dinâmica (e o PHPStan/IDE entende o tipo dentro do <code>if</code>). O Java 16 chega nessa ergonomia mantendo a checagem em tempo de compilação.</li>
+      </ul>
+
+      <h3>Fim da Maratona</h3>
+      <p>Esta foi a última aula da <strong>Maratona Java Virado no Jiraya</strong>: da primeira classe e dos tipos primitivos até coleções, generics, lambdas, streams, concorrência, padrões de projeto, JDBC, testes e os recursos do Java 16. O próprio professor aponta o caminho seguinte, o curso de <strong>Spring Boot</strong> da DevDojo (Docker, JPA/Hibernate, testes, APIs REST), onde tudo isso é usado de uma vez. Para revisar, as páginas deste site seguem a ordem do curso; os blocos de <a href="195-202-lambdas-method-reference-optional.html">lambdas</a>, <a href="203-210-streams-parte-1.html">streams</a> e <a href="268-274-jdbc-preparedstatement-transacao.html">JDBC</a> são os que mais aparecem no dia a dia com Spring.</p>
+    </section>
+
+    <section id="flashcards">
+      <h2>Flashcards</h2>
+      <p style="color:var(--muted);margin-top:-6px">Toque no cartão para virar.</p>
+      <div id="flashcards-app"></div>
+    </section>
+
+    <section id="quiz">
+      <h2>Quiz</h2>
+      <div id="quiz-app"></div>
+    </section>
+
+    <section id="estudo">
+      <h2>Material de estudo</h2>
+
+      <h3>Mapa mental</h3>
+<pre><code>Fecho da Maratona (280–284)
+├── Testes unitários (280–281) · JUnit 5 (Jupiter), scope test
+│   ├── src/test/java, mesmo pacote, ClasseTest · Create Test no IntelliJ
+│   ├── @Test · @DisplayName · nome metodo_Resultado_QuandoCondicao
+│   ├── Assertions: assertEquals · assertTrue/False · assertThrows(Classe, () -&gt; ...)
+│   ├── @BeforeEach setUp → testes independentes
+│   ├── cobertura 100% ≠ bons testes: cubra os CASOS
+│   └── o teste pega a mudança (18 → 21 quebra dois testes)
+├── JDK 16 (282): instalar · Path/JAVA_HOME · Project Structure (SDK, language level)
+│   └── pom: maven.compiler.source/target · Java Compiler target · clean · rodar os testes
+├── record (283, Java 16): record Manga(String name, int episodes) { }
+│   ├── final, extends Record, private final, accessors name(), equals/hashCode/toString
+│   ├── sem atributos/blocos de instância (static pode) · generics pode
+│   └── construtor compacto public Manga { validação } · Manga.class.isRecord()
+└── instanceof com pattern matching (284, Java 16)
+    ├── if (e instanceof Developer d) d.getMainLanguage();  (sem cast)
+    └── cuidado: if que não entra → assertiva não roda → teste "passa"</code></pre>
+
+      <h3>Prática no seu WSL (30 minutos)</h3>
+      <p>Continua o projeto Maven <code>~/java-lab-jdbc</code> (não precisa do banco). Primeiro, o <code>pom.xml</code> ganha o JUnit completo e o plugin que roda os testes: acrescente em <code>&lt;dependencies&gt;</code> e crie a seção <code>&lt;build&gt;</code>:</p>
+<pre><code>        &lt;dependency&gt;
+            &lt;groupId&gt;org.junit.jupiter&lt;/groupId&gt;
+            &lt;artifactId&gt;junit-jupiter&lt;/artifactId&gt;      &lt;!-- api + engine --&gt;
+            &lt;version&gt;5.10.2&lt;/version&gt;
+            &lt;scope&gt;test&lt;/scope&gt;
+        &lt;/dependency&gt;
+    &lt;/dependencies&gt;
+    &lt;build&gt;
+        &lt;plugins&gt;
+            &lt;plugin&gt;
+                &lt;groupId&gt;org.apache.maven.plugins&lt;/groupId&gt;
+                &lt;artifactId&gt;maven-surefire-plugin&lt;/artifactId&gt;
+                &lt;version&gt;3.2.5&lt;/version&gt;
+            &lt;/plugin&gt;
+        &lt;/plugins&gt;
+    &lt;/build&gt;</code></pre>
+<pre><code>cd ~/java-lab-jdbc
+M=src/main/java/academy/devdojo/maratonajava/javacore/ZZKjunit
+T=src/test/java/academy/devdojo/maratonajava/javacore/ZZKjunit
+mkdir -p $M/dominio $M/service $T/dominio $T/service
+
+cat > $M/dominio/Person.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.ZZKjunit.dominio;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+
+@Data
+@AllArgsConstructor
+public class Person {
+    private int age;
+}
+EOF
+
+cat > $M/service/PersonService.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.ZZKjunit.service;
+
+import academy.devdojo.maratonajava.javacore.ZZKjunit.dominio.Person;
+import java.util.List;
+
+public class PersonService {
+    public boolean isAdult(Person person) {
+        if (person == null) throw new IllegalArgumentException("Person can't be null");
+        return person.getAge() &gt;= 18;
+    }
+
+    public List&lt;Person&gt; filterRemovingNotAdult(List&lt;Person&gt; personList) {
+        return personList.stream().filter(this::isAdult).toList();
+    }
+}
+EOF
+
+cat > $M/dominio/Manga.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.ZZKjunit.dominio;
+
+import java.util.Objects;
+
+public record Manga(String name, int episodes) {
+    public Manga {
+        Objects.requireNonNull(name, "name can't be null");
+        if (episodes &lt; 0) throw new IllegalArgumentException("episodes can't be negative");
+    }
+}
+EOF
+
+cat > $M/dominio/Employee.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.ZZKjunit.dominio;
+
+public class Employee {
+    private final String id;
+    public Employee(String id) { this.id = id; }
+    public String getId() { return id; }
+}
+EOF
+
+cat > $M/dominio/Developer.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.ZZKjunit.dominio;
+
+public class Developer extends Employee {
+    private final String mainLanguage;
+    public Developer(String id, String mainLanguage) { super(id); this.mainLanguage = mainLanguage; }
+    public String getMainLanguage() { return mainLanguage; }
+}
+EOF
+
+cat > $T/service/PersonServiceTest.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.ZZKjunit.service;
+
+import academy.devdojo.maratonajava.javacore.ZZKjunit.dominio.Person;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+class PersonServiceTest {
+    private Person adult;
+    private Person notAdult;
+    private PersonService personService;
+
+    @BeforeEach
+    void setUp() {
+        adult = new Person(18);
+        notAdult = new Person(15);
+        personService = new PersonService();
+    }
+
+    @Test
+    @DisplayName("A person should be not adult when age is lower than 18")
+    void isAdult_ReturnFalse_WhenAgeIsLowerThan18() {
+        assertFalse(personService.isAdult(notAdult));
+    }
+
+    @Test
+    @DisplayName("A person should be adult when age is greater or equal than 18")
+    void isAdult_ReturnTrue_WhenAgeIsGreaterOrEqualsThan18() {
+        assertTrue(personService.isAdult(adult));
+    }
+
+    @Test
+    @DisplayName("Should throw IllegalArgumentException with message when person is null")
+    void isAdult_ThrowIllegalArgumentException_WhenPersonIsNull() {
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+                () -&gt; personService.isAdult(null));
+        assertEquals("Person can't be null", e.getMessage());          // a mensagem, de verdade
+    }
+
+    @Test
+    @DisplayName("Should return list with only adults")
+    void filterRemovingNotAdult_ReturnListWithAdultOnly_WhenListOfPersonWithAdultIsPassed() {
+        List&lt;Person&gt; personList = List.of(new Person(17), new Person(18), new Person(21));
+        assertEquals(List.of(new Person(18), new Person(21)), personService.filterRemovingNotAdult(personList));
+    }
+
+    @Test
+    @DisplayName("Should return empty list when list is empty")
+    void filterRemovingNotAdult_ReturnEmptyList_WhenListIsEmpty() {
+        assertTrue(personService.filterRemovingNotAdult(List.of()).isEmpty());
+    }
+}
+EOF
+
+cat > $T/dominio/MangaTest.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.ZZKjunit.dominio;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+class MangaTest {
+    private Manga manga1;
+    private Manga manga2;
+
+    @BeforeEach
+    void setUp() {
+        manga1 = new Manga("Kimetsu no Yaiba", 24);
+        manga2 = new Manga("Kimetsu no Yaiba", 24);
+    }
+
+    @Test void accessors_ReturnData_WhenInitialized() {
+        assertEquals("Kimetsu no Yaiba", manga1.name());
+        assertEquals(24, manga1.episodes());
+    }
+    @Test void equalsAndHashCode_ReturnTrue_WhenComponentsAreTheSame() {
+        assertEquals(manga1, manga2);
+        assertEquals(manga1.hashCode(), manga2.hashCode());
+        assertNotSame(manga1, manga2);                                  // objetos diferentes, iguais pelo equals
+    }
+    @Test void toString_ShowComponents() {
+        assertEquals("Manga[name=Kimetsu no Yaiba, episodes=24]", manga1.toString());
+    }
+    @Test void constructor_ThrowException_WhenDataIsInvalid() {
+        assertThrows(NullPointerException.class, () -&gt; new Manga(null, 12));
+        assertThrows(IllegalArgumentException.class, () -&gt; new Manga("Berserk", -1));
+    }
+    @Test void isRecord_ReturnTrue_WhenCalledFromManga() {
+        assertTrue(Manga.class.isRecord());
+    }
+}
+EOF
+
+cat > $T/dominio/DeveloperTest.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.ZZKjunit.dominio;
+
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+class DeveloperTest {
+    @Test
+    void instanceOf_ExecutesChildClassMethod_WhenObjectIsOfChildType() {
+        Employee employee = new Developer("1", "Java");
+        if (employee instanceof Developer developer) {                  // pattern matching
+            assertEquals("Java", developer.getMainLanguage());
+        } else {
+            fail("era para ser Developer");                              // evita o "passa em silêncio"
+        }
+    }
+
+    @Test
+    void assertInstanceOf_ReturnCastedObject_WhenTypeMatches() {
+        Employee employee = new Developer("2", "Kotlin");
+        Developer developer = assertInstanceOf(Developer.class, employee); // testa e já devolve com cast
+        assertEquals("Kotlin", developer.getMainLanguage());
+    }
+}
+EOF
+
+mvn test 2&gt;&amp;1 | grep -E "Tests run|FAIL|BUILD"</code></pre>
+      <details>
+        <summary>Ver a saída esperada</summary>
+<pre><code>[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.0xx s -- in academy.devdojo.maratonajava.javacore.ZZKjunit.dominio.DeveloperTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.0xx s -- in academy.devdojo.maratonajava.javacore.ZZKjunit.dominio.MangaTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.0xx s -- in academy.devdojo.maratonajava.javacore.ZZKjunit.service.PersonServiceTest
+[INFO] Tests run: 12, Failures: 0, Errors: 0, Skipped: 0
+[INFO] BUILD SUCCESS</code></pre>
+      </details>
+      <p>A ordem das classes na saída pode variar. Agora faça o teste do professor: troque o <code>&gt;= 18</code> por <code>&gt;= 21</code> no <code>PersonService</code> e rode de novo. Devem aparecer <strong>dois</strong> testes falhando (<code>isAdult_ReturnTrue...</code> e <code>filterRemovingNotAdult_ReturnListWithAdultOnly...</code>), com <code>BUILD FAILURE</code>.</p>
+      <p><strong>Exercícios:</strong></p>
+      <ol>
+        <li>Faça a troca 18 → 21 e leia a mensagem de cada falha (<code>expected: &lt;true&gt; but was: &lt;false&gt;</code>). Depois volte para 18.</li>
+        <li>No <code>DeveloperTest</code>, troque o objeto por <code>new Employee("1")</code>, tire o <code>else { fail(...) }</code> e veja o teste passar em silêncio. Recoloque o <code>else</code> e veja-o falhar.</li>
+        <li>Mude a mensagem da exceção no <code>PersonService</code>. Qual teste pega? E se o teste usasse só o terceiro argumento do <code>assertThrows</code>, como no repositório?</li>
+        <li>Tente declarar um atributo de instância (<code>private int volume;</code>) no <code>record Manga</code> e leia o erro. Depois um <code>static int total;</code>: compila?</li>
+        <li>Rode <code>javap -p target/classes/academy/devdojo/maratonajava/javacore/ZZKjunit/dominio/Manga.class</code> e compare com o que o professor mostra na aula 283.</li>
+      </ol>
+
+      <h3>Glossário</h3>
+      <ul>
+        <li><strong>Teste unitário</strong>: teste automático de uma unidade (geralmente um método), isolada.</li>
+        <li><strong>JUnit 5 (Jupiter)</strong>: biblioteca de testes do Java; a API é <code>org.junit.jupiter.api</code>.</li>
+        <li><strong>Assertiva</strong>: verificação que faz o teste falhar se não for verdadeira (<code>assertEquals</code>, <code>assertTrue</code>...).</li>
+        <li><strong><code>@BeforeEach</code></strong>: método executado antes de cada teste (preparação).</li>
+        <li><strong><code>@DisplayName</code></strong>: nome legível do teste nos relatórios.</li>
+        <li><strong>Cobertura de código</strong>: percentual de linhas executadas pelos testes.</li>
+        <li><strong>Integração contínua (CI)</strong>: servidor que compila e roda os testes a cada push.</li>
+        <li><strong>Maven Surefire</strong>: plugin que executa os testes no <code>mvn test</code>.</li>
+        <li><strong>LTS</strong>: versão do Java com suporte longo (17, 21, 25).</li>
+        <li><strong><code>record</code></strong>: classe final e imutável de dados, com construtor, accessors, equals, hashCode e toString gerados.</li>
+        <li><strong>Accessor</strong>: método de leitura do componente do record, com o mesmo nome (<code>name()</code>).</li>
+        <li><strong>Construtor compacto</strong>: construtor do record sem parâmetros declarados, usado para validar.</li>
+        <li><strong>Pattern matching para <code>instanceof</code></strong>: <code>x instanceof T t</code> testa o tipo e declara <code>t</code> já convertido.</li>
+      </ul>
+
+      <h3>Revisão espaçada</h3>
+      <ul class="revisao">
+        <li><span class="dia">Dia 1</span><span>Todos os flashcards + a prática até o <code>BUILD SUCCESS</code>.</span></li>
+        <li><span class="dia">Dia 3</span><span>Quiz + exercícios 1 a 3.</span></li>
+        <li><span class="dia">Dia 7</span><span>Exercícios 4 e 5 + escrever testes para uma classe de outra página (ex.: o <code>ProducerService</code>).</span></li>
+        <li><span class="dia">Dia 14</span><span>Flashcards que errou + questões discursivas + escolher três páginas antigas para revisar.</span></li>
+      </ul>
+
+      <h3>Para aprofundar</h3>
+      <ul>
+        <li><code>@ParameterizedTest</code> com <code>@ValueSource</code>/<code>@CsvSource</code>: um teste para várias idades de uma vez.</li>
+        <li>Mockito: como testar o <code>ProducerService</code> sem banco, trocando o repositório por um <em>mock</em>?</li>
+        <li>O que é TDD (<em>Test-Driven Development</em>): escrever o teste antes do código?</li>
+        <li>JaCoCo: como gerar o relatório de cobertura pelo Maven?</li>
+        <li>Java 21: pattern matching no <code>switch</code> e <em>record patterns</em> (<code>if (obj instanceof Manga(String n, int e))</code>).</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    window.AULA = {
+      flashcards: [
+        ["O que é um teste unitário?", "Um teste automático de uma unidade do código, geralmente um método"],
+        ["Por que testes unitários, segundo o professor?", "Garantir que o comportamento não muda sem querer na manutenção; e 90% dos candidatos que ele rejeita não escrevem testes"],
+        ["Qual o problema de 'testar' com um main?", "Depende de olhar o console; uma mudança (18 → 21) pode passar despercebida"],
+        ["Onde ficam as classes de teste?", "Em src/test/java, no mesmo pacote da classe testada, com o nome ClasseTest"],
+        ["Para que serve o scope test no pom.xml?", "A dependência só existe para os testes, fora do código de produção"],
+        ["O que faz @Test?", "Marca o método como teste para o JUnit executar"],
+        ["Qual a convenção de nome usada pelo professor?", "metodo_Resultado_QuandoCondicao, ex.: isAdult_ReturnFalse_WhenAgeIsLowerThan18"],
+        ["Para que serve @DisplayName?", "Dar um nome legível ao teste no relatório"],
+        ["O que é uma assertiva?", "Uma verificação (assertEquals, assertTrue, assertFalse...) que faz o teste falhar se não for verdadeira"],
+        ["Ordem dos argumentos do assertEquals?", "assertEquals(esperado, obtido)"],
+        ["O que faz @BeforeEach?", "Executa o método (setUp) antes de cada teste, recriando o estado e isolando os testes"],
+        ["Cobertura de 100% garante bons testes?", "Não: o importante é cobrir os casos (limites, null, vazio), não só as linhas"],
+        ["Como testar que um código lança exceção?", "assertThrows(TipoDaExceção.class, () -> código)"],
+        ["O que é o terceiro argumento do assertThrows?", "A mensagem exibida se o teste falhar, não a mensagem esperada da exceção"],
+        ["Como verificar a mensagem da exceção?", "var e = assertThrows(...); assertEquals(\"msg\", e.getMessage());"],
+        ["Por que mudar o tipo de exceção é perigoso?", "Quem depende dela (ex.: front-end) pode passar a se comportar diferente; os testes avisam"],
+        ["O que precisa mudar ao atualizar o JDK num projeto Maven no IntelliJ?", "SDK e language level (Project Structure), maven.compiler.source/target no pom, Java Compiler target; depois clean e rodar os testes"],
+        ["Em que versão o record ficou definitivo?", "Java 16 (preview no 14 e 15)"],
+        ["O que o compilador gera para record Manga(String name, int episodes)?", "Classe final que estende Record, campos private final, construtor, accessors name()/episodes(), equals, hashCode e toString"],
+        ["Record tem getName()?", "Não: o accessor tem o nome do componente, name()"],
+        ["O que o record não pode ter?", "Atributos e blocos de inicialização de instância (static pode); nem estender outra classe"],
+        ["O que é o construtor compacto?", "public Manga { validações }: sem parâmetros declarados; as atribuições são automáticas"],
+        ["Por que testar Manga.class.isRecord()?", "Se alguém trocar record por class, a imutabilidade some e o teste avisa"],
+        ["O que faz if (e instanceof Developer d)?", "Testa o tipo e, se verdadeiro, declara d já com cast (Java 16)"],
+        ["Qual a pegadinha do instanceof dentro de testes?", "Se o if não entra, nenhuma assertiva roda e o teste passa em silêncio; use else fail() ou assertInstanceOf"]
+      ],
+      quiz: [
+        { tipo: 'multipla', pergunta: 'Qual anotação faz um método ser executado antes de cada teste da classe?',
+          opcoes: ['@Test', '@BeforeEach', '@DisplayName', '@BeforeAll'],
+          correta: 1,
+          explicacao: '@BeforeEach roda antes de cada @Test (o professor chama o método de setUp). @BeforeAll roda uma vez só, antes de todos.' },
+        { tipo: 'vf', pergunta: 'Se a cobertura de código dos testes é 100%, os testes estão completos.',
+          correta: 1,
+          explicacao: 'Falso. O primeiro teste do professor já dava 100% de cobertura, mas não testava maior de 18 nem null. Cobertura mede linhas executadas, não casos verificados.' },
+        { tipo: 'multipla', pergunta: 'O que faz Assertions.assertThrows(IllegalArgumentException.class, () -> service.isAdult(null), "Person can\'t be null")?',
+          opcoes: ['Verifica a exceção e também a mensagem "Person can\'t be null"', 'Verifica que é lançada IllegalArgumentException; a String é a mensagem mostrada se o teste falhar', 'Lança a exceção com essa mensagem', 'Não compila'],
+          correta: 1,
+          explicacao: 'O terceiro argumento é a mensagem de falha do teste. Para checar a mensagem da exceção: var e = assertThrows(...); assertEquals("...", e.getMessage()).' },
+        { tipo: 'multipla', pergunta: 'Alguém trocou >= 18 por >= 21 no PersonService. Quais testes da aula 281 falham?',
+          opcoes: ['Nenhum', 'Só o de menor de 18', 'O de adulto com 18 e o do filtro de adultos', 'Todos'],
+          correta: 2,
+          explicacao: 'Com 21, a pessoa de 18 deixa de ser adulta: falham isAdult_ReturnTrue... e o filtro que esperava 2 adultos. O de 15 anos continua passando.' },
+        { tipo: 'vf', pergunta: 'Num record Manga(String name, int episodes), o acesso ao nome é manga.getName().',
+          correta: 1,
+          explicacao: 'Falso. Records geram accessors com o nome do componente: manga.name() e manga.episodes().' },
+        { tipo: 'multipla', pergunta: 'Qual destas declarações NÃO compila dentro de um record?',
+          opcoes: ['static int total = 0;', 'private int volume;', 'public String upperName() { return name.toUpperCase(); }', 'public Manga { Objects.requireNonNull(name); }'],
+          correta: 1,
+          explicacao: 'Records não podem ter atributos de instância além dos componentes. static, métodos e o construtor compacto são permitidos.' },
+        { tipo: 'multipla', pergunta: 'O que o código if (employee instanceof Developer developer) { ... } faz no Java 16?',
+          opcoes: ['Cria um novo Developer', 'Testa o tipo e, se verdadeiro, declara developer já convertido para Developer', 'Converte qualquer Employee em Developer', 'Lança ClassCastException se não for Developer'],
+          correta: 1,
+          explicacao: 'É o pattern matching para instanceof: une teste e cast. A variável só existe onde o teste é verdadeiro, e não há exceção se não for.' },
+        { tipo: 'multipla', pergunta: 'Na aula 284, o objeto era um Employee (não Developer) e as assertivas estavam dentro do if (x instanceof Developer d). O que aconteceu?',
+          opcoes: ['O teste falhou', 'O teste passou, porque nenhuma assertiva foi executada', 'Deu ClassCastException', 'Não compilou'],
+          correta: 1,
+          explicacao: 'O if não entrou e o teste terminou sem nenhuma verificação: passou em silêncio. Use else { fail(...) } ou assertInstanceOf(Developer.class, x).' },
+        { tipo: 'discursiva', pergunta: 'Descreva o que faz um bom conjunto de testes unitários para o PersonService, usando o que foi visto nas aulas 280 e 281.',
+          explicacao: 'Os testes ficam em src/test/java no mesmo pacote (PersonServiceTest), com JUnit 5 (dependência de scope test). Cada método é um @Test com nome descritivo no padrão metodo_Resultado_QuandoCondicao (e/ou @DisplayName), porque no relatório do CI você só verá os nomes. Um @BeforeEach setUp recria adult (18), notAdult (15) e o PersonService antes de cada teste, garantindo independência. Os casos: menor de 18 → assertFalse; exatamente 18 (limite) → assertTrue; null → assertThrows(IllegalArgumentException.class, ...), idealmente verificando também e.getMessage(), lembrando que o terceiro argumento do assertThrows é só a mensagem de falha; filterRemovingNotAdult com 17, 18 e 21 → só os dois adultos (assertEquals no tamanho ou na lista); e casos extras como lista vazia. Cobertura de 100% não basta: o que importa é cobrir limites e casos não óbvios. O ganho aparece quando alguém muda a regra (18 → 21) e dois testes falham na hora. Em PHP seria o mesmo com PHPUnit/Pest (setUp, assertFalse, expectException).' },
+        { tipo: 'discursiva', pergunta: 'Compare o record Manga da aula 283 com uma classe com @Value do Lombok e com uma classe readonly do PHP 8.2.',
+          explicacao: 'O record Manga(String name, int episodes) é suporte da linguagem (Java 16): o compilador gera uma classe final que estende java.lang.Record, com campos private final, construtor canônico, accessors name() e episodes(), equals, hashCode e toString (Manga[name=..., episodes=...]). Validações vão no construtor compacto (public Manga { Objects.requireNonNull(name); }). Não pode ter atributos ou blocos de instância extras nem estender outra classe, mas aceita métodos, static, generics e interfaces, e Manga.class.isRecord() confirma o tipo. O @Value do Lombok gera algo parecido (final, private final, getters, equals/hashCode/toString), mas por anotação e processamento na compilação: exige a biblioteca, usa getName() e permite mais customização (@Builder etc.). A final readonly class do PHP 8.2 com constructor promotion também é imutável, mas acessa $manga->name direto e não gera equals/hashCode (compara-se com ==). O professor compara o record com o data class do Kotlin: a linguagem incorporando o que antes dependia de boilerplate ou de bibliotecas.' }
+      ]
+    };
+  </script>
+  <script src="../js/app.js"></script>
+</body>
+</html>
