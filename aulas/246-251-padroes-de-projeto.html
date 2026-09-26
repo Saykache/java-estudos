@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>246–251 · Padrões de projeto</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="topo">
+      <a class="voltar" href="../index.html">← Todas as aulas</a>
+      <h1>246–251 · Padrões de projeto</h1>
+      <p>Builder, Factory, Singleton (eager, lazy com double-checked locking, enum) e DTO · <a href="https://www.youtube.com/playlist?list=PL62G310vn6nFIsOCC0H-C2infYgwm8SWW" target="_blank" rel="noopener">playlist</a></p>
+    </header>
+
+    <nav class="abas">
+      <a href="#resumo">Resumo</a>
+      <a href="#flashcards">Flashcards</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#estudo">Material de estudo</a>
+    </nav>
+
+    <p class="aviso">Junta as aulas 246 (Builder), 247 (Factory), 248 a 250 (Singleton eager, lazy e com enum) e 251 (Data Transfer Object). Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. O código (pacote <code>javacore.ZZHpadroesdeprojeto</code>: <code>Person</code>, <code>CurrencyFactory</code>, <code>Aircraft</code>, <code>AircraftSingletonEager</code>/<code>Lazy</code>/<code>Enum</code>, <code>ReportDto</code>) foi conferido no <a href="https://github.com/devdojobr/maratona-java-virado-no-jiraya" target="_blank" rel="noopener">repositório do professor</a>. Os itens marcados como "extra" não estão nos vídeos.</p>
+
+    <section id="resumo">
+      <h2>Resumo</h2>
+      <p><strong>Padrões de projeto</strong> (<em>design patterns</em>) são soluções padronizadas para problemas que milhares de desenvolvedores encontram no dia a dia. Não são bibliotecas: são <strong>formas de escrever o código</strong>. O bloco mostra quatro: <strong>Builder</strong> (criar objetos com muitos atributos de forma legível), <strong>Factory</strong> (esconder de quem usa <em>como</em> o objeto é criado), <strong>Singleton</strong> (garantir um único objeto compartilhado) e <strong>DTO</strong> (um objeto só para transportar dados).</p>
+<pre><code>Person p = Person.PersonBuilder.builder().firstName("William").lastName("Suane").build(); // 246 · Builder
+Currency c = CurrencyFactory.newCurrency(Country.BRAZIL);                                   // 247 · Factory
+AircraftSingletonEager a = AircraftSingletonEager.getINSTANCE();                            // 248–249 · Singleton
+AircraftSingletonEnum.INSTANCE.bookSeat("1A");                                              // 250 · Singleton com enum
+ReportDto dto = ReportDto.ReportDtoBuilder.builder().aircraftName("777")...build();         // 251 · DTO</code></pre>
+
+      <h3>246 · Builder</h3>
+      <p>O problema: um construtor com muitos argumentos. Em <code>new Person("William", "Suane", "ViradoNoJiraya", "william.suane@devdojo.academy")</code>, o IntelliJ até mostra o nome de cada parâmetro, mas nem toda IDE faz isso, e uma semana depois ninguém lembra se o segundo é o sobrenome ou o nome do meio. Com 15 ou 20 atributos, pior ainda. O <strong>Builder</strong> organiza a criação para qualquer um conseguir ler.</p>
+<pre><code>public class Person {
+    private String firstName;
+    private String lastName;
+    private String username;
+    private String email;
+
+    private Person(String firstName, String lastName, String username, String email) { // privado: força o builder
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.username = username;
+        this.email = email;
+    }
+
+    public static final class PersonBuilder {          // classe aninhada estática (aula 192)
+        private String firstName;
+        private String lastName;
+        private String username;
+        private String email;
+
+        private PersonBuilder() { }
+        public static PersonBuilder builder() { return new PersonBuilder(); }   // (aula 247)
+
+        public PersonBuilder firstName(String firstName) {
+            this.firstName = firstName;
+            return this;                                // devolve o próprio builder
+        }
+        public PersonBuilder lastName(String lastName) { this.lastName = lastName; return this; }
+        public PersonBuilder username(String username) { this.username = username; return this; }
+        public PersonBuilder email(String email) { this.email = email; return this; }
+
+        public Person build() {
+            return new Person(firstName, lastName, username, email);
+        }
+    }
+}
+
+Person build = Person.PersonBuilder
+        .builder()
+        .firstName("William")
+        .lastName("Suane")
+        .username("ViradoNoJiraya")
+        .email("william.suane@devdojo.academy")
+        .build();</code></pre>
+      <ul>
+        <li>O construtor da <code>Person</code> fica <strong>privado</strong>, para obrigar o uso do builder. A classe aninhada acessa esse construtor privado.</li>
+        <li>O segredo está nos "setters" do builder: em vez de <code>void</code>, cada um <strong>devolve <code>this</code></strong>, o próprio builder. Todas as chamadas trabalham no <strong>mesmo objeto na memória</strong>, e dá para encadear (<em>fluent interface</em>).</li>
+        <li><code>build()</code> no fim cria o objeto de verdade. Dá para chamá-lo a qualquer momento, pulando os atributos que você não quer preencher (eles ficam <code>null</code>).</li>
+        <li>Não precisa escrever tudo isso na mão: o plugin <strong>Builder Generator</strong> do IntelliJ (Marketplace) gera o builder interno (opção <em>inner builder</em>, e dá para escolher prefixos como <code>withFirstName</code>).</li>
+        <li>Na aula 247, o construtor do <code>PersonBuilder</code> também ficou privado, e a criação passou pelo método estático <code>builder()</code>, que é uma pequena <em>factory</em>.</li>
+      </ul>
+
+      <h3>247 · Factory</h3>
+      <p>O Factory <strong>desacopla a lógica de negócio da criação do objeto</strong>. Quem chama só pede "uma moeda para o Brasil" e não sabe (nem precisa saber) qual classe foi instanciada nem como.</p>
+<pre><code>public enum Country { BRAZIL, USA }
+
+public interface Currency {
+    String getSymbol();
+}
+class Real implements Currency {                 // sem public: só visível no pacote
+    @Override public String getSymbol() { return "R$"; }
+}
+class UsDollar implements Currency {
+    @Override public String getSymbol() { return "$"; }
+}
+
+public class CurrencyFactory {
+    public static Currency newCurrency(Country country) {
+        switch (country) {
+            case USA:
+                return new UsDollar();
+            case BRAZIL:
+                return new Real();
+            default: throw new IllegalArgumentException("No currency found for this country");
+        }
+    }
+}
+
+Currency currency = CurrencyFactory.newCurrency(Country.BRAZIL);
+System.out.println(currency.getSymbol());   // R$</code></pre>
+      <ul>
+        <li>Quem usa conhece só a <strong>interface</strong> <code>Currency</code> (polimorfismo, aula 90). <code>Real</code> e <code>UsDollar</code> nem são públicas.</li>
+        <li><strong>Vantagem</strong>: se a regra de criação mudar (outra classe, validação, cache), você mexe <strong>só na fábrica</strong>, e quem chama continua igual. Com construtor espalhado pelo código, seria preciso alterar (ou sobrecarregar) em todo lugar. Resultado: <strong>baixo acoplamento</strong> e manutenção mais fácil.</li>
+        <li>A fábrica também pode <strong>impor regras</strong>: um <code>builder(String firstName)</code> que obrigue passar pelo menos o primeiro nome, por exemplo.</li>
+        <li><strong>Extra</strong>: o que a aula mostra é a <em>simple/static factory</em>. O "Factory Method" do livro GoF é uma variação com herança (subclasses decidem o que criar). E o <code>Quote.newQuote</code> da aula 243 é o mesmo recurso: um método estático que cria o objeto.</li>
+      </ul>
+
+      <h3>248 · Singleton pt 01: eager initialization</h3>
+      <p>Às vezes uma classe só pode ter <strong>um objeto</strong>, compartilhado por qualquer parte do código ou thread. Um exemplo clássico é o driver de conexão com o banco. O exemplo da aula é um <strong>avião</strong>: só existe <strong>um</strong> 787-900, e os assentos dele não podem ser vendidos duas vezes.</p>
+<pre><code>public final class Aircraft {
+    private final Set&lt;String&gt; availableSeats = new HashSet&lt;&gt;();
+    private final String name;
+    public Aircraft(String name) { this.name = name; }
+    {                                            // bloco de inicialização (aula 60)
+        availableSeats.add("1A");
+        availableSeats.add("1B");
+    }
+    public boolean bookSeat(String seat) {
+        return availableSeats.remove(seat);      // true se estava livre
+    }
+}
+// cada chamada faz new Aircraft("787-900") e bookSeat("1A") → true, true: o assento foi vendido duas vezes!
+
+public final class AircraftSingletonEager {
+    //Eager initialization
+    private static final AircraftSingletonEager INSTANCE = new AircraftSingletonEager("787-900");
+    private final Set&lt;String&gt; availableSeats = new HashSet&lt;&gt;();
+    private final String name;
+
+    private AircraftSingletonEager(String name) { this.name = name; }   // ninguém de fora dá new
+    { availableSeats.add("1A"); availableSeats.add("1B"); }
+
+    public static AircraftSingletonEager getINSTANCE() { return INSTANCE; }
+    public boolean bookSeat(String seat) { return availableSeats.remove(seat); }
+}
+
+bookSeat("1A");   // true
+bookSeat("1A");   // false: é o MESMO avião, o assento já foi vendido
+AircraftTest01.bookSeat("1A");   // outra classe, mesmo endereço de memória impresso</code></pre>
+      <ul>
+        <li>Os três ingredientes: <strong>construtor privado</strong> (ninguém cria outro), <strong>atributo <code>private static final</code></strong> com a única instância, e <strong>método estático</strong> que a devolve.</li>
+        <li><strong>Eager</strong> ("guloso"): a instância é criada <strong>quando a classe é carregada</strong>, antes mesmo de alguém pedir. É simples e thread safe por natureza, porque a JVM garante que a inicialização estática acontece uma vez só.</li>
+        <li>O teste imprime o objeto em várias classes diferentes, e aparece sempre o <strong>mesmo endereço</strong> (<code>AircraftSingletonEager@...</code>).</li>
+      </ul>
+
+      <h3>249 · Singleton pt 02: lazy initialization</h3>
+<pre><code>public final class AircraftSingletonLazy {
+    private static AircraftSingletonLazy INSTANCE;        // não é mais final: começa null
+    ...
+    public static AircraftSingletonLazy getINSTANCE() {
+        if (INSTANCE == null) {                            // 1ª checagem, sem lock (rápida)
+            synchronized (AircraftSingletonLazy.class) {
+                if (INSTANCE == null) {                    // 2ª checagem, com lock
+                    INSTANCE = new AircraftSingletonLazy("787-900");
+                }
+            }
+        }
+        return INSTANCE;
+    }
+}</code></pre>
+      <ul>
+        <li><strong>Lazy</strong> ("preguiçoso"): só cria a instância na <strong>primeira vez</strong> que alguém pede.</li>
+        <li>Com um <code>if (INSTANCE == null)</code> simples, <strong>duas threads</strong> podem ver <code>null</code> ao mesmo tempo e criar <strong>dois</strong> aviões (a condição de corrida da aula 224), e aí dois usuários compram o mesmo assento.</li>
+        <li>Colocar <code>synchronized</code> no método resolve, mas custa desempenho <strong>em toda chamada</strong>, para sempre, embora o problema só exista na primeira.</li>
+        <li><strong><em>Double-checked locking</em></strong>: checa sem lock (o caso comum, instância já criada, fica rápido); se for <code>null</code>, sincroniza na classe e checa de novo, porque outra thread pode ter criado enquanto esta esperava o lock.</li>
+        <li><strong>Reflection quebra o singleton</strong>: <code>AircraftSingletonLazy.class.getDeclaredConstructor(String.class)</code>, <code>setAccessible(true)</code> e <code>newInstance("787-900")</code> criam um <strong>segundo objeto</strong> mesmo com o construtor privado. <em>Reflection</em> lê os metadados da classe em tempo de execução, é muito usada por frameworks e deixa o programa mais lento. "Se você vê alguém fazendo isso no código, levanta e dá um tapa na cabeça", e uma revisão de código (<em>code review</em>) deveria pegar.</li>
+      </ul>
+
+      <h3>250 · Singleton pt 03: com enum</h3>
+<pre><code>public enum AircraftSingletonEnum {
+    INSTANCE;
+    private final Set&lt;String&gt; availableSeats;
+
+    AircraftSingletonEnum() {                   // construtor de enum é sempre privado
+        this.availableSeats = new HashSet&lt;&gt;();
+        this.availableSeats.add("1A");
+        this.availableSeats.add("1B");
+    }
+
+    public boolean bookSeat(String seat) {
+        return availableSeats.remove(seat);
+    }
+}
+
+AircraftSingletonEnum.INSTANCE.bookSeat("1A");   // true
+AircraftSingletonEnum.INSTANCE.bookSeat("1A");   // false · o hashCode impresso é sempre o mesmo</code></pre>
+      <ul>
+        <li>Constantes de enum já são instâncias únicas criadas uma vez pela JVM (aula 80), então o singleton sai "de graça": código <strong>bem mais limpo</strong>, criação <strong>thread safe por padrão</strong> e <strong>reflection não consegue</strong> chamar o construtor de um enum (<code>IllegalArgumentException: Cannot reflectively create enum objects</code>).</li>
+        <li><strong>Atenção</strong>, que o professor repete: "thread safe" aqui é só a <strong>criação</strong> do objeto. O <code>bookSeat</code> continua mexendo num <code>HashSet</code> comum, e duas threads podem remover o mesmo assento ao mesmo tempo. Em ambiente com várias threads, ele também precisa ser <code>synchronized</code> (ou usar uma coleção concorrente).</li>
+        <li><strong>Extra</strong>: o enum também resiste à <strong>serialização</strong> (aula 159). Desserializar um singleton comum cria outro objeto; um enum, não. Por isso o livro <em>Effective Java</em> chama o enum de "a melhor forma de implementar um singleton".</li>
+      </ul>
+
+      <h3>251 · Data Transfer Object (DTO)</h3>
+      <p>Um padrão "arquitetural de aplicações corporativas" (do catálogo <em>Patterns of Enterprise Application Architecture</em>, de Martin Fowler). O problema: uma API precisa receber o nome do avião, o país, a moeda e o nome da pessoa, dados que vêm de <strong>quatro entidades diferentes</strong>. Mandar os quatro objetos inteiros é mandar dados demais. O DTO é uma classe com <strong>só os atributos necessários</strong>, montada para a transferência.</p>
+<pre><code>public class ReportDto {                       // "Dto", não "DTO": siglas são tratadas como palavras
+    private String aircraftName;
+    private Country country;
+    private Currency currency;
+    private String personName;
+
+    public static final class ReportDtoBuilder {
+        ...                                     // gerado pelo plugin de builder
+        public ReportDto build() {
+            ReportDto reportDto = new ReportDto();
+            reportDto.currency = this.currency;
+            reportDto.aircraftName = this.aircraftName;
+            reportDto.personName = this.personName;
+            reportDto.country = this.country;
+            return reportDto;
+        }
+    }
+}
+
+Aircraft aircraft = new Aircraft("777");
+Country country = Country.BRAZIL;
+Currency currency = CurrencyFactory.newCurrency(country);     // Factory
+Person person = Person.PersonBuilder.builder()                 // Builder
+        .firstName("William").lastName("Suane").build();
+ReportDto reportDto = ReportDto.ReportDtoBuilder.builder()     // DTO com Builder
+        .aircraftName(aircraft.getName())
+        .country(country)
+        .currency(currency)
+        .personName(person.getFirstName())
+        .build();
+System.out.println(reportDto);
+// ReportDto{aircraftName='777', country=BRAZIL, currency=...Real@1b6d3586, personName='William'}</code></pre>
+      <ul>
+        <li>Na vida real, esses dados vêm do banco (ou de outros serviços), e o DTO leva ao front-end, a outro serviço ou a uma API <strong>exatamente o que eles esperam</strong>: um objeto só, em vez de quatro.</li>
+        <li>O exemplo junta os padrões do bloco: Factory para a moeda, Builder para a pessoa e para o DTO.</li>
+        <li>O professor diz que o próprio Java é inconsistente na grafia (<code>URL</code>, <code>HttpURLConnection</code>), mas o recomendado é <code>ReportDto</code>.</li>
+        <li>Com isso termina o bloco de padrões. O próximo tema é banco de dados, com JDBC.</li>
+      </ul>
+
+      <h3>Atenção</h3>
+      <ul>
+        <li><strong>Builder: o construtor da classe real deve ser privado</strong>, senão o builder vira opcional e o problema volta.</li>
+        <li><strong>Singleton = construtor privado + instância estática + método estático de acesso.</strong> Esquecer o construtor privado deixa qualquer um dar <code>new</code>.</li>
+        <li><strong>Correção: no double-checked locking, <code>INSTANCE</code> precisa ser <code>volatile</code></strong> (<code>private static volatile AircraftSingletonLazy INSTANCE;</code>). Sem isso, pela forma como a JVM pode reordenar instruções, outra thread pode enxergar a referência <strong>antes</strong> de o objeto estar totalmente construído (com o <code>Set</code> ainda vazio, por exemplo). É por isso que o professor fala em possibilidade "bem reduzida" e não "zero": com <code>volatile</code>, é zero.</li>
+        <li><strong>Extra: alternativa lazy sem lock</strong>: o <em>holder idiom</em>, uma classe aninhada estática <code>private static class Holder { static final X INSTANCE = new X(); }</code> e <code>getInstance()</code> devolvendo <code>Holder.INSTANCE</code>. A JVM só carrega o <code>Holder</code> na primeira chamada, e o carregamento de classe já é thread safe.</li>
+        <li><strong>Reflection quebra singleton de classe; enum não.</strong></li>
+        <li><strong>Singleton thread safe ≠ métodos thread safe</strong>: o <code>bookSeat</code> ainda precisa de sincronização.</li>
+        <li><strong>Extra: o <code>currency</code> do DTO sai como <code>Real@1b6d3586</code></strong> porque <code>Real</code> não sobrescreve <code>toString</code> (aula 76). Num DTO que vai para fora, prefira tipos simples: <code>currencySymbol = currency.getSymbol()</code>.</li>
+        <li><strong>Extra: o <code>ReportDto</code> não declara construtor</strong>, então ganha o construtor padrão <strong>público</strong>, e dá para criar um vazio sem o builder. Declare <code>private ReportDto() {}</code> se quiser forçar o builder.</li>
+        <li><strong>Extra: singleton é considerado "antipadrão" por muitos</strong> quando vira estado global: dificulta testes (não dá para trocar a instância) e esconde dependências. Frameworks como o Spring resolvem isso com injeção de dependência, e o objeto continua único, mas é entregue pelo container.</li>
+      </ul>
+
+      <h3>Paralelo com PHP</h3>
+      <ul>
+        <li><strong>Builder no Laravel está em todo lugar</strong>: o <em>Query Builder</em> (<code>DB::table('users')-&gt;where(...)-&gt;orderBy(...)-&gt;get()</code>), o <code>Http::withToken(...)-&gt;timeout(3)-&gt;get(...)</code>, os <code>Mailable</code> e as <em>Model Factories</em> dos testes (<code>User::factory()-&gt;count(3)-&gt;create()</code>). Cada método devolve <code>$this</code> (ou uma cópia) e o último executa (o <code>build()</code>). No PHP 8 os <em>named arguments</em> (<code>new Person(firstName: 'William', lastName: 'Suane')</code>) resolvem parte do problema da legibilidade que motivou o Builder.</li>
+        <li><strong>Factory</strong>: os <code>Manager</code>/<code>driver()</code> do Laravel são fábricas: <code>Cache::store('redis')</code>, <code>Storage::disk('s3')</code>, <code>Mail::mailer('ses')</code>. Você pede pelo nome e recebe uma implementação da interface (<code>Illuminate\Contracts\Cache\Repository</code>) sem saber a classe concreta. Métodos estáticos como <code>Carbon::createFromFormat()</code> também.</li>
+        <li><strong>Singleton</strong>: no PHP o "para sempre" dura <strong>uma requisição</strong> (cada request começa do zero, salvo Octane). O padrão clássico existe (<code>private function __construct()</code> + <code>private static ?self $instance</code> + <code>public static function getInstance()</code>), mas no Laravel o jeito é o container: <code>$this-&gt;app-&gt;singleton(PaymentGateway::class, fn() =&gt; new StripeGateway(...))</code>. Várias Facades apontam para singletons do container. E não há o problema das threads.</li>
+        <li><strong>DTO</strong>: no PHP 8+ é comum com <em>constructor promotion</em> e <code>readonly</code> (<code>final class ReportDto { public function __construct(public readonly string $aircraftName, public readonly string $personName) {} }</code>), ou com o pacote <code>spatie/laravel-data</code>. Os <em>API Resources</em> (<code>JsonResource</code>) fazem um papel parecido: escolhem só os campos que vão para o front.</li>
+      </ul>
+    </section>
+
+    <section id="flashcards">
+      <h2>Flashcards</h2>
+      <p style="color:var(--muted);margin-top:-6px">Toque no cartão para virar.</p>
+      <div id="flashcards-app"></div>
+    </section>
+
+    <section id="quiz">
+      <h2>Quiz</h2>
+      <div id="quiz-app"></div>
+    </section>
+
+    <section id="estudo">
+      <h2>Material de estudo</h2>
+
+      <h3>Mapa mental</h3>
+<pre><code>Padrões de projeto (246–251): soluções padronizadas para problemas comuns
+├── Builder (246): construtor com muitos argumentos ilegível
+│   ├── construtor privado + static final class XBuilder
+│   ├── métodos devolvem this (encadeamento) · build() cria o objeto
+│   └── plugin Builder Generator · XBuilder.builder() (247)
+├── Factory (247): desacopla a criação da lógica de negócio
+│   ├── CurrencyFactory.newCurrency(Country) → Currency (interface)
+│   └── mudar a criação = mexer só na fábrica (baixo acoplamento)
+├── Singleton (248–250): um único objeto compartilhado (o avião 787-900)
+│   ├── eager: private static final INSTANCE = new ... (na carga da classe)
+│   ├── lazy: cria no 1º pedido · double-checked locking (+ volatile!)
+│   ├── reflection (setAccessible) quebra os de classe
+│   └── enum: INSTANCE · limpo, thread safe na criação, imune a reflection
+└── DTO (251): só os dados necessários, de várias entidades, num objeto
+    └── ReportDto (aircraftName, country, currency, personName) com builder</code></pre>
+
+      <h3>Prática no seu WSL (20 minutos)</h3>
+<pre><code>cd ~/java-lab
+P=src/academy/devdojo/maratonajava/javacore/ZZHpadroesdeprojeto
+mkdir -p $P/test
+
+cat > $P/test/PadroesPraticaTest01.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.ZZHpadroesdeprojeto.test;
+
+import java.lang.reflect.Constructor;
+import java.util.HashSet;
+import java.util.Set;
+
+public class PadroesPraticaTest01 {
+    // 246 · Builder
+    static class Person {
+        private final String firstName, lastName, username;
+        private Person(String firstName, String lastName, String username) {
+            this.firstName = firstName; this.lastName = lastName; this.username = username;
+        }
+        @Override public String toString() { return firstName + " " + lastName + " (" + username + ")"; }
+
+        static final class PersonBuilder {
+            private String firstName, lastName, username;
+            private PersonBuilder() { }
+            static PersonBuilder builder() { return new PersonBuilder(); }
+            PersonBuilder firstName(String v) { this.firstName = v; return this; }
+            PersonBuilder lastName(String v) { this.lastName = v; return this; }
+            PersonBuilder username(String v) { this.username = v; return this; }
+            Person build() { return new Person(firstName, lastName, username); }
+        }
+    }
+
+    // 247 · Factory
+    enum Country { BRAZIL, USA }
+    interface Currency { String getSymbol(); }
+    static Currency newCurrency(Country country) {
+        switch (country) {
+            case BRAZIL: return () -&gt; "R$";          // Currency é interface funcional
+            case USA: return () -&gt; "$";
+            default: throw new IllegalArgumentException("No currency found for this country");
+        }
+    }
+
+    // 248 · sem singleton
+    static class Aircraft {
+        private final Set&lt;String&gt; seats = new HashSet&lt;&gt;(Set.of("1A", "1B"));
+        boolean bookSeat(String seat) { return seats.remove(seat); }
+    }
+
+    // 248 · eager
+    static final class Eager {
+        private static final Eager INSTANCE = new Eager();
+        private final Set&lt;String&gt; seats = new HashSet&lt;&gt;(Set.of("1A", "1B"));
+        private Eager() { }
+        static Eager getInstance() { return INSTANCE; }
+        boolean bookSeat(String seat) { return seats.remove(seat); }
+    }
+
+    // 249 · lazy com double-checked locking (e volatile)
+    static final class Lazy {
+        private static volatile Lazy instance;
+        private Lazy() { }
+        static Lazy getInstance() {
+            if (instance == null) {
+                synchronized (Lazy.class) {
+                    if (instance == null) instance = new Lazy();
+                }
+            }
+            return instance;
+        }
+    }
+
+    // 250 · enum
+    enum AircraftEnum {
+        INSTANCE;
+        private final Set&lt;String&gt; seats = new HashSet&lt;&gt;(Set.of("1A", "1B"));
+        synchronized boolean bookSeat(String seat) { return seats.remove(seat); }
+    }
+
+    // 251 · DTO
+    static final class ReportDto {
+        private String aircraftName, country, currencySymbol, personName;
+        private ReportDto() { }
+        @Override public String toString() {
+            return "ReportDto{aircraftName='" + aircraftName + "', country=" + country
+                    + ", currency=" + currencySymbol + ", personName='" + personName + "'}";
+        }
+    }
+
+    public static void main(String[] args) throws Exception {
+        Person person = Person.PersonBuilder.builder()
+                .firstName("William").lastName("Suane").username("ViradoNoJiraya").build();
+        System.out.println(person);                                                  // ?
+
+        System.out.println(newCurrency(Country.BRAZIL).getSymbol() + " " + newCurrency(Country.USA).getSymbol()); // ?
+
+        System.out.println(new Aircraft().bookSeat("1A") + " " + new Aircraft().bookSeat("1A"));   // ?
+        System.out.println(Eager.getInstance().bookSeat("1A") + " " + Eager.getInstance().bookSeat("1A")); // ?
+        System.out.println("mesmo objeto? " + (Eager.getInstance() == Eager.getInstance()));       // ?
+
+        System.out.println("lazy mesmo objeto? " + (Lazy.getInstance() == Lazy.getInstance()));    // ?
+        Constructor&lt;Lazy&gt; constructor = Lazy.class.getDeclaredConstructor();
+        constructor.setAccessible(true);
+        System.out.println("reflection criou outro? " + (constructor.newInstance() != Lazy.getInstance())); // ?
+
+        System.out.println(AircraftEnum.INSTANCE.bookSeat("1A") + " " + AircraftEnum.INSTANCE.bookSeat("1A")); // ?
+        try {
+            Constructor&lt;?&gt; enumConstructor = AircraftEnum.class.getDeclaredConstructors()[0];
+            enumConstructor.setAccessible(true);
+            enumConstructor.newInstance("OUTRO", 1);
+        } catch (IllegalArgumentException e) {
+            System.out.println("enum: " + e.getMessage());                           // ?
+        }
+
+        ReportDto dto = new ReportDto();
+        dto.aircraftName = "777";
+        dto.country = Country.BRAZIL.name();
+        dto.currencySymbol = newCurrency(Country.BRAZIL).getSymbol();
+        dto.personName = person.firstName;
+        System.out.println(dto);                                                     // ?
+    }
+}
+EOF
+
+javac -d out $(find src -name '*.java')
+java -cp out academy.devdojo.maratonajava.javacore.ZZHpadroesdeprojeto.test.PadroesPraticaTest01</code></pre>
+      <details>
+        <summary>Ver a saída esperada</summary>
+<pre><code>William Suane (ViradoNoJiraya)
+R$ $
+true true
+true false
+mesmo objeto? true
+lazy mesmo objeto? true
+reflection criou outro? true
+true false
+enum: Cannot reflectively create enum objects
+ReportDto{aircraftName='777', country=BRAZIL, currency=R$, personName='William'}</code></pre>
+      </details>
+      <p>O <code>true true</code> é o assento 1A vendido duas vezes em dois aviões diferentes, o problema que o singleton resolve. O <code>ReportDto</code> da prática é preenchido direto porque está na mesma classe; no exercício 4 você monta um builder para ele.</p>
+      <p><strong>Exercícios:</strong></p>
+      <ol>
+        <li>Instale o plugin <em>Builder Generator</em> no IntelliJ e gere o builder de uma classe <code>Anime</code> com 6 atributos.</li>
+        <li>Acrescente <code>Country.ARGENTINA</code> e não mexa na fábrica. O que acontece ao pedir a moeda? Agora crie a classe <code>Peso</code> e ajuste só a fábrica: quem chamava precisou mudar?</li>
+        <li>Tire o <code>volatile</code> e o <code>synchronized</code> do <code>Lazy</code>, dispare 100 threads chamando <code>getInstance()</code> e guarde os objetos num <code>Set</code> concorrente. Aparece mais de um? (Pode não aparecer: a condição de corrida é rara, e é isso que a torna perigosa.)</li>
+        <li>Escreva um <code>ReportDtoBuilder</code> para o <code>ReportDto</code> da prática, no estilo da aula 251.</li>
+        <li>Implemente o singleton com <em>holder idiom</em> (classe aninhada estática) e compare com o double-checked locking.</li>
+      </ol>
+
+      <h3>Glossário</h3>
+      <ul>
+        <li><strong>Padrão de projeto (design pattern)</strong>: solução reutilizável e padronizada para um problema recorrente de design de código.</li>
+        <li><strong>Builder</strong>: objeto auxiliar que monta outro passo a passo, com métodos encadeados e um <code>build()</code> final.</li>
+        <li><strong>Fluent interface</strong>: métodos que devolvem <code>this</code> para permitir encadeamento.</li>
+        <li><strong>Factory</strong>: método/classe responsável por criar objetos, escondendo a classe concreta.</li>
+        <li><strong>Acoplamento</strong>: grau de dependência entre partes do código; baixo acoplamento facilita mudanças.</li>
+        <li><strong>Singleton</strong>: classe com uma única instância, acessível globalmente.</li>
+        <li><strong>Eager × lazy initialization</strong>: criar na carga da classe × criar no primeiro uso.</li>
+        <li><strong>Double-checked locking</strong>: checar sem lock, travar e checar de novo antes de criar.</li>
+        <li><strong><code>volatile</code></strong>: garante que todas as threads vejam a escrita mais recente de uma variável, sem reordenação perigosa.</li>
+        <li><strong>Reflection</strong>: API para inspecionar e manipular classes, métodos e construtores em tempo de execução.</li>
+        <li><strong>DTO (Data Transfer Object)</strong>: objeto só com os dados necessários para transferir entre camadas ou sistemas.</li>
+        <li><strong>Code review</strong>: revisão do código por outro desenvolvedor antes de ir para produção.</li>
+      </ul>
+
+      <h3>Revisão espaçada</h3>
+      <ul class="revisao">
+        <li><span class="dia">Dia 1</span><span>Todos os flashcards + a prática com previsões.</span></li>
+        <li><span class="dia">Dia 3</span><span>Quiz + exercícios 1 a 3.</span></li>
+        <li><span class="dia">Dia 7</span><span>Exercícios 4 e 5 + escrever de memória os três singletons (eager, lazy com volatile, enum).</span></li>
+        <li><span class="dia">Dia 14</span><span>Flashcards que errou + questões discursivas + achar no código do Laravel um exemplo de cada padrão.</span></li>
+      </ul>
+
+      <h3>Para aprofundar</h3>
+      <ul>
+        <li>Quais são os 23 padrões do livro GoF (<em>Design Patterns</em>, 1994) e como se dividem em criacionais, estruturais e comportamentais?</li>
+        <li>Como o Lombok gera builders com <code>@Builder</code> (vem aí na aula 258)?</li>
+        <li>O que são os <code>record</code>s do Java (aula 283) e por que são ótimos para DTOs?</li>
+        <li>Como o Spring gerencia singletons (escopo <code>singleton</code> dos beans) sem o padrão clássico?</li>
+        <li>O que é o padrão <em>Strategy</em> e como ele aparece no <code>Comparator</code> e no <code>Predicate</code> das aulas 169 e 194?</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    window.AULA = {
+      flashcards: [
+        ["O que é um padrão de projeto?", "Uma solução padronizada para um problema comum de design de código"],
+        ["Que problema o Builder resolve?", "Construtores com muitos argumentos, difíceis de ler e de lembrar a ordem"],
+        ["Por que o construtor da classe fica privado no Builder?", "Para obrigar a criação pelo builder"],
+        ["Por que os métodos do builder devolvem this?", "Para encadear chamadas no mesmo objeto (fluent interface)"],
+        ["O que faz o build()?", "Cria o objeto real com os valores acumulados no builder"],
+        ["Onde fica o PersonBuilder?", "Como classe aninhada estática (public static final class) dentro de Person"],
+        ["Que problema o Factory resolve?", "Desacopla a criação do objeto da lógica de negócio: quem chama não sabe qual classe é criada"],
+        ["Qual a vantagem de CurrencyFactory.newCurrency(country)?", "Mudou a regra de criação, mexe só na fábrica; baixo acoplamento"],
+        ["Por que Real e UsDollar não são públicas?", "Quem usa só precisa conhecer a interface Currency"],
+        ["Que problema o Singleton resolve?", "Garantir um único objeto compartilhado (ex.: o mesmo avião, o driver do banco)"],
+        ["Quais os três ingredientes do Singleton?", "Construtor privado, instância private static e método estático de acesso"],
+        ["O que é eager initialization?", "A instância é criada na carga da classe (private static final INSTANCE = new ...)"],
+        ["O eager é thread safe?", "Sim: a JVM garante que a inicialização estática acontece uma vez só"],
+        ["O que é lazy initialization?", "A instância só é criada na primeira chamada do getInstance"],
+        ["Qual o problema do lazy com um if simples?", "Duas threads podem ver null ao mesmo tempo e criar dois objetos"],
+        ["Por que não só synchronized no getInstance?", "Funciona, mas cobra o custo do lock em todas as chamadas, para sempre"],
+        ["O que é double-checked locking?", "Checa null sem lock; se null, sincroniza na classe e checa de novo antes de criar"],
+        ["O que falta no double-checked locking do repositório?", "O volatile na variável INSTANCE"],
+        ["Como reflection quebra um singleton?", "getDeclaredConstructor + setAccessible(true) + newInstance cria outro objeto"],
+        ["Como fazer singleton com enum?", "enum X { INSTANCE; ... }: a constante é a instância única"],
+        ["Vantagens do singleton com enum", "Código limpo, criação thread safe e imune a reflection (e à serialização)"],
+        ["Singleton thread safe torna o bookSeat thread safe?", "Não: só a criação é segura; o método ainda precisa de sincronização"],
+        ["O que é um DTO?", "Objeto só com os dados necessários, vindos de várias entidades, para transferir a outra camada/sistema"],
+        ["DTO ou Dto no nome da classe?", "ReportDto: o recomendado é tratar siglas como palavras"],
+        ["Por que o currency do ReportDto imprime Real@1b6d3586?", "Porque Real não sobrescreve toString"]
+      ],
+      quiz: [
+        { tipo: 'multipla', pergunta: 'Qual o principal problema que o padrão Builder resolve?',
+          opcoes: ['Garantir uma única instância', 'Construtores com muitos parâmetros difíceis de ler', 'Esconder qual classe concreta é criada', 'Transferir dados entre camadas'],
+          correta: 1,
+          explicacao: 'Com muitos argumentos, fica impossível saber qual é qual. O builder nomeia cada valor: .firstName("William").lastName("Suane")...' },
+        { tipo: 'vf', pergunta: 'No Builder da aula 246, cada método como firstName(...) cria um novo objeto PersonBuilder.',
+          correta: 1,
+          explicacao: 'Falso. Cada método altera o mesmo builder e devolve this, a mesma referência. Só o build() cria o objeto Person.' },
+        { tipo: 'multipla', pergunta: 'Qual a vantagem de usar CurrencyFactory.newCurrency(Country.BRAZIL) em vez de new Real()?',
+          opcoes: ['É mais rápido', 'Se a regra de criação mudar, só a fábrica é alterada; quem chama depende só da interface', 'Evita o garbage collector', 'Garante uma única instância'],
+          correta: 1,
+          explicacao: 'O Factory desacopla criação de uso. Quem chama conhece só Currency, e Real e UsDollar podem mudar à vontade.' },
+        { tipo: 'multipla', pergunta: 'Duas chamadas com new Aircraft("787-900") fazem bookSeat("1A") cada. O que imprime?',
+          opcoes: ['true e false', 'true e true', 'false e false', 'Lança exceção'],
+          correta: 1,
+          explicacao: 'São dois objetos, cada um com seu Set de assentos, e o 1A foi "vendido" duas vezes. Com o singleton, a segunda chamada dá false.' },
+        { tipo: 'multipla', pergunta: 'Quando a instância do AircraftSingletonEager é criada?',
+          opcoes: ['Na primeira chamada de getINSTANCE()', 'Quando a classe é carregada (inicialização estática)', 'A cada chamada de getINSTANCE()', 'Nunca, é criada pelo usuário'],
+          correta: 1,
+          explicacao: 'Eager: private static final INSTANCE = new ..., criada na inicialização estática da classe. Lazy é que espera o primeiro pedido.' },
+        { tipo: 'vf', pergunta: 'No double-checked locking, a segunda verificação de null dentro do synchronized é desnecessária.',
+          correta: 1,
+          explicacao: 'Falso. Enquanto uma thread esperava o lock, outra pode ter criado a instância. Sem a segunda checagem, a que entra depois criaria outra.' },
+        { tipo: 'multipla', pergunta: 'O que acontece com constructor.setAccessible(true) + newInstance() num singleton de classe com construtor privado?',
+          opcoes: ['Lança exceção: o construtor é privado', 'Cria um segundo objeto, quebrando o singleton', 'Devolve a mesma instância', 'Não compila'],
+          correta: 1,
+          explicacao: 'Reflection ignora o private com setAccessible(true). Só o singleton com enum é imune ("Cannot reflectively create enum objects").' },
+        { tipo: 'multipla', pergunta: 'Qual afirmação sobre o singleton com enum está correta?',
+          opcoes: ['Os métodos dele ficam automaticamente thread safe', 'A criação é thread safe e reflection não consegue criar outra instância', 'Precisa de double-checked locking', 'Não pode ter atributos'],
+          correta: 1,
+          explicacao: 'A JVM cria a constante uma vez e bloqueia reflection. Mas o bookSeat mexe num HashSet comum e ainda precisa de synchronized.' },
+        { tipo: 'discursiva', pergunta: 'Compare as três formas de singleton das aulas 248 a 250: quando o objeto é criado, riscos e vantagens de cada uma.',
+          explicacao: 'Eager: private static final INSTANCE = new ..., criado na carga da classe. É simples e thread safe (a JVM inicializa estáticos uma vez), mas cria o objeto mesmo que ninguém use, e reflection consegue criar outro. Lazy: a instância começa null e é criada no primeiro getInstance. Com if simples, duas threads podem criar dois objetos; synchronized no método resolve mas custa em toda chamada. A solução é o double-checked locking (checa, sincroniza na classe, checa de novo), com a variável volatile, que falta no repositório, para evitar ver um objeto parcialmente construído. Reflection também a quebra. Enum: enum X { INSTANCE; }, com código mais limpo, criação thread safe, imune a reflection e à serialização. Em todos, "thread safe" vale só para a criação: métodos que alteram estado (bookSeat) continuam precisando de sincronização. No Laravel, o equivalente é $app->singleton() no container.' },
+        { tipo: 'discursiva', pergunta: 'Explique o DTO da aula 251 e como ele usa os outros padrões do bloco. Relacione com o Laravel.',
+          explicacao: 'O DTO (Data Transfer Object, dos padrões de arquitetura corporativa de Martin Fowler) é uma classe só com os dados necessários para uma transferência. No exemplo, uma API precisa do nome do avião, do país, da moeda e do nome da pessoa, dados de quatro entidades (Aircraft, Country, Currency, Person). Em vez de mandar os quatro objetos inteiros, monta-se um ReportDto com esses quatro campos. Ele reúne os padrões do bloco: a moeda vem da fábrica (CurrencyFactory.newCurrency), a pessoa é criada com o Builder (Person.PersonBuilder.builder()...build()), e o próprio DTO também tem builder (ReportDto.ReportDtoBuilder). A convenção de nome é ReportDto. No Laravel, o papel é parecido com o de API Resources (JsonResource), que escolhem os campos que vão ao front, ou de classes com constructor promotion e readonly (ou spatie/laravel-data).' }
+      ]
+    };
+  </script>
+  <script src="../js/app.js"></script>
+</body>
+</html>
