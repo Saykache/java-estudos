@@ -75,7 +75,17 @@ Plano (títulos no README do professor; a aula 35 não está na playlist, é o v
 - 189–194 Classes internas + parametrizando comportamentos
 - 195–202 Lambdas, method reference, Optional
 - 203–219 Streams (dividir: 203–210, 211–219)
-- 220–228 Threads; 229+ Concorrência (planejar quando chegar lá)
+- 220–228 Threads
+- 229–235 Concorrência: AtomicInteger, Lock/ReentrantLock, Conditions, ReentrantReadWriteLock, CopyOnWriteArrayList, ArrayBlockingQueue, LinkedTransferQueue
+- 236–239 Concorrência: Executors (thread pools, ScheduledExecutorService), Callable, Future
+- 240–245 Concorrência: CompletableFuture (get/join, streams, ThreadFactory, encadeando chamadas, allOf/anyOf)
+- 246–251 Padrões de projeto: Builder, Factory, Singleton (eager, lazy, enum), DTO
+- 252–256 JDBC: Docker, container MySQL, Workbench, Maven, conexão
+- 257–262 JDBC: Statement (insert/delete/update), Lombok e Log4J2, ResultSet (findAll, findByName)
+- 263–267 JDBC: ResultSetMetaData, DatabaseMetaData, scroll, atualizar/inserir/deletar via ResultSet
+- 268–274 JDBC: PreparedStatement, CallableStatement, JdbcRowSet, CachedRowSet, transação
+- 275–279 JDBC: CRUD completo (Anime CRUD)
+- 280–284 jUnit, atualizando JDK, Record Class, Pattern Matching for instanceof (fim do curso)
 
 ## Transcrições
 `ferramentas/transcricao.py` baixa as legendas pelo navegador (Playwright, janela aberta; headless vem vazio):
