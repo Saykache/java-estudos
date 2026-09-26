@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>268–274 · JDBC: PreparedStatement</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="topo">
+      <a class="voltar" href="../index.html">← Todas as aulas</a>
+      <h1>268–274 · JDBC: PreparedStatement, CallableStatement, RowSet e transação</h1>
+      <p>SQL injection e PreparedStatement com ?, stored procedure com CallableStatement, JdbcRowSet (conectado) e listener, CachedRowSet (desconectado) e transação com commit e rollback · <a href="https://www.youtube.com/playlist?list=PL62G310vn6nFIsOCC0H-C2infYgwm8SWW" target="_blank" rel="noopener">playlist</a></p>
+    </header>
+
+    <nav class="abas">
+      <a href="#resumo">Resumo</a>
+      <a href="#flashcards">Flashcards</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#estudo">Material de estudo</a>
+    </nav>
+
+    <p class="aviso">Junta as aulas 268 e 269 (PreparedStatement), 270 (CallableStatement), 271 e 272 (JdbcRowSet), 273 (CachedRowSet) e 274 (transação). Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. O código (pacote <code>javacore.ZZIjdbc</code>: <code>ProducerRepository</code>, <code>ProducerRepositoryRowSet</code>, <code>CustomRowSetListener</code>, <code>ConnectionFactory</code>, <code>ConnectionFactoryTest02</code>/<code>03</code>) foi conferido no <a href="https://github.com/devdojobr/maratona-java-virado-no-jiraya" target="_blank" rel="noopener">repositório do professor</a>. A <em>stored procedure</em> da aula 270 foi criada no Workbench e não está no repositório; o SQL abaixo foi reconstruído a partir do vídeo. Os itens marcados como "extra" não estão nos vídeos.</p>
+
+    <section id="resumo">
+      <h2>Resumo</h2>
+      <p>Até aqui o SQL era montado com <code>formatted</code>, e as páginas anteriores alertaram para a <strong>injeção de SQL</strong>. Este bloco resolve isso com o <strong><code>PreparedStatement</code></strong>: o SQL vai para o banco com <strong><code>?</code></strong> no lugar dos valores, que são enviados <strong>separados</strong>. Depois vêm o <strong><code>CallableStatement</code></strong> (para chamar <em>stored procedures</em>), os <strong><code>RowSet</code></strong> (um <code>ResultSet</code> "turbinado", conectado ou desconectado) e as <strong>transações</strong>: ou tudo é gravado, ou nada.</p>
+<pre><code>PreparedStatement ps = conn.prepareStatement("SELECT * FROM producer WHERE name LIKE ?"); // 268
+ps.setString(1, "%" + name + "%");
+CallableStatement cs = conn.prepareCall("CALL anime_store.sp_get_producer_by_name(?)");  // 270
+JdbcRowSet jrs = RowSetProvider.newFactory().createJdbcRowSet();                        // 271–272
+CachedRowSet crs = RowSetProvider.newFactory().createCachedRowSet();                    // 273
+conn.setAutoCommit(false); ... conn.commit(); / conn.rollback();                        // 274</code></pre>
+
+      <h3>268 · PreparedStatement pt 01: SQL injection</h3>
+      <p>O professor mostra o ataque primeiro. Com o <code>findByName</code> montado com <code>formatted</code> (sem LIKE, com <code>name = '%s'</code>), ele passa algo como <code>x' OR 'x'='x</code>. O SQL vira <code>... WHERE name = 'x' OR 'x'='x'</code>, e a consulta devolve <strong>a tabela inteira</strong>. "É uma coisa simples, mas o Yahoo pagou um preço alto por uma besteira dessa."</p>
+<pre><code>public static List&lt;Producer&gt; findByNamePreparedStatement(String name) {
+    List&lt;Producer&gt; producers = new ArrayList&lt;&gt;();
+    try (Connection conn = ConnectionFactory.getConnection();
+         PreparedStatement ps = preparedStatementFindByName(conn, name);   // criado fora
+         ResultSet rs = ps.executeQuery()) {                                // sem SQL aqui!
+        while (rs.next()) {
+            producers.add(Producer.builder().id(rs.getInt("id")).name(rs.getString("name")).build());
+        }
+    } catch (SQLException e) {
+        log.error("Error while trying to find all producers", e);
+    }
+    return producers;
+}
+
+private static PreparedStatement preparedStatementFindByName(Connection conn, String name) throws SQLException {
+    String sql = "SELECT * FROM anime_store.producer where name like ?;";   // ? = placeholder
+    PreparedStatement ps = conn.prepareStatement(sql);
+    ps.setString(1, String.format("%%%s%%", name));                        // índice começa em 1
+    return ps;
+}</code></pre>
+      <ul>
+        <li><strong>Duas vantagens</strong>, segundo o professor: <strong>desempenho</strong>, porque o SQL é <strong>pré-compilado</strong> (o banco valida tabela, colunas e sintaxe uma vez e reaproveita), e <strong>proteção contra SQL injection</strong>, porque o valor é tratado como <strong>dado</strong>, nunca como parte do comando. O mesmo ataque não devolve nada.</li>
+        <li><strong><code>?</code></strong> marca onde entra cada valor, e os <strong><code>setString(índice, valor)</code></strong>, <code>setInt</code>... preenchem, com índice a partir de <strong>1</strong>. No LIKE, o <code>%</code> vai <strong>no valor</strong>, não no SQL: <code>"%" + name + "%"</code>.</li>
+        <li>O SQL vai no <code>conn.prepareStatement(sql)</code>. Depois é <code>ps.executeQuery()</code> / <code>ps.executeUpdate()</code> <strong>sem argumento</strong>. (O professor estranhou que o <code>executeQuery(sql)</code> herdado do <code>Statement</code> ainda compila; extra: no <code>PreparedStatement</code> ele lança exceção se chamado.)</li>
+        <li><strong>Problema de estrutura</strong>: os <code>setXxx</code> precisam rodar <strong>entre</strong> criar o <code>PreparedStatement</code> e executar a consulta, e dentro dos parênteses do try-with-resources não cabem instruções. A solução é <strong>extrair um método</strong> que cria e preenche o <code>PreparedStatement</code> e devolvê-lo ao try, que continua fechando tudo.</li>
+      </ul>
+
+      <h3>269 · PreparedStatement pt 02: UPDATE</h3>
+<pre><code>public static void updatePreparedStatement(Producer producer) {
+    try (Connection conn = ConnectionFactory.getConnection();
+         PreparedStatement ps = preparedStatementUpdate(conn, producer)) {
+        int rowsAffected = ps.executeUpdate();
+        log.info("Updated producer '{}', rows affected '{}' ", producer.getId(), rowsAffected);
+    } catch (SQLException e) {
+        log.error("Error while trying to update producer '{}'", producer.getId(), e);
+    }
+}
+
+private static PreparedStatement preparedStatementUpdate(Connection conn, Producer producer) throws SQLException {
+    String sql = "UPDATE `anime_store`.`producer` SET `name` = ? WHERE (`id` = ?);";
+    PreparedStatement ps = conn.prepareStatement(sql);
+    ps.setString(1, producer.getName());    // 1º ?
+    ps.setInt(2, producer.getId());         // 2º ?
+    return ps;
+}</code></pre>
+      <ul>
+        <li>Cada <code>?</code> tem seu índice, na ordem em que aparece. <code>'%s'</code> com aspas vira só <code>?</code>, <strong>sem aspas</strong>: o driver cuida disso. Isso resolve de quebra o espaço extra do UPDATE da aula 260 e o nome com apóstrofo.</li>
+        <li>O professor também descobre que o <code>%%%s%%</code> com <code>String.format</code> funcionava (no vídeo anterior ele tinha errado outra coisa).</li>
+      </ul>
+
+      <h3>270 · CallableStatement e stored procedure</h3>
+      <p>Um <code>CallableStatement</code> é um <code>PreparedStatement</code> especializado em executar <strong>procedures</strong> e <strong>functions</strong> guardadas no banco. A diferença entre as duas: a <em>function</em> <strong>obrigatoriamente</strong> retorna um valor; a <em>procedure</em> pode ou não retornar. O professor conta que por volta de 2006 a 2008 se usava muito, mas hoje ele quase não vê: a lógica dentro do banco fica difícil de manter. Um uso da época era limitar o acesso: as pessoas só podiam consultar certas colunas através da procedure.</p>
+<pre><code>DELIMITER $$
+CREATE PROCEDURE `anime_store`.`sp_get_producer_by_name`(IN p_name VARCHAR(100))
+BEGIN
+    SELECT * FROM anime_store.producer WHERE name LIKE p_name;
+END$$
+DELIMITER ;
+
+CALL anime_store.sp_get_producer_by_name('%NHK%');</code></pre>
+<pre><code>private static CallableStatement callableStatementFindByName(Connection conn, String name) throws SQLException {
+    String sql = "CALL `anime_store`.`sp_get_producer_by_name`(?);";
+    CallableStatement cs = conn.prepareCall(sql);            // prepareCall, não prepareStatement
+    cs.setString(1, String.format("%%%s%%", name));
+    return cs;
+}
+// o resto é igual ao findByNamePreparedStatement: executeQuery e while (rs.next())</code></pre>
+      <ul>
+        <li><strong><code>DELIMITER $$</code></strong>: o corpo da procedure tem <code>;</code> no meio, e sem trocar o delimitador o cliente cortaria o comando ali. No fim, volta-se para <code>;</code>.</li>
+        <li><strong>Pegadinha do vídeo</strong>: com o parâmetro chamado <code>name</code>, igual à coluna, o <code>WHERE name LIKE name</code> compara a coluna com ela mesma e devolve <strong>todo mundo</strong>. Dê outro nome ao parâmetro (<code>p_name</code>).</li>
+        <li>No Workbench, a procedure aparece em <em>Stored Procedures</em> do schema e pode ser chamada com <code>CALL</code>.</li>
+        <li><strong>Extra</strong>: parâmetros de saída (<code>OUT</code>) são lidos com <code>cs.registerOutParameter(2, Types.INTEGER)</code> antes de executar e <code>cs.getInt(2)</code> depois.</li>
+      </ul>
+
+      <h3>271 · JdbcRowSet pt 01: RowSet conectado</h3>
+      <p>O <strong><code>RowSet</code></strong> é "uma versão tunada do <code>ResultSet</code>":</p>
+      <ul>
+        <li>O <code>ResultSet</code> sempre mantém a conexão; um <code>RowSet</code> pode ficar <strong>conectado</strong> (<code>JdbcRowSet</code>) ou <strong>desconectado</strong> (<code>CachedRowSet</code>).</li>
+        <li>O <code>ResultSet</code> <strong>não é serializável</strong>; o <code>RowSet</code> é, e dá para mandá-lo pela rede.</li>
+        <li>O <code>RowSet</code> é um <strong>JavaBean</strong> (propriedades com setters) e é, por padrão, <strong>rolável e atualizável</strong>.</li>
+        <li>Ele é criado por uma fábrica: <code>RowSetProvider.newFactory()</code>.</li>
+      </ul>
+<pre><code>public static JdbcRowSet getJdbcRowSet() throws SQLException {           // na ConnectionFactory
+    JdbcRowSet jdbcRowSet = RowSetProvider.newFactory().createJdbcRowSet();
+    jdbcRowSet.setUrl("jdbc:mysql://localhost:3306/anime_store");         // atenção: setUrl, u minúsculo
+    jdbcRowSet.setUsername("root");
+    jdbcRowSet.setPassword("root");
+    return jdbcRowSet;
+}
+
+public static List&lt;Producer&gt; findByNameJdbcRowSet(String name) {
+    String sql = "SELECT * FROM anime_store.producer where name like ?;";
+    List&lt;Producer&gt; producers = new ArrayList&lt;&gt;();
+    try (JdbcRowSet jrs = ConnectionFactory.getJdbcRowSet()) {
+        jrs.setCommand(sql);                                   // o SQL
+        jrs.setString(1, String.format("%%%s%%", name));       // parâmetros, como no PreparedStatement
+        jrs.execute();                                         // abre a conexão e executa
+        while (jrs.next()) {                                   // e ele mesmo é o "ResultSet"
+            producers.add(Producer.builder().id(jrs.getInt("id")).name(jrs.getString("name")).build());
+        }
+    } catch (SQLException e) {
+        e.printStackTrace();
+    }
+    return producers;
+}</code></pre>
+      <ul>
+        <li>Uma classe só faz o papel de <code>Connection</code> + <code>PreparedStatement</code> + <code>ResultSet</code>: simplifica bastante, e o try-with-resources fica com um recurso só.</li>
+        <li>O <code>execute()</code> do <code>RowSet</code> é para <strong>buscar</strong> dados. Para gravar, veja a aula 272.</li>
+        <li>O código ganhou classes separadas (<code>ProducerRepositoryRowSet</code>, <code>ProducerServiceRowSet</code>) porque o repositório "já estava muito grande".</li>
+      </ul>
+
+      <h3>272 · JdbcRowSet pt 02: update e listener</h3>
+<pre><code>// NÃO funciona: execute() de um RowSet espera um SELECT
+// jrs.setCommand("UPDATE ... SET name = ? WHERE id = ?"); jrs.execute();   → exceção
+
+public static void updateJdbcRowSet(Producer producer) {
+    String sql = "SELECT * FROM anime_store.producer WHERE (`id` = ?);";   // busca a linha...
+    try (JdbcRowSet jrs = ConnectionFactory.getJdbcRowSet()) {
+        jrs.addRowSetListener(new CustomRowSetListener());
+        jrs.setCommand(sql);
+        jrs.setInt(1, producer.getId());
+        jrs.execute();
+        if (!jrs.next()) return;
+        jrs.updateString("name", producer.getName());                    // ...e altera por ela
+        jrs.updateRow();
+    } catch (SQLException e) {
+        e.printStackTrace();
+    }
+}
+
+@Log4j2
+public class CustomRowSetListener implements RowSetListener {
+    @Override
+    public void rowSetChanged(RowSetEvent event) { log.info("Command execute triggered"); }  // execute()
+
+    @Override
+    public void rowChanged(RowSetEvent event) {                         // insert/update/delete
+        log.info("Row inserted, updated or deleted");
+        if (event.getSource() instanceof RowSet) {
+            try {
+                ((RowSet) event.getSource()).execute();                 // recarrega os dados
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    @Override
+    public void cursorMoved(RowSetEvent event) { log.info("Cursor moved"); }   // next(), previous()...
+}</code></pre>
+      <ul>
+        <li><strong>Para alterar</strong>, o jeito é o mesmo do <code>ResultSet</code> atualizável (aula 266): um SELECT que traz a linha, <code>updateString</code> e <code>updateRow</code>.</li>
+        <li><strong>Listener</strong>: uma classe que "fica escutando" o <code>RowSet</code>. Três métodos são chamados sozinhos, graças ao polimorfismo: <code>rowSetChanged</code> quando o comando é executado, <code>cursorMoved</code> a cada movimento do cursor e <code>rowChanged</code> quando uma linha é inserida, atualizada ou apagada. No exemplo, o <code>rowChanged</code> chama <code>execute()</code> de novo para <strong>recarregar</strong> o <code>RowSet</code>, algo que o <code>ResultSet</code> não faz sozinho.</li>
+        <li>O professor mostra o <strong><code>@SneakyThrows</code></strong> do Lombok, que "esconde" a exceção checked (o código compilado ganha um try/catch). "Para estudo tudo bem, mas em produção, pelo amor de Deus": você perde o tratamento da exceção.</li>
+      </ul>
+
+      <h3>273 · CachedRowSet: RowSet desconectado</h3>
+      <p>O <code>CachedRowSet</code> <strong>pega os dados e desconecta</strong>: tudo fica na memória, você trabalha nela e, no fim, manda as alterações de volta.</p>
+<pre><code>public static CachedRowSet getCachedRowSet() throws SQLException {        // na ConnectionFactory
+    return RowSetProvider.newFactory().createCachedRowSet();
+}
+
+public static void updateCachedRowSet(Producer producer) {
+    String sql = "SELECT * FROM producer WHERE (`id` = ?);";               // sem "anime_store."!
+    try (CachedRowSet crs = ConnectionFactory.getCachedRowSet();
+         Connection connection = ConnectionFactory.getConnection()) {
+        connection.setAutoCommit(false);                                   // obrigatório aqui
+        crs.setCommand(sql);
+        crs.setInt(1, producer.getId());
+        crs.execute(connection);                                           // usa esta conexão
+        if (!crs.next()) return;
+        crs.updateString("name", producer.getName());
+        crs.updateRow();                                                   // só na memória!
+        TimeUnit.SECONDS.sleep(10);                                        // teste de conflito
+        crs.acceptChanges();                                               // agora grava no banco
+    } catch (SQLException | InterruptedException e) {
+        e.printStackTrace();
+    }
+}</code></pre>
+      <ul>
+        <li><strong><code>updateRow()</code> não basta</strong>: altera só a cópia em memória. É o <strong><code>acceptChanges()</code></strong> que manda para o banco.</li>
+        <li><strong>A saga da depuração</strong> (o professor passou "uma hora e meia" nisso e mostra o caminho):
+          <ul>
+            <li><strong>Primeiro erro, sintaxe SQL</strong>: seguindo a pilha com <em>breakpoints</em> e <code>F8</code> até dentro da implementação (<code>CachedRowSetWriter</code>), ele achou o UPDATE gerado com o nome da tabela errado por causa do <code>anime_store.</code> no SELECT. A solução foi escrever só <code>FROM producer</code> (o banco já está na URL).</li>
+            <li><strong>Segundo erro, auto-commit</strong>: o <code>acceptChanges</code> faz o próprio <em>commit</em> e não funciona com a conexão em auto-commit. A solução foi passar uma <code>Connection</code> com <code>setAutoCommit(false)</code> para <code>crs.execute(connection)</code>.</li>
+          </ul>
+          A lição dele: "é o tipo de coisa que vai acontecer na vida profissional", e o Google nem sempre tem a resposta. Aprenda a <strong>depurar dentro das bibliotecas</strong>.</li>
+        <li><strong>Conflito</strong>: com o <code>sleep</code> de 10 s, ele alterou o mesmo registro no Workbench antes do <code>acceptChanges</code>. Resultado: <code>SyncProviderException</code>, porque os dados originais mudaram no banco enquanto o <code>CachedRowSet</code> estava desconectado. Resolver conflitos é possível, mas "não é o foco do curso, graças a Deus".</li>
+        <li>Vantagem: pode ser muito mais rápido trabalhar na memória do que ir ao banco a cada operação. O preço são essas "treta" de sincronização.</li>
+      </ul>
+
+      <h3>274 · Transação</h3>
+      <p><strong>Transação</strong> é <strong>atomicidade</strong> no banco: <strong>ou executa tudo, ou não executa nada</strong>. Exemplo: numa compra, o pagamento é registrado e o monitor sai do estoque. Se um dos passos falhar, os outros precisam voltar ao estado original.</p>
+<pre><code>public static void saveTransaction(List&lt;Producer&gt; producers) {
+    try (Connection conn = ConnectionFactory.getConnection()) {
+        conn.setAutoCommit(false);                        // "eu decido quando gravar"
+        preparedStatementSaveTransaction(conn, producers);
+        conn.commit();                                    // grava tudo de uma vez
+        conn.setAutoCommit(true);
+    } catch (SQLException e) {
+        log.error("Error while trying to save producers '{}'", producers, e);
+    }
+}
+
+private static void preparedStatementSaveTransaction(Connection conn, List&lt;Producer&gt; producers) throws SQLException {
+    String sql = "INSERT INTO `anime_store`.`producer` (`name`) VALUES ( ? );";
+    boolean shouldRollback = false;
+    for (Producer p : producers) {
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {   // um PreparedStatement por item,
+            log.info("Saving producer '{}'", p.getName());          // a MESMA conexão para todos
+            ps.setString(1, p.getName());
+//          if (p.getName().equals("White fox")) throw new SQLException("Can't save white fox");
+            ps.execute();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            shouldRollback = true;
+        }
+    }
+    if (shouldRollback) {
+        log.warn("Transaction is going be rollback");
+        conn.rollback();                                  // desfaz tudo desde o início
+    }
+}
+
+ProducerService.saveTransaction(List.of(
+        Producer.builder().name("Toei Animation").build(),
+        Producer.builder().name("White fox").build(),
+        Producer.builder().name("Studio Ghibli").build()));</code></pre>
+      <ul>
+        <li><strong>Auto-commit</strong>: por padrão, o MySQL grava <strong>cada comando</strong> assim que ele executa. Com três inserts A, B e C, se o C falhar, A e B já estão salvos. <code>conn.setAutoCommit(false)</code> muda isso: nada fica permanente até o <code>conn.commit()</code>.</li>
+        <li>O professor mostra os estados: sem o <code>commit()</code>, o log diz "salvo" mas o banco está vazio. Com o <code>commit()</code>, os três aparecem. Forçando erro no "White fox", ficam dois gravados, porque a exceção foi pega dentro do laço e o <code>commit</code> gravou o resto.</li>
+        <li>A correção é o <code>rollback()</code> depois do laço, controlado pela variável <code>shouldRollback</code>. Um <code>rollback</code> dentro do <code>catch</code> de cada item não resolveria, e no <code>catch</code> externo a conexão já estaria fechada pelo try-with-resources. Com o <code>rollback</code>, nenhum dos três é gravado.</li>
+        <li>A mesma <strong>conexão</strong> precisa ser usada em toda a transação (não abra uma por item). O professor comenta que, na vida real, conexões vêm de um <strong>pool</strong>, e frameworks como o Spring cuidam da transação automaticamente.</li>
+        <li>Lembre de <strong>voltar o auto-commit</strong> (<code>setAutoCommit(true)</code>) se a conexão for reaproveitada.</li>
+      </ul>
+
+      <h3>Atenção</h3>
+      <ul>
+        <li><strong>Use <code>PreparedStatement</code> sempre que houver valor vindo de fora.</strong> <code>Statement</code> com concatenação é SQL injection esperando para acontecer.</li>
+        <li><strong>O <code>?</code> substitui valores, não nomes de tabela/coluna</strong> nem palavras-chave. <code>ORDER BY ?</code> não funciona como você espera (extra).</li>
+        <li><strong>Índices dos parâmetros começam em 1</strong> e seguem a ordem dos <code>?</code>.</li>
+        <li><strong>Parâmetro de procedure com o mesmo nome da coluna</strong> faz o <code>WHERE</code> comparar a coluna com ela mesma.</li>
+        <li><strong><code>RowSet.execute()</code> é para SELECT.</strong> Para alterar, busque e use <code>updateXxx</code> + <code>updateRow</code> (e, no <code>CachedRowSet</code>, <code>acceptChanges</code>).</li>
+        <li><strong><code>@SneakyThrows</code> não é para produção.</strong></li>
+        <li><strong>Transação</strong>: <code>setAutoCommit(false)</code>, a mesma conexão, <code>commit()</code> no sucesso e <code>rollback()</code> na falha. <strong>Extra</strong>: a forma mais comum é <code>try { ...; conn.commit(); } catch (SQLException e) { conn.rollback(); throw e; }</code>, deixando a exceção interromper tudo; o laço do professor continua inserindo depois do erro e só no fim desfaz.</li>
+        <li><strong>Extra: para muitos inserts, <code>addBatch()</code>/<code>executeBatch()</code></strong> manda tudo numa ida ao banco, e combina bem com a transação.</li>
+        <li><strong>Extra: tabelas precisam ser InnoDB</strong> (o padrão do MySQL 8) para ter transação; MyISAM ignora o <code>rollback</code>.</li>
+      </ul>
+
+      <h3>Paralelo com PHP</h3>
+      <ul>
+        <li><strong><code>PreparedStatement</code> ≈ <code>$pdo-&gt;prepare()</code></strong>: <code>$stmt = $pdo-&gt;prepare('SELECT * FROM producer WHERE name LIKE ?'); $stmt-&gt;execute(["%$nome%"]);</code> (ou <code>:nome</code> com <code>bindValue</code>). É exatamente o mesmo mecanismo e a mesma proteção. O Eloquent e o Query Builder já usam <em>bindings</em> por baixo (<code>where('name', 'like', "%$nome%")</code>), e o perigo volta com <code>DB::raw</code>/<code>whereRaw</code> concatenando texto: use <code>whereRaw('name like ?', ["%$nome%"])</code>.</li>
+        <li><strong><code>CallableStatement</code> ≈ <code>$pdo-&gt;prepare('CALL sp_get_producer_by_name(?)')</code></strong> ou <code>DB::select('CALL sp_...(?)', [$nome])</code>. No Laravel, a lógica geralmente fica no PHP (Eloquent, Services), e não em procedures, pelo mesmo motivo que o professor cita.</li>
+        <li><strong>RowSet</strong> não tem equivalente direto. O mais parecido com o <code>CachedRowSet</code> é trabalhar com uma <code>Collection</code> de models na memória e depois salvar, e os "conflitos" são o problema de <em>optimistic locking</em> (comparar uma coluna <code>updated_at</code>/<code>version</code> antes de gravar). Os <em>model events</em>/<em>observers</em> do Eloquent (<code>updated</code>, <code>created</code>) lembram o <code>RowSetListener</code>.</li>
+        <li><strong>Transação ≈ <code>DB::transaction(function () { ... })</code></strong>: se qualquer exceção sair da closure, o Laravel faz <code>rollback</code>; se não, <code>commit</code>. É o padrão try/commit/catch/rollback da seção "Atenção", pronto. No PDO: <code>$pdo-&gt;beginTransaction()</code>, <code>commit()</code>, <code>rollBack()</code>.</li>
+      </ul>
+    </section>
+
+    <section id="flashcards">
+      <h2>Flashcards</h2>
+      <p style="color:var(--muted);margin-top:-6px">Toque no cartão para virar.</p>
+      <div id="flashcards-app"></div>
+    </section>
+
+    <section id="quiz">
+      <h2>Quiz</h2>
+      <div id="quiz-app"></div>
+    </section>
+
+    <section id="estudo">
+      <h2>Material de estudo</h2>
+
+      <h3>Mapa mental</h3>
+<pre><code>JDBC avançado (268–274)
+├── PreparedStatement (268–269): conn.prepareStatement(sql com ?)
+│   ├── setString(1, ...) / setInt(2, ...) · índices a partir de 1 · % do LIKE no valor
+│   ├── executeQuery() / executeUpdate() SEM argumento
+│   ├── pré-compilado (desempenho) + valor = dado (sem SQL injection)
+│   └── método auxiliar cria e preenche → try-with-resources fecha
+├── CallableStatement (270): conn.prepareCall("CALL sp(?)")
+│   ├── procedure (retorno opcional) × function (retorno obrigatório)
+│   └── DELIMITER $$ · parâmetro ≠ nome da coluna
+├── RowSet (271–273): ResultSet "tunado" · JavaBean · serializável · RowSetProvider
+│   ├── JdbcRowSet (conectado): setUrl/Username/Password · setCommand · setXxx · execute
+│   │   ├── update = SELECT + updateString + updateRow (execute não faz UPDATE)
+│   │   └── RowSetListener: rowSetChanged · cursorMoved · rowChanged
+│   └── CachedRowSet (desconectado): execute(conn com autoCommit false) · updateRow · acceptChanges
+│       └── conflito se o banco mudou → SyncProviderException
+└── Transação (274): tudo ou nada
+    ├── setAutoCommit(false) · mesma conexão · commit() · rollback() · setAutoCommit(true)
+    └── Laravel: DB::transaction(fn) · PDO: beginTransaction/commit/rollBack</code></pre>
+
+      <h3>Prática no seu WSL (30 minutos)</h3>
+      <p>Continua o projeto <code>~/java-lab-jdbc</code>. Primeiro, a tabela com três produtores e a procedure:</p>
+<pre><code>cd ~/java-lab-jdbc
+docker compose up -d
+docker exec mysql mysql -uroot -proot -e "DELETE FROM anime_store.anime; DELETE FROM anime_store.producer; ALTER TABLE anime_store.producer AUTO_INCREMENT = 1; INSERT INTO anime_store.producer (name) VALUES ('NHK'), ('Studio Deen'), ('Madhouse');"
+
+cat > procedure.sql &lt;&lt;'EOF'
+DROP PROCEDURE IF EXISTS anime_store.sp_get_producer_by_name;
+DELIMITER $$
+CREATE PROCEDURE anime_store.sp_get_producer_by_name(IN p_name VARCHAR(100))
+BEGIN
+    SELECT * FROM anime_store.producer WHERE name LIKE p_name ORDER BY id;
+END$$
+DELIMITER ;
+EOF
+docker exec -i mysql mysql -uroot -proot &lt; procedure.sql
+
+J=src/main/java/academy/devdojo/maratonajava/javacore/ZZIjdbc
+cat > $J/test/JdbcAvancadoPraticaTest01.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.ZZIjdbc.test;
+
+import academy.devdojo.maratonajava.javacore.ZZIjdbc.conn.ConnectionFactory;
+import academy.devdojo.maratonajava.javacore.ZZIjdbc.dominio.Producer;
+
+import javax.sql.RowSetEvent;
+import javax.sql.RowSetListener;
+import javax.sql.rowset.CachedRowSet;
+import javax.sql.rowset.JdbcRowSet;
+import javax.sql.rowset.RowSetProvider;
+import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
+
+public class JdbcAvancadoPraticaTest01 {
+    static final String URL = "jdbc:mysql://localhost:3306/anime_store";
+
+    static List&lt;Producer&gt; read(ResultSet rs) throws SQLException {
+        List&lt;Producer&gt; list = new ArrayList&lt;&gt;();
+        while (rs.next()) list.add(Producer.builder().id(rs.getInt("id")).name(rs.getString("name")).build());
+        return list;
+    }
+
+    // 268 · PreparedStatement criado e preenchido num método à parte
+    static PreparedStatement psFindByName(Connection conn, String name) throws SQLException {
+        PreparedStatement ps = conn.prepareStatement("SELECT * FROM producer WHERE name LIKE ? ORDER BY id");
+        ps.setString(1, "%" + name + "%");
+        return ps;
+    }
+
+    static List&lt;Producer&gt; findByName(String name) throws SQLException {
+        try (Connection conn = ConnectionFactory.getConnection();
+             PreparedStatement ps = psFindByName(conn, name);
+             ResultSet rs = ps.executeQuery()) {
+            return read(rs);
+        }
+    }
+
+    public static void main(String[] args) throws Exception {
+        System.out.println("PS mad: " + findByName("mad"));                            // ?
+        System.out.println("PS injeção: " + findByName("xyz' OR 1=1 -- "));            // ?
+
+        // 269 · UPDATE e INSERT com ?
+        try (Connection conn = ConnectionFactory.getConnection();
+             PreparedStatement up = conn.prepareStatement("UPDATE producer SET name = ? WHERE id = ?");
+             PreparedStatement in = conn.prepareStatement("INSERT INTO producer (name) VALUES (?)")) {
+            up.setString(1, "NHK Enterprises");
+            up.setInt(2, 1);
+            System.out.println("update: " + up.executeUpdate());                         // ?
+            in.setString(1, "Kyoto's Animation");                                        // apóstrofo sem problema
+            System.out.println("insert: " + in.executeUpdate());                         // ?
+        }
+
+        // 270 · CallableStatement
+        try (Connection conn = ConnectionFactory.getConnection();
+             CallableStatement cs = conn.prepareCall("CALL anime_store.sp_get_producer_by_name(?)")) {
+            cs.setString(1, "%Studio%");
+            try (ResultSet rs = cs.executeQuery()) {
+                System.out.println("procedure: " + read(rs));                          // ?
+            }
+        }
+
+        // 271–272 · JdbcRowSet com listener
+        int[] eventos = new int[3];                                   // execute, cursor, linha
+        try (JdbcRowSet jrs = RowSetProvider.newFactory().createJdbcRowSet()) {
+            jrs.setUrl(URL); jrs.setUsername("root"); jrs.setPassword("root");
+            jrs.addRowSetListener(new RowSetListener() {
+                public void rowSetChanged(RowSetEvent e) { eventos[0]++; }
+                public void cursorMoved(RowSetEvent e) { eventos[1]++; }
+                public void rowChanged(RowSetEvent e) { eventos[2]++; }
+            });
+            jrs.setCommand("SELECT * FROM producer WHERE id = ?");
+            jrs.setInt(1, 2);
+            jrs.execute();
+            if (jrs.next()) {
+                jrs.updateString("name", jrs.getString("name").toUpperCase());
+                jrs.updateRow();
+            }
+        }
+        System.out.println("listener execute/cursor/linha: " + eventos[0] + "/" + eventos[1] + "/" + eventos[2]); // ?
+
+        // 273 · CachedRowSet (desconectado)
+        try (CachedRowSet crs = RowSetProvider.newFactory().createCachedRowSet();
+             Connection conn = ConnectionFactory.getConnection()) {
+            conn.setAutoCommit(false);
+            crs.setCommand("SELECT * FROM producer WHERE id = ?");    // sem "anime_store."
+            crs.setInt(1, 3);
+            crs.execute(conn);
+            crs.next();
+            crs.updateString("name", "MADHOUSE");
+            crs.updateRow();
+            System.out.println("antes do acceptChanges: " + findByName("madhouse"));   // ?
+            crs.acceptChanges();
+            System.out.println("depois do acceptChanges: " + findByName("madhouse"));  // ?
+        }
+
+        // 274 · transação
+        List&lt;String&gt; nomes = List.of("Toei Animation", "White fox", "Studio Ghibli");
+        System.out.println("com falha: " + saveTransaction(nomes, "White fox") + " | total: " + findByName("").size()); // ?
+        System.out.println("sem falha: " + saveTransaction(nomes, null) + " | total: " + findByName("").size());        // ?
+        System.out.println("final: " + findByName(""));                                                            // ?
+    }
+
+    static String saveTransaction(List&lt;String&gt; nomes, String nomeQueFalha) throws SQLException {
+        try (Connection conn = ConnectionFactory.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement ps = conn.prepareStatement("INSERT INTO producer (name) VALUES (?)")) {
+                for (String nome : nomes) {
+                    if (nome.equals(nomeQueFalha)) throw new SQLException("Can't save " + nome);
+                    ps.setString(1, nome);
+                    ps.executeUpdate();
+                }
+                conn.commit();
+                return "commit";
+            } catch (SQLException e) {
+                conn.rollback();
+                return "rollback (" + e.getMessage() + ")";
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        }
+    }
+}
+EOF
+
+mvn -q compile
+java -cp target/classes:$(cat cp.txt) academy.devdojo.maratonajava.javacore.ZZIjdbc.test.JdbcAvancadoPraticaTest01</code></pre>
+      <details>
+        <summary>Ver a saída esperada</summary>
+<pre><code>PS mad: [Producer(id=3, name=Madhouse)]
+PS injeção: []
+update: 1
+insert: 1
+procedure: [Producer(id=2, name=Studio Deen)]
+listener execute/cursor/linha: 1/1/1
+antes do acceptChanges: [Producer(id=3, name=Madhouse)]
+depois do acceptChanges: [Producer(id=3, name=MADHOUSE)]
+com falha: rollback (Can't save White fox) | total: 4
+sem falha: commit | total: 7
+final: [Producer(id=1, name=NHK Enterprises), Producer(id=2, name=STUDIO DEEN), Producer(id=3, name=MADHOUSE), Producer(id=4, name=Kyoto's Animation), Producer(id=6, name=Toei Animation), Producer(id=7, name=White fox), Producer(id=8, name=Studio Ghibli)]</code></pre>
+      </details>
+      <p>Repare no id 5: ele foi consumido pelo "Toei Animation" da transação desfeita. O <em>rollback</em> apaga a linha, mas o <em>auto increment</em> não volta. A injeção que devolvia a tabela inteira na página 257–262 agora não acha nada. A contagem exata de eventos do listener pode variar conforme a implementação do <code>JdbcRowSet</code> (ex.: se o <code>updateRow</code> também dispara <code>cursorMoved</code>).</p>
+      <p><strong>Exercícios:</strong></p>
+      <ol>
+        <li>Reescreva o <code>findByName</code> com <code>Statement</code> e <code>formatted</code> e passe <code>"xyz' OR 1=1 -- "</code>. Compare com o <code>PreparedStatement</code>.</li>
+        <li>Recrie a procedure com o parâmetro chamado <code>name</code> (igual à coluna) e chame com <code>'%Studio%'</code>. Quantas linhas vêm?</li>
+        <li>No <code>JdbcRowSet</code>, troque o SELECT por <code>UPDATE producer SET name = ? WHERE id = ?</code> e chame <code>execute()</code>. Qual erro aparece?</li>
+        <li>No <code>CachedRowSet</code>, escreva <code>anime_store.producer</code> no SELECT, e depois tire o <code>setAutoCommit(false)</code>. Leia as duas exceções (o mesmo caminho de depuração do professor).</li>
+        <li>Troque o <code>saveTransaction</code> para usar <code>ps.addBatch()</code> no laço e <code>ps.executeBatch()</code> no fim, mantendo o commit/rollback.</li>
+      </ol>
+
+      <h3>Glossário</h3>
+      <ul>
+        <li><strong>SQL injection</strong>: entrada do usuário que altera o SQL executado.</li>
+        <li><strong><code>PreparedStatement</code></strong>: SQL pré-compilado com <code>?</code>; valores passados à parte (<code>setXxx</code>).</li>
+        <li><strong>Placeholder</strong>: o <code>?</code> que marca onde entra um valor.</li>
+        <li><strong>Stored procedure / function</strong>: rotina guardada no banco; a function sempre retorna um valor.</li>
+        <li><strong><code>CallableStatement</code></strong>: executa procedures e functions (<code>prepareCall</code>).</li>
+        <li><strong><code>DELIMITER</code></strong>: troca o terminador de comandos do cliente MySQL para escrever blocos com <code>;</code>.</li>
+        <li><strong><code>RowSet</code></strong>: <code>ResultSet</code> JavaBean, serializável, rolável e atualizável.</li>
+        <li><strong><code>JdbcRowSet</code></strong>: RowSet conectado ao banco.</li>
+        <li><strong><code>CachedRowSet</code></strong>: RowSet desconectado; trabalha na memória e sincroniza com <code>acceptChanges</code>.</li>
+        <li><strong><code>RowSetListener</code></strong>: ouvinte de eventos de um RowSet.</li>
+        <li><strong><code>@SneakyThrows</code></strong>: anotação do Lombok que esconde exceções checked.</li>
+        <li><strong>Transação</strong>: conjunto de operações que é gravado inteiro ou desfeito inteiro.</li>
+        <li><strong>Auto-commit</strong>: modo em que cada comando é gravado imediatamente.</li>
+        <li><strong>Commit / rollback</strong>: confirmar / desfazer as operações da transação.</li>
+      </ul>
+
+      <h3>Revisão espaçada</h3>
+      <ul class="revisao">
+        <li><span class="dia">Dia 1</span><span>Todos os flashcards + a prática com previsões.</span></li>
+        <li><span class="dia">Dia 3</span><span>Quiz + exercícios 1 a 3.</span></li>
+        <li><span class="dia">Dia 7</span><span>Exercícios 4 e 5 + escrever de memória o padrão de transação (autoCommit false, commit, rollback).</span></li>
+        <li><span class="dia">Dia 14</span><span>Flashcards que errou + questões discursivas + explicar SQL injection para alguém.</span></li>
+      </ul>
+
+      <h3>Para aprofundar</h3>
+      <ul>
+        <li>O que são os níveis de isolamento de transação (<code>READ COMMITTED</code>, <code>REPEATABLE READ</code>...) e o <code>conn.setTransactionIsolation</code>?</li>
+        <li>O que são <em>savepoints</em> (<code>conn.setSavepoint()</code>) e quando desfazer só parte da transação?</li>
+        <li>Como <code>Statement.RETURN_GENERATED_KEYS</code> e <code>ps.getGeneratedKeys()</code> devolvem o id de um INSERT?</li>
+        <li>Como o <code>@Transactional</code> do Spring substitui todo o commit/rollback manual?</li>
+        <li>O que é um <em>connection pool</em> (HikariCP) e por que ele importa para transações?</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    window.AULA = {
+      flashcards: [
+        ["Como o SQL injection funciona?", "O texto do usuário é concatenado no SQL e vira comando, ex.: x' OR 'x'='x devolve tudo"],
+        ["Quais as duas vantagens do PreparedStatement?", "SQL pré-compilado (desempenho) e valores tratados como dados (sem SQL injection)"],
+        ["Como se cria um PreparedStatement?", "conn.prepareStatement(\"... WHERE name LIKE ?\")"],
+        ["Como preencher os ? de um PreparedStatement?", "ps.setString(1, ...), ps.setInt(2, ...): índice a partir de 1, na ordem dos ?"],
+        ["Onde vai o % de um LIKE com PreparedStatement?", "No valor: ps.setString(1, \"%\" + name + \"%\"), não no SQL"],
+        ["Como executar um PreparedStatement?", "ps.executeQuery() ou ps.executeUpdate() sem passar o SQL"],
+        ["Por que criar o PreparedStatement num método auxiliar?", "Os setXxx precisam rodar antes do executeQuery, e dentro do try-with-resources só cabem declarações"],
+        ["O ? do PreparedStatement leva aspas?", "Não: o driver trata o tipo e as aspas"],
+        ["Procedure × function?", "A function precisa retornar um valor; a procedure pode ou não retornar"],
+        ["Como chamar uma stored procedure no Java?", "conn.prepareCall(\"CALL anime_store.sp_get_producer_by_name(?)\")"],
+        ["Para que serve DELIMITER $$ ao criar uma procedure?", "Para o ; dentro do corpo não encerrar o comando no cliente"],
+        ["Qual a pegadinha do parâmetro com o mesmo nome da coluna?", "WHERE name LIKE name compara a coluna com ela mesma e traz tudo"],
+        ["Quais as diferenças do RowSet para o ResultSet?", "Pode ser desconectado, é serializável, é JavaBean e por padrão é rolável e atualizável"],
+        ["Como criar um JdbcRowSet?", "RowSetProvider.newFactory().createJdbcRowSet() + setUrl/setUsername/setPassword"],
+        ["Quais os passos de uma consulta com JdbcRowSet?", "setCommand(sql), setString(1, ...), execute(), while (jrs.next())"],
+        ["O execute() de um RowSet faz UPDATE?", "Não: é para SELECT; para alterar, busque e use updateString + updateRow"],
+        ["Quais métodos tem um RowSetListener?", "rowSetChanged (execute), cursorMoved (movimentos) e rowChanged (insert/update/delete)"],
+        ["Por que evitar @SneakyThrows em produção?", "Esconde a exceção checked; você perde o tratamento"],
+        ["JdbcRowSet × CachedRowSet?", "Conectado × desconectado (dados na memória, sincronizados com acceptChanges)"],
+        ["No CachedRowSet, updateRow grava no banco?", "Não; só na memória. Quem grava é acceptChanges()"],
+        ["Quais os dois erros que o professor resolveu no CachedRowSet?", "Tirar o anime_store. do SELECT e usar uma conexão com setAutoCommit(false) em execute(conn)"],
+        ["O que acontece se o registro mudar no banco antes do acceptChanges?", "Conflito: SyncProviderException"],
+        ["O que é uma transação?", "Atomicidade: todas as operações são gravadas ou nenhuma"],
+        ["Quais os passos de uma transação no JDBC?", "setAutoCommit(false), mesma conexão, commit() no sucesso, rollback() na falha, voltar setAutoCommit(true)"],
+        ["Equivalente Laravel da transação?", "DB::transaction(function () { ... }): rollback automático se sair exceção"]
+      ],
+      quiz: [
+        { tipo: 'multipla', pergunta: 'O que torna o PreparedStatement seguro contra SQL injection?',
+          opcoes: ['Ele remove aspas do texto', 'Os valores são enviados separados do SQL e tratados como dados, nunca como comando', 'Ele criptografa a consulta', 'Ele só aceita números'],
+          correta: 1,
+          explicacao: 'O SQL com ? é pré-compilado; os valores dos setXxx chegam depois como dados. "x\' OR 1=1 -- " vira só um texto que não bate com nenhum nome.' },
+        { tipo: 'vf', pergunta: "Com PreparedStatement, o certo é escrever WHERE name = '?' com aspas em volta do ponto de interrogação.",
+          correta: 1,
+          explicacao: "Falso. O ? vai sem aspas: WHERE name = ?. Entre aspas ele vira um texto literal '?'. O driver cuida do tipo e das aspas." },
+        { tipo: 'multipla', pergunta: 'Em "UPDATE producer SET name = ? WHERE id = ?", qual chamada preenche o id?',
+          opcoes: ['ps.setInt(0, id)', 'ps.setInt(1, id)', 'ps.setInt(2, id)', 'ps.setId(id)'],
+          correta: 2,
+          explicacao: 'Os índices começam em 1 e seguem a ordem dos ?: o 1º é o name (setString(1, ...)) e o 2º é o id (setInt(2, ...)).' },
+        { tipo: 'multipla', pergunta: 'Qual método da Connection cria um CallableStatement para chamar uma procedure?',
+          opcoes: ['prepareStatement', 'createStatement', 'prepareCall', 'callProcedure'],
+          correta: 2,
+          explicacao: 'conn.prepareCall("CALL anime_store.sp_get_producer_by_name(?)"). O CallableStatement é um PreparedStatement especializado.' },
+        { tipo: 'multipla', pergunta: 'A procedure tinha o parâmetro chamado name e o corpo SELECT * FROM producer WHERE name LIKE name. O que acontecia?',
+          opcoes: ['Erro de sintaxe', 'Devolvia todos os registros', 'Não devolvia nada', 'Funcionava normalmente'],
+          correta: 1,
+          explicacao: 'Com o mesmo nome, a comparação vira coluna LIKE coluna, sempre verdadeira. A solução é renomear o parâmetro (ex.: p_name).' },
+        { tipo: 'vf', pergunta: 'Um RowSet, ao contrário do ResultSet, é serializável e pode trabalhar desconectado do banco.',
+          correta: 0,
+          explicacao: 'Verdadeiro. RowSet é JavaBean e serializável. O JdbcRowSet fica conectado; o CachedRowSet pega os dados e desconecta.' },
+        { tipo: 'multipla', pergunta: 'No CachedRowSet, depois de crs.updateString(...) e crs.updateRow(), o que falta para gravar no banco?',
+          opcoes: ['Nada', 'crs.commit()', 'crs.acceptChanges()', 'crs.execute()'],
+          correta: 2,
+          explicacao: 'updateRow altera só a cópia em memória; acceptChanges sincroniza com o banco (e pode dar SyncProviderException se houver conflito).' },
+        { tipo: 'multipla', pergunta: 'Com setAutoCommit(false), três INSERTs executados e nenhum commit(), o que fica no banco?',
+          opcoes: ['Os três registros', 'Só o primeiro', 'Nada', 'Os três, mas só até reiniciar o MySQL'],
+          correta: 2,
+          explicacao: 'Sem auto-commit, nada é permanente até conn.commit(). Foi o que o professor mostrou: o log dizia "salvo", mas o banco estava vazio.' },
+        { tipo: 'discursiva', pergunta: 'Explique como o PreparedStatement resolve os problemas do Statement vistos nas aulas 257 a 262 e mostre como fica o findByName.',
+          explicacao: 'Com Statement, o SQL era montado com formatted/concatenação, então o texto do usuário virava parte do comando. "x\' OR \'x\'=\'x" devolvia a tabela inteira (SQL injection), um nome com apóstrofo quebrava a sintaxe, e o UPDATE tinha o espaço extra de \'%s \'. Com PreparedStatement, o SQL é escrito com placeholders ? (sem aspas) e passado a conn.prepareStatement(sql), onde é pré-compilado, o que dá mais desempenho. Os valores são enviados à parte com setString/setInt (índice a partir de 1) e tratados como dados, nunca como comando. O findByName fica: SQL "SELECT * FROM anime_store.producer WHERE name LIKE ?"; um método auxiliar cria o PreparedStatement e faz ps.setString(1, "%" + name + "%"); no try-with-resources: Connection, esse PreparedStatement e ps.executeQuery() (sem argumento) e o while (rs.next()). O método auxiliar existe porque os setXxx precisam rodar antes do executeQuery. No PHP, é o mesmo $pdo->prepare(...)->execute([...]), e no Laravel os bindings do Query Builder.' },
+        { tipo: 'discursiva', pergunta: 'Descreva a transação da aula 274: o problema do auto-commit, o que aconteceu ao forçar erro no "White fox" e como o rollback resolveu. Compare com o Laravel.',
+          explicacao: 'Por padrão o MySQL está em auto-commit: cada INSERT é gravado ao executar, então numa lista A, B, C, se C falhar, A e B já ficaram. Na transação, conn.setAutoCommit(false) faz nada ser permanente até conn.commit(), e se esquecer o commit nada é salvo. Todas as operações usam a mesma Connection, com um PreparedStatement por item. Forçando exceção no segundo item (White fox), o erro foi pego dentro do laço, os outros dois foram inseridos e o commit gravou Toei e Ghibli, violando o "tudo ou nada". A solução foi a flag shouldRollback: se algum item falhou, depois do laço chama conn.rollback() e nada é gravado. Depois, setAutoCommit(true) devolve o comportamento padrão. A forma mais comum é try { ...; commit } catch { rollback; relança }. No Laravel, DB::transaction(function () {...}) faz exatamente isso: commit se a closure termina, rollback se sai exceção (PDO: beginTransaction/commit/rollBack).' }
+      ]
+    };
+  </script>
+  <script src="../js/app.js"></script>
+</body>
+</html>
