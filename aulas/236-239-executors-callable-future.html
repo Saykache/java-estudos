@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>236–239 · Executors e Future</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="topo">
+      <a class="voltar" href="../index.html">← Todas as aulas</a>
+      <h1>236–239 · Executors, Callable e Future</h1>
+      <p>Thread pools (fixed, single, cached), ScheduledExecutorService, Callable × Runnable, Future, get com timeout e programação assíncrona · <a href="https://www.youtube.com/playlist?list=PL62G310vn6nFIsOCC0H-C2infYgwm8SWW" target="_blank" rel="noopener">playlist</a></p>
+    </header>
+
+    <nav class="abas">
+      <a href="#resumo">Resumo</a>
+      <a href="#flashcards">Flashcards</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#estudo">Material de estudo</a>
+    </nav>
+
+    <p class="aviso">Junta as aulas 236 (thread pools), 237 (ScheduledExecutorService), 238 (Callable) e 239 (Future). Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. O código (pacote <code>javacore.ZZGconcorrencia</code>: <code>ExecutorsTest01</code>, <code>ScheduledThreadPoolTest01</code>, <code>CallableTest01</code>, <code>FutureTest01</code>) foi conferido no <a href="https://github.com/devdojobr/maratona-java-virado-no-jiraya" target="_blank" rel="noopener">repositório do professor</a>. Os itens marcados como "extra" não estão nos vídeos.</p>
+
+    <section id="resumo">
+      <h2>Resumo</h2>
+      <p>Criar uma <code>new Thread</code> para cada tarefa é o jeito de "mais baixo nível". O problema: se cada requisição de usuário criar uma thread, mil usuários são mil threads, cada uma um objeto com memória e processamento próprios, e a aplicação vai para o espaço. O framework <strong>Executor</strong> resolve isso com um objetivo: <strong>desacoplar a submissão das tarefas da execução</strong>. Você entrega tarefas a um <strong>pool</strong> de threads reaproveitáveis, e o executor decide quando e em qual thread cada uma roda. Depois vêm as tarefas <strong>agendadas</strong>, as tarefas que <strong>devolvem resultado</strong> (<code>Callable</code>) e o <strong><code>Future</code></strong>, a "promessa" de um resultado que ainda vai chegar.</p>
+<pre><code>ExecutorService pool = Executors.newFixedThreadPool(4);   // 236 · pool com 4 threads
+pool.execute(runnable);                                    // 236 · entrega a tarefa (sem start!)
+scheduler.scheduleAtFixedRate(r, 1, 5, TimeUnit.SECONDS);  // 237 · repete a cada 5 s
+Future&lt;String&gt; f = pool.submit(callable);                 // 238 · tarefa com retorno
+f.get(3, TimeUnit.SECONDS);                                // 239 · espera o resultado, com limite
+pool.shutdown();                                           // não aceita mais tarefas</code></pre>
+
+      <h3>236 · Executors pt 01: thread pools</h3>
+<pre><code>class Printer implements Runnable {
+    private final int num;
+    public Printer(int num) { this.num = num; }
+
+    @Override
+    public void run() {
+        System.out.printf("%s inicio: %d%n", Thread.currentThread().getName(), num);
+        try {
+            TimeUnit.SECONDS.sleep(3);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        System.out.printf("%s finalizou%n", Thread.currentThread().getName());
+    }
+}
+
+public class ExecutorsTest01 {
+    public static void main(String[] args) {
+        //submission of tasks is decoupled of the execution
+//      ExecutorService executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+//      ExecutorService executorService = Executors.newSingleThreadExecutor();
+        ExecutorService executorService = Executors.newCachedThreadPool();
+        executorService.execute(new Printer(1));
+        executorService.execute(new Printer(2));
+        // ... até new Printer(6)
+        executorService.shutdown();
+        System.out.println("Programa finalizado");
+    }
+}</code></pre>
+      <ul>
+        <li><strong>Você não chama mais <code>start()</code></strong>: <code>executorService.execute(runnable)</code> entrega a tarefa, e o executor decide quando rodar. Isso dá flexibilidade: com <code>start()</code>, "já era, não tem mais o que fazer".</li>
+        <li><strong><code>Executors.newFixedThreadPool(4)</code></strong>: número <strong>fixo</strong> de threads. Com 6 tarefas e 4 threads, as 4 primeiras rodam, e quando uma termina, a <strong>mesma thread</strong> pega a tarefa 5 (<code>pool-1-thread-1 inicio: 5</code>). Com 500 tarefas continuariam sendo 4 threads, e isso é ótimo para um sistema que precisa escalar: o número de threads não explode com o número de usuários.</li>
+        <li><strong>Quantas threads?</strong> Uma referência é <code>Runtime.getRuntime().availableProcessors()</code>: a máquina do professor tem 4 núcleos com <em>hyper-threading</em>, então 8 processadores lógicos. Mas "não é uma matemática muito precisa": o sistema roda milhares de threads com só 8 processadores.</li>
+        <li><strong><code>newSingleThreadExecutor()</code></strong>: <strong>uma</strong> thread só, e as tarefas são executadas uma depois da outra, na ordem.</li>
+        <li><strong><code>newCachedThreadPool()</code></strong>: cria threads <strong>conforme a necessidade</strong> e <strong>reaproveita</strong> as que estiverem livres; uma thread ociosa por <strong>60 segundos</strong> é encerrada e removida do cache. Com 6 tarefas simultâneas, cria 6 threads.</li>
+        <li><strong><code>shutdown()</code></strong> não interrompe nada: só avisa que o executor <strong>não aceita novas tarefas</strong> e deve encerrar quando as atuais terminarem. Por isso "Programa finalizado" aparece <strong>antes</strong> dos "finalizou". <strong>Sem <code>shutdown()</code>, o programa não termina</strong>: as threads do pool continuam vivas esperando trabalho.</li>
+        <li>Para esperar tudo terminar, o professor mostrou (sem deixar no repositório) um laço <code>while (!executorService.isTerminated()) {}</code>, que ele mesmo chama de gambiarra: ele fica girando e gastando CPU. <strong>Extra</strong>: o jeito certo é <code>executorService.awaitTermination(1, TimeUnit.MINUTES)</code>, que bloqueia sem gastar CPU.</li>
+      </ul>
+
+      <h3>237 · ScheduledExecutorService</h3>
+      <p>"Como executar uma tarefa a cada 5 segundos? Ou daqui a um dia? Ou uma vez por dia?" O <code>ScheduledExecutorService</code> é o seu melhor amigo.</p>
+<pre><code>public class ScheduledThreadPoolTest01 {
+    private static final ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
+    private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss");
+
+    private static void beeper() {
+        Runnable r = () -&gt; {
+            System.out.println(LocalTime.now().format(formatter) + " beep");
+            try {
+                TimeUnit.SECONDS.sleep(5);                 // a tarefa demora 5 s
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        };
+//      executor.schedule(r, 5, TimeUnit.SECONDS);         // uma vez, daqui a 5 s
+        ScheduledFuture&lt;?&gt; scheduleWithFixedDelay = executor.scheduleWithFixedDelay(r, 1, 5, TimeUnit.SECONDS);
+//      ScheduledFuture&lt;?&gt; scheduleWithFixedDelay = executor.scheduleAtFixedRate(r, 1, 5, TimeUnit.SECONDS);
+        executor.schedule(() -&gt; {
+            System.out.println("Cancelando o scheduleWithFixedDelay");
+            scheduleWithFixedDelay.cancel(false);
+            executor.shutdown();
+        }, 20, TimeUnit.SECONDS);
+    }
+
+    public static void main(String[] args) {
+        System.out.println(LocalTime.now().format(formatter));
+        beeper();
+    }
+}</code></pre>
+      <ul>
+        <li><strong><code>schedule(tarefa, atraso, unidade)</code></strong>: executa <strong>uma vez</strong> depois do atraso. Mesmo assim o programa não termina sozinho: falta o <code>shutdown()</code>.</li>
+        <li><strong><code>scheduleAtFixedRate(r, 1, 5, SECONDS)</code></strong>: começa depois de 1 s e repete a cada 5 s <strong>contados a partir do início</strong> de cada execução (ritmo fixo). Se a tarefa dorme 3 s, a próxima começa 2 s depois dela terminar; se dorme 5 s, começa logo em seguida.</li>
+        <li><strong><code>scheduleWithFixedDelay(r, 1, 5, SECONDS)</code></strong>: espera 5 s <strong>depois que a execução anterior termina</strong>. Com a tarefa dormindo 5 s, os beeps saem de <strong>10 em 10 segundos</strong> (5 de tarefa + 5 de intervalo).</li>
+        <li>O professor trocou os dois na explicação e depois corrigiu no próprio vídeo ("esquece o que eu falei") e admitiu que é difícil de lembrar. O resumo: <em>rate</em> é um ritmo fixo de relógio, <em>delay</em> é um intervalo de descanso entre uma execução e outra.</li>
+        <li><strong>Parar uma repetição</strong>: os métodos devolvem um <strong><code>ScheduledFuture&lt;?&gt;</code></strong>; <code>cancel(false)</code> cancela as próximas execuções mas <strong>deixa a atual terminar</strong> (<code>cancel(true)</code> interromperia). O cancelamento foi agendado para 20 s depois, e o <code>shutdown()</code> vai junto, senão o programa continua vivo.</li>
+        <li>Uma lembrança do professor: um colega mandou um programa que, depois de 20 segundos, mostrava a foto da menina do Exorcista. Dá para fazer algo parecido com um <code>schedule</code>.</li>
+      </ul>
+
+      <h3>238 · Executors pt 03: Callable</h3>
+      <p><code>Runnable</code> tem <code>void run()</code>: não devolve nada e não pode lançar exceção checked. O "irmão" <strong><code>Callable&lt;V&gt;</code></strong> tem <strong><code>V call() throws Exception</code></strong>: devolve um valor (o tipo vem do generics) e pode lançar exceção. Ele trabalha em parceria com o <code>ExecutorService</code>.</p>
+<pre><code>class RandomNumberCallable implements Callable&lt;String&gt; {
+    @Override
+    public String call() throws Exception {
+        int num = ThreadLocalRandom.current().nextInt(1, 11);   // 1 a 10
+        for (int i = 0; i &lt; num; i++) {
+            System.out.printf("%s executando uma tarefa callable...%n", Thread.currentThread().getName());
+        }
+        return String.format("%s finished and the random number is %d", Thread.currentThread().getName(), num);
+    }
+}
+
+public class CallableTest01 {
+    public static void main(String[] args) throws ExecutionException, InterruptedException {
+        RandomNumberCallable randomNumberCallable = new RandomNumberCallable();
+        ExecutorService executorService = Executors.newFixedThreadPool(2);
+        Future&lt;String&gt; future = executorService.submit(randomNumberCallable);   // submit, não execute
+        String s = future.get();              // a main ESPERA aqui até o call() terminar
+        System.out.printf("Program finished %s", s);
+        executorService.shutdown();
+    }
+}</code></pre>
+      <ul>
+        <li><strong><code>ThreadLocalRandom.current().nextInt(1, 11)</code></strong> × <code>Math.random()</code>: o <code>Math.random()</code> usa um gerador compartilhado e sincronizado, então várias threads disputam o lock. O <code>ThreadLocalRandom</code> tem um gerador por thread, sem disputa, e é o preferido em código concorrente.</li>
+        <li><strong><code>submit(callable)</code></strong> devolve um <strong><code>Future&lt;V&gt;</code></strong>: "a resposta vem no futuro". Sem o <code>get()</code>, a <code>main</code> passa direto (o "Program finished" apareceria antes do resultado).</li>
+        <li><strong><code>future.get()</code></strong> <strong>bloqueia</strong> a thread que chamou até o resultado ficar pronto. Lança <strong><code>InterruptedException</code></strong> (a espera foi interrompida) e <strong><code>ExecutionException</code></strong> (o <code>call()</code> lançou exceção, que vem como causa). No exemplo, elas foram jogadas no <code>throws</code> do <code>main</code>.</li>
+        <li><strong>Dica</strong>: dentro de tarefas de um executor, evite <code>wait</code>/<code>notify</code>, porque você não sabe quando nem em qual thread a tarefa vai rodar.</li>
+      </ul>
+
+      <h3>239 · Executors pt 04: Future e programação assíncrona</h3>
+      <ul>
+        <li><strong>Síncrono</strong>: uma thread faz tudo, do começo ao fim, em ordem. Foi tudo o que fizemos até as aulas de threads.</li>
+        <li><strong>Assíncrono</strong>: uma thread principal continua trabalhando enquanto outra faz algo demorado. Exemplo: uma tela com o botão "consultar cotação do dólar". Se a mesma thread que desenha a tela for ao servidor remoto buscar a cotação, a tela <strong>congela</strong> até a resposta chegar. Com uma thread para a interface e outra para a requisição, a tela continua respondendo.</li>
+      </ul>
+<pre><code>public class FutureTest01 {
+    public static void main(String[] args) throws ExecutionException, InterruptedException, TimeoutException {
+        ExecutorService executorService = Executors.newSingleThreadExecutor();
+        Future&lt;Double&gt; dollarRequest = executorService.submit(() -&gt; {   // lambda de Callable
+            TimeUnit.SECONDS.sleep(15);    // simula um servidor lento (ou fora do ar)
+            return 4.35D;
+        });
+        System.out.println(doSomething());                              // a main trabalha enquanto isso
+        Double dollarResponse = dollarRequest.get(3, TimeUnit.SECONDS); // espera no máximo 3 s
+        System.out.println("Dollar: " + dollarResponse);
+        executorService.shutdown();
+    }
+
+    private static long doSomething() {
+        System.out.println(Thread.currentThread().getName());          // main
+        long sum = 0;
+        for (int i = 0; i &lt; 1_000_000; i++) sum += i;
+        return sum;                                                      // 499999500000
+    }
+}
+// main
+// 499999500000
+// Exception in thread "main" java.util.concurrent.TimeoutException</code></pre>
+      <ul>
+        <li>A lambda vira <code>Callable</code> (e não <code>Runnable</code>) porque <strong>retorna um valor</strong> e pode lançar a <code>InterruptedException</code> do <code>sleep</code> sem <code>try/catch</code>. Na dúvida, o professor sugere escrever primeiro a classe anônima e depois deixar o IntelliJ converter para lambda.</li>
+        <li>Enquanto a outra thread "consulta o servidor", a <code>main</code> faz a soma: as duas coisas acontecem ao mesmo tempo.</li>
+        <li><strong><code>get()</code> sem tempo pode travar para sempre</strong> se o servidor estiver fora do ar. Em requisições assíncronas, <strong>sempre defina um timeout</strong>: <code>get(3, TimeUnit.SECONDS)</code> desiste depois de 3 s e lança <strong><code>TimeoutException</code></strong>. Aí você trata, por exemplo com "não foi possível obter a cotação do dólar, tente novamente mais tarde".</li>
+        <li><strong>Assíncrono ≠ parallel stream</strong>: o parallel stream divide <strong>uma</strong> tarefa entre vários núcleos para terminar antes. A programação assíncrona serve para não deixar uma thread parada esperando: enquanto uma espera o servidor, outra continua trabalhando, e os recursos da máquina ficam ocupados de forma útil.</li>
+      </ul>
+
+      <h3>Atenção</h3>
+      <ul>
+        <li><strong>Sem <code>shutdown()</code>, o programa não termina</strong>: as threads do pool continuam vivas esperando tarefas.</li>
+        <li><strong><code>shutdown()</code> não espera nem interrompe</strong>: só fecha a porta para novas tarefas. Para esperar, use <code>awaitTermination</code> (extra). <code>shutdownNow()</code> tenta interromper as tarefas em execução e devolve as que nem começaram.</li>
+        <li><strong>Correção no <code>FutureTest01</code></strong>: quando o <code>get(3, SECONDS)</code> lança <code>TimeoutException</code>, o <code>main</code> sai pela exceção e o <code>shutdown()</code> <strong>nunca é chamado</strong>, então o programa fica pendurado depois da exceção. A tarefa ainda roda por 15 s, e a thread do pool continua viva depois dela. Coloque o <code>shutdown()</code> num <code>finally</code> e, no timeout, cancele a tarefa com <code>dollarRequest.cancel(true)</code>.</li>
+        <li><strong><code>execute(Runnable)</code> × <code>submit(...)</code></strong>: <code>execute</code> não devolve nada; <code>submit</code> aceita <code>Runnable</code> ou <code>Callable</code> e devolve um <code>Future</code>.</li>
+        <li><strong>Extra: exceção dentro de uma tarefa enviada com <code>submit</code> não aparece sozinha</strong>: ela fica guardada no <code>Future</code> e só surge como <code>ExecutionException</code> quando alguém chama <code>get()</code>. Se ninguém chamar, o erro passa em silêncio.</li>
+        <li><strong><code>scheduleAtFixedRate</code> × <code>scheduleWithFixedDelay</code></strong>: ritmo contado do início × intervalo contado do fim.</li>
+        <li><strong>Extra: tarefa agendada que lança exceção para de repetir</strong> sem aviso. Envolva o corpo da tarefa em <code>try/catch</code>.</li>
+        <li><strong>Extra: <code>newCachedThreadPool</code> não tem limite</strong>: com muitas tarefas lentas ao mesmo tempo, ele cria muitas threads. Para cargas imprevisíveis, prefira um pool fixo.</li>
+      </ul>
+
+      <h3>Paralelo com PHP</h3>
+      <ul>
+        <li><strong>Pool de threads ≈ workers de fila</strong>: <code>php artisan queue:work</code> rodando em N processos (ou o Horizon com <code>maxProcesses</code>) é um <code>newFixedThreadPool(N)</code>: um número fixo de "trabalhadores" que pegam jobs de uma fila. O <code>dispatch(new EnviarEmail(...))</code> é o <code>execute</code>: quem despacha não espera a execução. O Horizon com <code>balance =&gt; 'auto'</code> lembra o cached pool, que cresce e diminui conforme a demanda.</li>
+        <li><strong>ScheduledExecutorService ≈ agendador do Laravel</strong>: <code>Schedule::job(...)-&gt;everyFiveSeconds()</code> / <code>-&gt;daily()</code> no <code>routes/console.php</code>, disparado pelo cron com <code>schedule:run</code> (ou <code>schedule:work</code>). O <code>-&gt;withoutOverlapping()</code> evita que uma execução comece antes da anterior terminar, uma preocupação parecida com a do <em>fixed delay</em>.</li>
+        <li><strong>Callable/Future ≈ esperar um resultado</strong>: <code>Concurrency::run([fn() =&gt; ..., fn() =&gt; ...])</code> (Laravel 11+) roda closures em paralelo e devolve os resultados, como vários <code>submit</code> seguidos de <code>get()</code>. Com o Guzzle, <code>$client-&gt;getAsync($url)</code> devolve uma <em>promise</em> e <code>-&gt;wait()</code> é o <code>get()</code>.</li>
+        <li><strong>Timeout sempre</strong>: <code>Http::timeout(3)-&gt;get(...)</code> do Laravel é o <code>get(3, SECONDS)</code>. A lição da aula 239 vale igual em PHP: nunca espere um serviço externo sem limite.</li>
+      </ul>
+    </section>
+
+    <section id="flashcards">
+      <h2>Flashcards</h2>
+      <p style="color:var(--muted);margin-top:-6px">Toque no cartão para virar.</p>
+      <div id="flashcards-app"></div>
+    </section>
+
+    <section id="quiz">
+      <h2>Quiz</h2>
+      <div id="quiz-app"></div>
+    </section>
+
+    <section id="estudo">
+      <h2>Material de estudo</h2>
+
+      <h3>Mapa mental</h3>
+<pre><code>Executors (236–239)
+├── Ideia: desacoplar submissão × execução · reaproveitar threads (pool)
+├── Pools (236) · Executors.newXxx
+│   ├── newFixedThreadPool(n): n threads fixas, as tarefas esperam na fila
+│   ├── newSingleThreadExecutor(): 1 thread, tarefas em ordem
+│   ├── newCachedThreadPool(): cria sob demanda, reaproveita, ociosa 60 s → removida
+│   ├── execute(Runnable) · submit(Runnable/Callable) → Future
+│   └── shutdown() (fecha a porta) · awaitTermination · shutdownNow · isTerminated
+├── Agendamento (237) · newScheduledThreadPool(n)
+│   ├── schedule(r, atraso): uma vez
+│   ├── scheduleAtFixedRate(r, inicial, período): ritmo contado do início
+│   ├── scheduleWithFixedDelay(r, inicial, atraso): intervalo contado do fim
+│   └── ScheduledFuture.cancel(false/true)
+├── Callable&lt;V&gt; (238): V call() throws Exception × Runnable void run()
+│   └── ThreadLocalRandom (sem disputa) × Math.random (sincronizado)
+└── Future&lt;V&gt; (239)
+    ├── get(): bloqueia · get(tempo): TimeoutException
+    ├── ExecutionException (erro no call) · InterruptedException
+    ├── isDone · cancel · isCancelled
+    └── síncrono × assíncrono (tela que não congela) ≠ parallel stream</code></pre>
+
+      <h3>Prática no seu WSL (20 minutos)</h3>
+<pre><code>cd ~/java-lab
+C=src/academy/devdojo/maratonajava/javacore/ZZGconcorrencia
+mkdir -p $C/test
+
+cat > $C/test/ExecutorsPraticaTest01.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.ZZGconcorrencia.test;
+
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
+
+public class ExecutorsPraticaTest01 {
+    public static void main(String[] args) throws Exception {
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        try {
+            // 236/238 · várias tarefas com retorno
+            List&lt;Future&lt;Integer&gt;&gt; futures = new ArrayList&lt;&gt;();
+            for (int i = 1; i &lt;= 4; i++) {
+                int n = i;
+                futures.add(pool.submit(() -&gt; n * n));          // Callable&lt;Integer&gt;
+            }
+            List&lt;Integer&gt; quadrados = new ArrayList&lt;&gt;();
+            for (Future&lt;Integer&gt; f : futures) quadrados.add(f.get());
+            System.out.println(quadrados);                                    // ?
+
+            // quantas threads diferentes trabalharam?
+            Set&lt;String&gt; nomes = ConcurrentHashMap.newKeySet();
+            List&lt;Callable&lt;String&gt;&gt; tarefas = new ArrayList&lt;&gt;();
+            for (int i = 0; i &lt; 6; i++) {
+                tarefas.add(() -&gt; {
+                    nomes.add(Thread.currentThread().getName());
+                    TimeUnit.MILLISECONDS.sleep(100);
+                    return "ok";
+                });
+            }
+            pool.invokeAll(tarefas);                          // espera todas
+            System.out.println("threads usadas: " + nomes.size());           // ?
+
+            // 238 · exceção dentro do call()
+            Future&lt;String&gt; comErro = pool.submit(() -&gt; {
+                if (true) throw new IllegalStateException("servidor recusou");
+                return "nunca";
+            });
+            try {
+                comErro.get();
+            } catch (ExecutionException e) {
+                System.out.println("ExecutionException causada por: " + e.getCause().getMessage()); // ?
+            }
+
+            // 239 · timeout e cancel
+            Future&lt;Double&gt; dolar = pool.submit(() -&gt; {
+                TimeUnit.SECONDS.sleep(5);
+                return 4.35;
+            });
+            System.out.println("pronto? " + dolar.isDone());                   // ?
+            try {
+                dolar.get(300, TimeUnit.MILLISECONDS);
+            } catch (TimeoutException e) {
+                System.out.println("TimeoutException: tente mais tarde");     // ?
+                dolar.cancel(true);
+            }
+            System.out.println("cancelado? " + dolar.isCancelled());           // ?
+        } finally {
+            pool.shutdown();                                  // no finally: sempre roda
+        }
+        System.out.println("terminou? " + pool.awaitTermination(2, TimeUnit.SECONDS)); // ?
+
+        // 237 · agendamento
+        ScheduledExecutorService agenda = Executors.newScheduledThreadPool(1);
+        ScheduledFuture&lt;String&gt; umaVez = agenda.schedule(() -&gt; "executou depois de 200 ms", 200, TimeUnit.MILLISECONDS);
+        System.out.println(umaVez.get());                                     // ?
+        AtomicInteger beeps = new AtomicInteger();
+        ScheduledFuture&lt;?&gt; repetindo = agenda.scheduleAtFixedRate(beeps::incrementAndGet, 0, 100, TimeUnit.MILLISECONDS);
+        TimeUnit.MILLISECONDS.sleep(550);
+        repetindo.cancel(false);
+        agenda.shutdown();
+        System.out.println("beeps: " + beeps.get());                           // ?
+    }
+}
+EOF
+
+javac -d out $(find src -name '*.java')
+java -cp out academy.devdojo.maratonajava.javacore.ZZGconcorrencia.test.ExecutorsPraticaTest01</code></pre>
+      <details>
+        <summary>Ver a saída esperada</summary>
+<pre><code>[1, 4, 9, 16]
+threads usadas: 2
+ExecutionException causada por: servidor recusou
+pronto? false
+TimeoutException: tente mais tarde
+cancelado? true
+terminou? true
+executou depois de 200 ms
+beeps: 6        ← cerca de 6 (0, 100, 200, 300, 400, 500 ms); pode variar ±1</code></pre>
+      </details>
+      <p>Os resultados vêm na ordem dos <code>Future</code>s, não na ordem em que as tarefas terminaram. O pool fixo de 2 nunca usa mais de 2 threads, mesmo com 6 tarefas. E o programa termina, porque os dois executores recebem <code>shutdown()</code>, um deles num <code>finally</code>.</p>
+      <p><strong>Exercícios:</strong></p>
+      <ol>
+        <li>Rode o <code>ExecutorsTest01</code> da aula 236 com <code>newFixedThreadPool(4)</code>, <code>newSingleThreadExecutor()</code> e <code>newCachedThreadPool()</code>. Anote quantas threads aparecem e quanto tempo leva no total.</li>
+        <li>Tire o <code>shutdown()</code> do <code>ExecutorsTest01</code>. O programa termina? E se esperar 60 s com o cached pool?</li>
+        <li>No <code>ScheduledThreadPoolTest01</code> da aula 237, troque <code>scheduleWithFixedDelay</code> por <code>scheduleAtFixedRate</code> e compare os horários dos beeps.</li>
+        <li>Rode o <code>FutureTest01</code> da aula 239 como está e observe que ele não termina logo após a <code>TimeoutException</code>. Corrija com <code>try/finally</code> e <code>cancel(true)</code>.</li>
+        <li>Reescreva o <code>CallableTest01</code> para enviar 5 <code>RandomNumberCallable</code> de uma vez com <code>invokeAll</code> e imprimir os 5 resultados.</li>
+      </ol>
+
+      <h3>Glossário</h3>
+      <ul>
+        <li><strong>Executor/ExecutorService</strong>: serviço que recebe tarefas e as executa em threads que ele gerencia.</li>
+        <li><strong>Thread pool</strong>: conjunto de threads reaproveitadas para executar várias tarefas.</li>
+        <li><strong><code>Executors</code></strong>: classe com métodos-fábrica para criar pools (<code>newFixedThreadPool</code>, <code>newCachedThreadPool</code>...).</li>
+        <li><strong><code>shutdown</code></strong>: para de aceitar tarefas e encerra quando as atuais terminarem.</li>
+        <li><strong><code>ScheduledExecutorService</code></strong>: executor que roda tarefas com atraso ou periodicamente.</li>
+        <li><strong>Fixed rate</strong>: período contado do início de cada execução.</li>
+        <li><strong>Fixed delay</strong>: intervalo contado do fim de cada execução.</li>
+        <li><strong><code>Callable&lt;V&gt;</code></strong>: tarefa que devolve <code>V</code> e pode lançar exceção (<code>call()</code>).</li>
+        <li><strong><code>Future&lt;V&gt;</code></strong>: representa um resultado que ficará pronto no futuro (<code>get</code>, <code>isDone</code>, <code>cancel</code>).</li>
+        <li><strong><code>ExecutionException</code></strong>: embrulha a exceção lançada dentro da tarefa.</li>
+        <li><strong><code>TimeoutException</code></strong>: o <code>get</code> com tempo limite desistiu de esperar.</li>
+        <li><strong>Síncrono × assíncrono</strong>: esperar cada coisa terminar × seguir trabalhando enquanto outra thread espera.</li>
+        <li><strong><code>ThreadLocalRandom</code></strong>: gerador de aleatórios com uma instância por thread, sem disputa.</li>
+      </ul>
+
+      <h3>Revisão espaçada</h3>
+      <ul class="revisao">
+        <li><span class="dia">Dia 1</span><span>Todos os flashcards + a prática com previsões.</span></li>
+        <li><span class="dia">Dia 3</span><span>Quiz + exercícios 1 a 3.</span></li>
+        <li><span class="dia">Dia 7</span><span>Exercícios 4 e 5 + explicar em voz alta a diferença entre fixed rate e fixed delay.</span></li>
+        <li><span class="dia">Dia 14</span><span>Flashcards que errou + questões discursivas.</span></li>
+      </ul>
+
+      <h3>Para aprofundar</h3>
+      <ul>
+        <li>O que é <code>ThreadPoolExecutor</code> (core size, max size, fila, política de rejeição) e por que os métodos de <code>Executors</code> são atalhos para ele?</li>
+        <li>O que <code>invokeAny</code> faz e quando é útil?</li>
+        <li>Como <code>ExecutorCompletionService</code> entrega os resultados na ordem em que as tarefas terminam?</li>
+        <li>O que são as <em>virtual threads</em> do Java 21 (<code>Executors.newVirtualThreadPerTaskExecutor()</code>) e por que elas mudam a conta de "uma thread por requisição"?</li>
+        <li>Por que o <code>Future</code> não permite encadear "quando terminar, faça X"? (É o que o <code>CompletableFuture</code> das aulas 240+ resolve.)</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    window.AULA = {
+      flashcards: [
+        ["Qual o objetivo do framework Executor?", "Desacoplar a submissão das tarefas da execução, reaproveitando threads num pool"],
+        ["Por que não criar uma thread por requisição?", "Mil requisições viram mil threads, cada uma com memória e processamento: a aplicação não escala"],
+        ["O que faz Executors.newFixedThreadPool(4)?", "Cria um pool com 4 threads fixas; as tarefas extras esperam numa fila"],
+        ["O que faz newSingleThreadExecutor()?", "Um pool com uma thread só: as tarefas rodam uma após a outra, em ordem"],
+        ["Como funciona o newCachedThreadPool()?", "Cria threads sob demanda, reaproveita as livres e remove as ociosas por 60 s"],
+        ["Com o executor, quem chama start()?", "Ninguém: você chama execute/submit e o executor decide quando rodar"],
+        ["O que shutdown() faz?", "Para de aceitar tarefas; encerra quando as atuais terminarem (não interrompe, não espera)"],
+        ["O que acontece sem shutdown()?", "O programa não termina: as threads do pool ficam vivas esperando tarefas"],
+        ["Como esperar o executor terminar sem gastar CPU?", "awaitTermination(tempo, unidade), em vez de while(!isTerminated()) {}"],
+        ["O que faz schedule(r, 5, SECONDS)?", "Executa a tarefa uma vez, 5 segundos depois"],
+        ["scheduleAtFixedRate × scheduleWithFixedDelay?", "Rate: período contado do início de cada execução. Delay: intervalo contado do fim de cada execução"],
+        ["Tarefa de 5 s com scheduleWithFixedDelay de 5 s: de quanto em quanto tempo ela roda?", "A cada 10 segundos (5 de execução + 5 de intervalo)"],
+        ["Como parar uma tarefa agendada repetitiva?", "Guardar o ScheduledFuture e chamar cancel(false) (deixa a atual terminar) ou cancel(true)"],
+        ["Runnable × Callable?", "Runnable: void run(), sem exceção checked. Callable<V>: V call() throws Exception"],
+        ["execute × submit?", "execute(Runnable) não devolve nada; submit(Runnable/Callable) devolve um Future"],
+        ["Por que ThreadLocalRandom em vez de Math.random()?", "Math.random usa um gerador sincronizado e compartilhado; ThreadLocalRandom tem um por thread, sem disputa"],
+        ["O que é um Future?", "Uma referência a um resultado que ficará pronto no futuro"],
+        ["O que future.get() faz?", "Bloqueia a thread que chamou até o resultado ficar pronto"],
+        ["Quais exceções o get() pode lançar?", "InterruptedException, ExecutionException (erro no call) e, com tempo, TimeoutException"],
+        ["Por que sempre usar get com timeout em chamadas externas?", "Se o servidor não responder, get() sem tempo trava a thread para sempre"],
+        ["Onde fica a exceção lançada dentro de um submit?", "Guardada no Future; aparece como ExecutionException (com a causa) só quando alguém chama get()"],
+        ["Síncrono × assíncrono?", "Síncrono: uma thread faz tudo em ordem. Assíncrono: outra thread faz o demorado e a principal segue (tela não congela)"],
+        ["Programação assíncrona é o mesmo que parallel stream?", "Não: parallel divide uma tarefa entre núcleos; assíncrono evita ficar parado esperando algo"],
+        ["O que isDone() e cancel(true) fazem?", "isDone diz se a tarefa terminou; cancel(true) tenta cancelar interrompendo a thread"],
+        ["Qual o erro do FutureTest01 do repositório?", "Com TimeoutException o main sai antes do shutdown(), e o programa fica pendurado; use try/finally e cancel"]
+      ],
+      quiz: [
+        { tipo: 'multipla', pergunta: 'Um newFixedThreadPool(4) recebe 6 tarefas de 3 segundos cada. O que acontece?',
+          opcoes: ['Cria 6 threads', '4 tarefas rodam; as outras 2 esperam e são executadas pelas mesmas threads quando liberam', 'Lança exceção por excesso de tarefas', 'Só as 4 primeiras são executadas'],
+          correta: 1,
+          explicacao: 'O pool fixo nunca passa de 4 threads. As tarefas 5 e 6 ficam na fila, e quando uma thread termina ela pega a próxima tarefa (pool-1-thread-1 inicio: 5).' },
+        { tipo: 'vf', pergunta: 'executorService.shutdown() interrompe as tarefas em andamento e espera todas terminarem antes de retornar.',
+          correta: 1,
+          explicacao: 'Falso. shutdown() só impede novas tarefas e retorna na hora: as atuais seguem até o fim (por isso "Programa finalizado" aparece antes). Para esperar existe awaitTermination; para interromper, shutdownNow.' },
+        { tipo: 'multipla', pergunta: 'Qual pool cria threads sob demanda, reaproveita as livres e remove as ociosas depois de 60 segundos?',
+          opcoes: ['newFixedThreadPool', 'newSingleThreadExecutor', 'newCachedThreadPool', 'newScheduledThreadPool'],
+          correta: 2,
+          explicacao: 'newCachedThreadPool cresce conforme a demanda, sem limite fixo, e descarta threads ociosas após 60 s.' },
+        { tipo: 'multipla', pergunta: 'Uma tarefa demora 5 s e foi agendada com scheduleWithFixedDelay(r, 1, 5, SECONDS). De quanto em quanto tempo ela começa?',
+          opcoes: ['A cada 5 s', 'A cada 10 s', 'A cada 1 s', 'Só uma vez'],
+          correta: 1,
+          explicacao: 'Fixed delay conta o intervalo a partir do fim da execução anterior: 5 s de tarefa + 5 s de espera = 10 s. Com scheduleAtFixedRate seria a cada 5 s (contado do início).' },
+        { tipo: 'multipla', pergunta: 'Qual a diferença entre Callable e Runnable?',
+          opcoes: ['Callable não pode ser usado com ExecutorService', 'Callable devolve um valor e pode lançar exceção checked; Runnable não', 'Runnable é mais novo', 'Não há diferença'],
+          correta: 1,
+          explicacao: 'Callable<V> tem V call() throws Exception; Runnable tem void run() sem throws. Por isso o Callable é enviado com submit e o resultado vem num Future.' },
+        { tipo: 'vf', pergunta: 'Depois de future = executor.submit(callable), a linha seguinte já tem o resultado disponível sem precisar esperar.',
+          correta: 1,
+          explicacao: 'Falso. submit devolve imediatamente um Future. O resultado só é obtido com future.get(), que bloqueia até o call() terminar.' },
+        { tipo: 'multipla', pergunta: 'O call() de uma tarefa enviada com submit lançou IllegalStateException. O que acontece quando a main chama future.get()?',
+          opcoes: ['Recebe null', 'Recebe a IllegalStateException diretamente', 'Recebe uma ExecutionException cuja causa é a IllegalStateException', 'Nada: a exceção se perdeu'],
+          correta: 2,
+          explicacao: 'O executor guarda a exceção no Future e o get() a entrega embrulhada em ExecutionException; e.getCause() devolve a original.' },
+        { tipo: 'multipla', pergunta: 'No FutureTest01, a tarefa dorme 15 s e a main chama dollarRequest.get(3, SECONDS). O que acontece?',
+          opcoes: ['Imprime Dollar: 4.35 depois de 3 s', 'Imprime Dollar: 4.35 depois de 15 s', 'Lança TimeoutException depois de 3 s', 'Lança InterruptedException na hora'],
+          correta: 2,
+          explicacao: 'O get com tempo desiste após 3 s e lança TimeoutException. E como o shutdown() vem depois e não é alcançado, o programa ainda fica pendurado. A correção é try/finally e cancel(true).' },
+        { tipo: 'discursiva', pergunta: 'Explique o que significa "desacoplar a submissão da execução" e compare os três pools da aula 236 com um caso de uso para cada.',
+          explicacao: 'Com new Thread(...).start() quem cria a tarefa também decide quando e como ela roda, e cada tarefa custa uma thread nova. Com o Executor, você só entrega a tarefa (execute/submit), e o executor decide quando e em qual das suas threads ela executa, reaproveitando threads num pool, o que controla o consumo de memória/CPU e escala melhor. newFixedThreadPool(n): número fixo de threads, e o excedente espera na fila. Bom para servidores com carga alta e previsível (ex.: processar requisições com n = núcleos). newSingleThreadExecutor(): uma thread e tarefas em ordem. Bom quando a ordem importa ou o recurso não pode ser acessado em paralelo (ex.: gravar num arquivo de log). newCachedThreadPool(): cria sob demanda, reaproveita e remove as ociosas após 60 s. Bom para muitas tarefas curtas e esporádicas, mas sem limite, pode criar threads demais com tarefas lentas. Em todos, é preciso shutdown() para o programa terminar. No Laravel, o equivalente é dispatch de jobs para N workers.' },
+        { tipo: 'discursiva', pergunta: 'Usando o exemplo da cotação do dólar da aula 239, explique programação assíncrona, o papel do Future e por que o timeout é essencial.',
+          explicacao: 'Síncrono: a mesma thread que cuida da tela vai ao servidor buscar a cotação e fica bloqueada esperando, e a tela congela. Assíncrono: a busca é enviada a outra thread (executorService.submit de um Callable que retorna a cotação), e a thread principal continua trabalhando (no exemplo, a main faz a soma do doSomething). O submit devolve um Future<Double>, a promessa do resultado, e quando a main precisa do valor chama get(), que bloqueia até ele ficar pronto. Se o servidor estiver lento ou fora do ar, get() sem tempo trava a thread indefinidamente, por isso usa-se get(3, TimeUnit.SECONDS): depois de 3 s vem TimeoutException, e o sistema pode avisar "não foi possível obter a cotação, tente mais tarde" (e cancelar a tarefa com cancel(true)). O shutdown deve ficar num finally, senão a exceção impede o encerramento do pool. É diferente do parallel stream, que divide uma computação entre núcleos; aqui o objetivo é não ficar parado esperando. No PHP, o paralelo é Http::timeout(3) ou a promise do Guzzle com wait().' }
+      ]
+    };
+  </script>
+  <script src="../js/app.js"></script>
+</body>
+</html>
