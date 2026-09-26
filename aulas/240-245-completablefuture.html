@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>240–245 · CompletableFuture</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="topo">
+      <a class="voltar" href="../index.html">← Todas as aulas</a>
+      <h1>240–245 · CompletableFuture</h1>
+      <p>supplyAsync e join, cuidado com streams, executor e ThreadFactory próprios, encadeando com thenApply/thenCompose/thenAccept, allOf e anyOf · <a href="https://www.youtube.com/playlist?list=PL62G310vn6nFIsOCC0H-C2infYgwm8SWW" target="_blank" rel="noopener">playlist</a></p>
+    </header>
+
+    <nav class="abas">
+      <a href="#resumo">Resumo</a>
+      <a href="#flashcards">Flashcards</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#estudo">Material de estudo</a>
+    </nav>
+
+    <p class="aviso">Junta as aulas 240 a 245, as seis de <code>CompletableFuture</code>, e fecha o bloco de concorrência. Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. <strong>A aula 243 não tem legenda no YouTube</strong>: a seção dela foi montada só com o código do professor, que é autoexplicativo. O código (pacote <code>javacore.ZZGconcorrencia</code>: <code>StoreService</code>, <code>StoreServiceDeprecated</code>, <code>StoreServiceWithDiscount</code>, <code>Discount</code>, <code>Quote</code>, <code>CompletableFutureTest01</code> a <code>05</code>) foi conferido no <a href="https://github.com/devdojobr/maratona-java-virado-no-jiraya" target="_blank" rel="noopener">repositório do professor</a>. Os itens marcados como "extra" não estão nos vídeos.</p>
+
+    <section id="resumo">
+      <h2>Resumo</h2>
+      <p>O cenário das seis aulas: <strong>consultar o preço de um produto em várias lojas</strong>, e cada consulta demora (um "servidor remoto" simulado com <code>sleep</code>). Feito uma por vez, 4 lojas × 2 s = 8 s; "com 30 lojas, você perdeu o cliente". O <code>Future</code> da aula 239 já permite consultar em paralelo, mas tem limites. O <strong><code>CompletableFuture</code></strong> (Java 8) é a versão completa: dispensa criar executor, tem <code>join()</code> sem exceção checked, pode ser <strong>completado manualmente</strong> e, principalmente, permite <strong>encadear</strong> etapas ("quando o preço chegar, monte o orçamento; quando o orçamento estiver pronto, aplique o desconto") e <strong>combinar</strong> vários resultados (<code>allOf</code>, <code>anyOf</code>).</p>
+<pre><code>CompletableFuture.supplyAsync(() -&gt; service.getPriceSync(loja))   // 240 · roda em outra thread
+        .thenApply(Quote::newQuote)                                // 244 · transforma o resultado
+        .thenCompose(q -&gt; CompletableFuture.supplyAsync(() -&gt; service.applyDiscount(q))) // 244 · encadeia outra chamada assíncrona
+        .thenAccept(System.out::println);                          // 245 · consome o resultado
+CompletableFuture.allOf(futures).join();                           // 245 · espera todas
+CompletableFuture.anyOf(futures).join();                           // 245 · espera a primeira</code></pre>
+
+      <h3>240 · CompletableFuture pt 01: get e join</h3>
+<pre><code>public class StoreService {
+    private static final ExecutorService ex = Executors.newCachedThreadPool();
+
+    public double getPriceSync(String storeName) {                       // síncrono
+        System.out.printf("Getting prices sync for store %s%n", storeName);
+        return priceGenerator();
+    }
+
+    public Future&lt;Double&gt; getPricesAsyncFuture(String storeName) {       // com Future
+        return ex.submit(this::priceGenerator);
+    }
+
+    public CompletableFuture&lt;Double&gt; getPricesAsyncCompletableFuture(String storeName) { // com CompletableFuture
+        return CompletableFuture.supplyAsync(this::priceGenerator);
+    }
+
+    private double priceGenerator() {
+        System.out.printf("%s generating price %n", Thread.currentThread().getName());
+        delay();                                                         // sleep de 2 s
+        return ThreadLocalRandom.current().nextInt(1, 500) * 10;
+    }
+
+    public static void shutdown() { ex.shutdown(); }
+}</code></pre>
+      <ul>
+        <li><strong>Síncrono</strong>: 4 chamadas de <code>getPriceSync</code> seguidas levam cerca de <strong>8 s</strong>.</li>
+        <li><strong>Com <code>Future</code></strong>: é preciso ter um <code>ExecutorService</code> e lembrar do <code>shutdown()</code>. O <code>StoreService</code> ganhou um método estático <code>shutdown()</code>, porque não dá para desligar o executor dentro do método que envia a tarefa: ele pararia de aceitar as próximas. E a pegadinha: se você chamar <code>get()</code> logo depois de cada <code>submit</code>, continua levando 8 s, porque espera uma por vez. O certo é <strong>primeiro disparar as quatro</strong> e <strong>depois</strong> chamar os <code>get()</code>. Aí leva cerca de 2 s.</li>
+        <li><strong>Com <code>CompletableFuture.supplyAsync(supplier)</code></strong>: recebe um <code>Supplier</code> (aula 200) e roda numa thread do <strong><code>ForkJoinPool</code> comum</strong> (<code>ForkJoinPool.commonPool-worker-1</code>...), então não precisa criar nem desligar executor. Também cerca de 2 s.</li>
+        <li><strong><code>join()</code> × <code>get()</code></strong>: os dois esperam o resultado, mas o <code>join()</code> não lança exceção checked (em caso de erro, lança <code>CompletionException</code>, que é unchecked), então não obriga o <code>try/catch</code>, e o código fica mais limpo.</li>
+        <li>Limitação do <code>Future</code> citada pelo professor: ele <strong>não pode ser completado manualmente</strong>. Se uma API não responde, você não tem como dizer "considere este valor". O <code>CompletableFuture</code> tem <code>complete(valor)</code> (e é daí que vem o nome).</li>
+        <li>O professor também corrigiu o <code>FutureTest01</code> da aula 239: o <code>get</code> com timeout foi para um <code>try/catch</code> e o <code>shutdown()</code> para um <code>finally</code>, para o programa não ficar pendurado.</li>
+      </ul>
+
+      <h3>241 · CompletableFuture pt 02: cuidado com streams</h3>
+<pre><code>List&lt;String&gt; stores = List.of("Store 1", "Store 2", "Store 3", "Store 4");
+
+// ERRADO: um stream só → cerca de 8 s
+List&lt;Double&gt; prices = stores.stream()
+        .map(storeService::getPricesAsyncCompletableFuture)
+        .map(CompletableFuture::join)
+        .collect(Collectors.toList());
+
+// CERTO: dois streams → cerca de 2 s
+List&lt;CompletableFuture&lt;Double&gt;&gt; completableFutures = stores.stream()
+        .map(storeService::getPricesAsyncCompletableFuture)
+        .collect(Collectors.toList());                     // dispara TODAS primeiro
+List&lt;Double&gt; prices = completableFutures.stream()
+        .map(CompletableFuture::join)                      // depois espera
+        .collect(Collectors.toList());</code></pre>
+      <p>Por quê? As operações intermediárias do stream são <strong><em>lazy</em></strong> e processam <strong>um elemento de cada vez pelo pipeline inteiro</strong>: a "Store 1" é disparada e já cai no <code>join</code>, que espera 2 s; só então a "Store 2" é disparada, e assim por diante. Fica sequencial de novo. O <code>collect</code> no meio força disparar todas antes de começar a esperar, o mesmo truque do <code>Future</code> na aula 240. Vale igual para <code>Future</code> dentro de stream.</p>
+
+      <h3>242 · CompletableFuture pt 03: executor e ThreadFactory</h3>
+      <p>E se o serviço que você recebe só tem o método <strong>síncrono</strong> (o <code>StoreServiceDeprecated</code>, só com <code>getPriceSync</code>)? Você mesmo o torna assíncrono, embrulhando a chamada:</p>
+<pre><code>ExecutorService executor = Executors.newFixedThreadPool(10, r -&gt; {   // ThreadFactory
+    Thread thread = new Thread(r);
+    thread.setDaemon(true);                // não segura o programa aberto
+    return thread;
+});
+
+List&lt;CompletableFuture&lt;Double&gt;&gt; completableFutures = stores.stream()
+        .map(s -&gt; CompletableFuture.supplyAsync(() -&gt; storeService.getPriceSync(s), executor)) // executor próprio
+        .collect(Collectors.toList());
+List&lt;Double&gt; prices = completableFutures.stream()
+        .map(CompletableFuture::join)
+        .collect(Collectors.toList());
+executor.shutdown();</code></pre>
+      <ul>
+        <li><strong><code>supplyAsync(supplier, executor)</code></strong>: segundo argumento opcional para usar <strong>o seu executor</strong> no lugar do <code>ForkJoinPool</code> comum.</li>
+        <li><strong><code>ThreadFactory</code></strong>: interface funcional (<code>Thread newThread(Runnable r)</code>) que os métodos de <code>Executors</code> aceitam para você decidir <strong>como as threads são criadas</strong>: nome, prioridade, daemon... Aqui as threads viram daemon, e o nome muda de <code>pool-1-thread-1</code> para <code>Thread-0</code>.</li>
+        <li><strong>Extra: por que um executor próprio?</strong> O pool comum tem <code>availableProcessors() - 1</code> threads e é compartilhado com os parallel streams da aplicação inteira. Tarefas de I/O (esperando servidor) ocupam essas poucas threads à toa. Com 30 lojas, um pool com mais threads (e daemon, ou com <code>shutdown</code>) termina bem antes.</li>
+      </ul>
+
+      <h3>243 · Encadeando chamadas pt 01 (a partir do código)</h3>
+      <p><em>Esta aula não tem legenda; a explicação sai do código.</em> O cenário cresce: além do preço, cada loja devolve um <strong>código de desconto</strong>, e aplicar o desconto é <strong>outra chamada remota</strong> demorada.</p>
+<pre><code>public class Discount {
+    public enum Code {
+        NONE(0), SUPER_SAYAJIN(5), SUPER_SAYAJIN2(10), SUPER_SAYAJIN3(15);   // enum com atributo (aula 82)
+        private final int percentage;
+        Code(int percentage) { this.percentage = percentage; }
+        public int getPercentage() { return percentage; }
+    }
+}
+
+// storeName:price:discountCode
+public final class Quote {                    // imutável (aula 233): final, atributos final, sem setters
+    private final String store;
+    private final double price;
+    private final Discount.Code discountCode;
+
+    private Quote(String store, double price, Discount.Code discountCode) { ... }  // construtor privado
+
+    public static Quote newQuote(String value) {   // "fábrica" estática
+        String[] values = value.split(":");
+        return new Quote(values[0], Double.parseDouble(values[1]), Discount.Code.valueOf(values[2]));
+    }
+}
+
+public class StoreServiceWithDiscount {
+    public String getPriceSync(String storeName) {                    // 1 s
+        double price = priceGenerator();
+        Discount.Code discountCode = Discount.Code.values()[
+                ThreadLocalRandom.current().nextInt(Discount.Code.values().length)];
+        return String.format("%s:%.2f:%s", storeName, price, discountCode);  // "Store 1:1230.00:SUPER_SAYAJIN"
+    }
+
+    public String applyDiscount(Quote quote) {                         // mais 1 s
+        delay();
+        double discountValue = quote.getPrice() * (100 - quote.getDiscountCode().getPercentage()) / 100;
+        return String.format("'%s' original price: '%.2f'. Applying discount code '%s'. Final price: '%.2f'",
+                quote.getStore(), quote.getPrice(), quote.getDiscountCode(), discountValue);
+    }
+}
+
+// versão síncrona: 4 lojas × (1 s + 1 s) ≈ 8 s
+stores.stream()
+        .map(service::getPriceSync)   //store:price:code
+        .map(Quote::newQuote)
+        .map(service::applyDiscount)
+        .forEach(System.out::println);</code></pre>
+      <ul>
+        <li>A loja responde um texto no formato <code>loja:preço:código</code>, e <code>Quote.newQuote</code> o transforma num objeto com <code>split(":")</code>, <code>Double.parseDouble</code> e <code>Discount.Code.valueOf</code> (texto → constante do enum).</li>
+        <li><strong>Enum aninhado com atributo</strong> (<code>Discount.Code</code>): cada constante carrega sua porcentagem. <code>Code.values()[aleatório]</code> sorteia um código.</li>
+        <li><strong><code>Quote</code> imutável</strong>, com construtor <strong>privado</strong> e um método estático que cria o objeto: um prenúncio das aulas de padrões de projeto (246+).</li>
+        <li>Desconto: <code>preço × (100 − %) / 100</code>. Com 1000 e SUPER_SAYAJIN2 (10%), 900.</li>
+      </ul>
+
+      <h3>244 · Encadeando chamadas pt 02: thenApply e thenCompose</h3>
+<pre><code>List&lt;CompletableFuture&lt;String&gt;&gt; completableFutures = stores.stream()
+        // Getting the price async storeName:price:discountCode
+        .map(s -&gt; CompletableFuture.supplyAsync(() -&gt; service.getPriceSync(s)))
+        // Instantiating a new Quote from the string generated by getPriceSync
+        .map(cf -&gt; cf.thenApply(Quote::newQuote))
+        // Composing the first completable future
+        .map(cf -&gt; cf.thenCompose(quote -&gt; CompletableFuture.supplyAsync(() -&gt; service.applyDiscount(quote))))
+        .collect(Collectors.toList());
+
+completableFutures.stream()
+        .map(CompletableFuture::join)
+        .forEach(System.out::println);
+// de ~8 s para ~2 s: cada loja ainda espera 1 s de preço + 1 s de desconto, mas as 4 em paralelo</code></pre>
+      <ul>
+        <li><strong><code>thenApply(Function)</code></strong>: <strong>quando</strong> o resultado chegar, transforma-o (<code>String</code> → <code>Quote</code>). É o <code>map</code> do <code>CompletableFuture</code>. Não há motivo para <code>thenApplyAsync</code> aqui: montar o <code>Quote</code> é rápido e depende do preço, então pode rodar na mesma thread.</li>
+        <li><strong><code>thenCompose(Function que devolve outro CompletableFuture)</code></strong>: <strong>quando</strong> o resultado chegar, dispara <strong>outra</strong> operação assíncrona e "achata" o resultado. Com <code>thenApply</code> aqui, o tipo seria <code>CompletableFuture&lt;CompletableFuture&lt;String&gt;&gt;</code>; o <code>thenCompose</code> devolve <code>CompletableFuture&lt;String&gt;</code>. É o <code>flatMap</code> do <code>CompletableFuture</code> (aula 206).</li>
+        <li>O desenho do professor: para <strong>cada loja</strong>, numa thread do pool, vem a tarefa 1 (<code>getPriceSync</code>), depois o <code>thenApply</code> (novo <code>Quote</code>), depois o <code>thenCompose</code> com a tarefa 2 (<code>applyDiscount</code>), e no fim o <code>join</code> devolve o preço com desconto. Isso acontece <strong>quatro vezes em paralelo</strong>.</li>
+        <li>E de novo: <strong>dois streams</strong> (<code>collect</code> antes do <code>join</code>), senão volta a ser sequencial.</li>
+      </ul>
+
+      <h3>245 · allOf e anyOf</h3>
+      <p>Para simular o mundo real, o <code>delay()</code> virou aleatório: entre 200 e 2500 ms. Cada loja responde num tempo diferente.</p>
+<pre><code>var completableFutures = stores.stream()
+        .map(s -&gt; CompletableFuture.supplyAsync(() -&gt; service.getPriceSync(s)))
+        .map(cf -&gt; cf.thenApply(Quote::newQuote))
+        .map(cf -&gt; cf.thenCompose(quote -&gt; CompletableFuture.supplyAsync(() -&gt; service.applyDiscount(quote))))
+        .map(cf -&gt; cf.thenAccept(store -&gt; System.out.printf("%s finished in %d%n", store, (System.currentTimeMillis() - start))))
+        .toArray(CompletableFuture[]::new);        // array de CompletableFuture
+
+//      CompletableFuture&lt;Void&gt; voidCompletableFuture = CompletableFuture.allOf(completableFutures);
+CompletableFuture&lt;Object&gt; voidCompletableFuture = CompletableFuture.anyOf(completableFutures);
+voidCompletableFuture.join();
+System.out.printf("Finished? %b%n", voidCompletableFuture.isDone());</code></pre>
+      <ul>
+        <li><strong><code>thenAccept(Consumer)</code></strong>: quando o resultado chegar, <strong>consome</strong> (imprime) e não devolve nada, por isso o tipo vira <code>CompletableFuture&lt;Void&gt;</code>. Cada loja imprime assim que termina, na ordem em que terminar, e não na ordem da lista.</li>
+        <li><strong><code>toArray(CompletableFuture[]::new)</code></strong>: <code>allOf</code>/<code>anyOf</code> recebem varargs (array), não lista. É uma referência a construtor de array (aula 200), e o IntelliJ reclama do tipo genérico "cru". O <code>var</code> (Java 10) evita escrever o tipo.</li>
+        <li><strong><code>CompletableFuture.allOf(...)</code></strong>: devolve um <code>CompletableFuture&lt;Void&gt;</code> que só completa quando <strong>todos</strong> completarem (mesmo que algum termine com exceção). Sem o <code>join()</code> nele, o <code>main</code> acaba e nada aparece, porque as threads do pool comum são daemon. O tempo total é o da loja mais lenta (cerca de 3,4 s no vídeo).</li>
+        <li><strong><code>CompletableFuture.anyOf(...)</code></strong>: completa assim que <strong>o primeiro</strong> completar, e devolve <code>CompletableFuture&lt;Object&gt;</code>. Uso: cotar o dólar em 5 fontes que dariam a mesma resposta e ficar com <strong>a mais rápida</strong>. No teste, só uma loja imprimiu e o programa acabou.</li>
+        <li>Com isso termina o bloco de concorrência.</li>
+      </ul>
+
+      <h3>Atenção</h3>
+      <ul>
+        <li><strong>Dispare tudo antes de esperar</strong>: <code>submit</code>/<code>supplyAsync</code> de todas as tarefas primeiro, <code>get</code>/<code>join</code> depois. Num stream, isso significa <strong>dois streams</strong> com <code>collect</code> no meio.</li>
+        <li><strong><code>supplyAsync</code> sem executor usa o <code>ForkJoinPool</code> comum</strong>, cujas threads são daemon: se o <code>main</code> acabar sem <code>join</code>, as tarefas são abandonadas. E ele tem só <code>núcleos − 1</code> threads (extra), então para muito I/O passe um executor próprio.</li>
+        <li><strong><code>thenApply</code> × <code>thenCompose</code></strong>: a função do <code>thenApply</code> devolve um valor; a do <code>thenCompose</code> devolve outro <code>CompletableFuture</code>. Usar <code>thenApply</code> com uma função que devolve <code>CompletableFuture</code> gera <code>CompletableFuture&lt;CompletableFuture&lt;T&gt;&gt;</code>.</li>
+        <li><strong><code>join()</code> lança <code>CompletionException</code></strong> (unchecked) se a tarefa falhou; <code>get()</code> lança <code>ExecutionException</code> (checked).</li>
+        <li><strong>Extra: trate erros na corrente</strong> com <code>exceptionally(e -&gt; valorPadrao)</code> ou <code>handle((valor, erro) -&gt; ...)</code>, senão uma loja fora do ar derruba o <code>join</code> do resultado inteiro.</li>
+        <li><strong>Extra: <code>anyOf</code> não cancela os outros</strong>: as demais tarefas continuam rodando (no exemplo, só "somem" porque o programa acaba e as threads daemon morrem).</li>
+        <li><strong>Extra: <code>String.format("%.2f")</code> depende do locale.</strong> Numa JVM em português, o <code>getPriceSync</code> gera <code>"Store 1:1230,00:NONE"</code>, e o <code>Double.parseDouble("1230,00")</code> do <code>Quote</code> estoura <code>NumberFormatException</code>. Fixe o locale: <code>String.format(Locale.US, "%s:%.2f:%s", ...)</code>. No WSL o padrão costuma ser inglês e funciona; num Windows em português, não.</li>
+        <li><strong>Extra: <code>CompletableFuture.orTimeout(3, SECONDS)</code></strong> (Java 9) e <code>completeOnTimeout(valor, 3, SECONDS)</code> trazem o "sempre use timeout" da aula 239 para a corrente.</li>
+      </ul>
+
+      <h3>Paralelo com PHP</h3>
+      <ul>
+        <li><strong><code>CompletableFuture</code> ≈ Promise</strong>: as <em>promises</em> do Guzzle (<code>$client-&gt;getAsync($url)</code>) e o <code>Http::pool()</code> do Laravel são a mesma ideia. <code>-&gt;then(fn($r) =&gt; ...)</code> ≈ <code>thenApply</code>/<code>thenCompose</code> (se o <code>then</code> devolve outra promise, ela é "achatada", como no <code>thenCompose</code>); <code>-&gt;wait()</code> ≈ <code>join()</code>; <code>-&gt;otherwise(...)</code> ≈ <code>exceptionally</code>.</li>
+        <li><strong><code>allOf</code> ≈ <code>Utils::all($promises)-&gt;wait()</code></strong> / <code>Http::pool(fn($pool) =&gt; [...])</code>, que dispara todas as requisições juntas e espera todas. <strong><code>anyOf</code> ≈ <code>Utils::any($promises)</code></strong>: fica com a primeira resposta.</li>
+        <li><strong>O mesmo erro de "disparar e esperar um por um"</strong>: um <code>foreach ($lojas as $l) { $precos[] = Http::get($l)-&gt;json(); }</code> leva a soma dos tempos (os 8 s da aula 240). O <code>Http::pool</code> dispara todas juntas e leva o tempo da mais lenta (os ~2 s).</li>
+        <li><strong>JavaScript</strong>, se você usa no front: <code>fetch().then().then()</code>, <code>Promise.all</code> e <code>Promise.any</code>/<code>race</code> são exatamente <code>thenApply</code>/<code>thenCompose</code>, <code>allOf</code> e <code>anyOf</code>.</li>
+      </ul>
+    </section>
+
+    <section id="flashcards">
+      <h2>Flashcards</h2>
+      <p style="color:var(--muted);margin-top:-6px">Toque no cartão para virar.</p>
+      <div id="flashcards-app"></div>
+    </section>
+
+    <section id="quiz">
+      <h2>Quiz</h2>
+      <div id="quiz-app"></div>
+    </section>
+
+    <section id="estudo">
+      <h2>Material de estudo</h2>
+
+      <h3>Mapa mental</h3>
+<pre><code>CompletableFuture (240–245) · consultar preços em várias lojas
+├── Por que (240): síncrono 4 × 2 s = 8 s · Future precisa de executor e get checked
+│   ├── supplyAsync(Supplier) → ForkJoinPool comum (daemon), sem shutdown
+│   ├── join() (CompletionException, unchecked) × get() (checked)
+│   └── complete(valor): pode ser completado manualmente
+├── Streams (241): lazy = um elemento por vez → dois streams (collect antes do join)
+├── Executor próprio (242): supplyAsync(supplier, executor) · ThreadFactory (daemon, nome)
+├── Encadeando (243–244)
+│   ├── Quote imutável + newQuote("loja:preço:código") · enum Discount.Code(%)
+│   ├── thenApply(Function): transforma (map)
+│   ├── thenCompose(f → outro CF): encadeia assíncrono (flatMap)
+│   └── thenAccept(Consumer): consome, vira CF&lt;Void&gt;
+└── Combinar (245)
+    ├── allOf(cfs...): CF&lt;Void&gt;, completa quando todos completam
+    └── anyOf(cfs...): CF&lt;Object&gt;, completa com o primeiro</code></pre>
+
+      <h3>Prática no seu WSL (20 minutos)</h3>
+<pre><code>cd ~/java-lab
+C=src/academy/devdojo/maratonajava/javacore/ZZGconcorrencia
+mkdir -p $C/test
+
+cat > $C/test/CompletableFuturePraticaTest01.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.ZZGconcorrencia.test;
+
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.stream.Collectors;
+
+public class CompletableFuturePraticaTest01 {
+    static int preco(String loja) {                 // "servidor lento": 300 ms
+        dorme(300);
+        return loja.length() * 100;
+    }
+    static void dorme(int ms) {
+        try { TimeUnit.MILLISECONDS.sleep(ms); } catch (InterruptedException e) { throw new RuntimeException(e); }
+    }
+
+    public static void main(String[] args) {
+        List&lt;String&gt; lojas = List.of("A", "BB", "CCC", "DDDD");
+        ExecutorService executor = Executors.newFixedThreadPool(4, r -&gt; {   // 242 · ThreadFactory
+            Thread t = new Thread(r, "loja-thread");
+            t.setDaemon(true);
+            return t;
+        });
+
+        // 240 · síncrono × assíncrono
+        long inicio = System.currentTimeMillis();
+        List&lt;Integer&gt; sync = lojas.stream().map(CompletableFuturePraticaTest01::preco).collect(Collectors.toList());
+        long tempoSync = System.currentTimeMillis() - inicio;
+
+        inicio = System.currentTimeMillis();
+        List&lt;CompletableFuture&lt;Integer&gt;&gt; cfs = lojas.stream()
+                .map(l -&gt; CompletableFuture.supplyAsync(() -&gt; preco(l), executor))
+                .collect(Collectors.toList());                                  // 241 · dispara todas
+        List&lt;Integer&gt; async = cfs.stream().map(CompletableFuture::join).collect(Collectors.toList());
+        long tempoAsync = System.currentTimeMillis() - inicio;
+        System.out.println(sync + " " + async);                                             // ?
+        System.out.println("assíncrono mais rápido? " + (tempoAsync &lt; tempoSync));         // ?
+
+        // 241 · o erro do stream único
+        inicio = System.currentTimeMillis();
+        lojas.stream()
+                .map(l -&gt; CompletableFuture.supplyAsync(() -&gt; preco(l), executor))
+                .map(CompletableFuture::join)
+                .collect(Collectors.toList());
+        System.out.println("stream único levou mais de 1 s? " + (System.currentTimeMillis() - inicio &gt;= 1200)); // ?
+
+        // 243–244 · thenApply + thenCompose
+        String resultado = CompletableFuture.supplyAsync(() -&gt; String.format(Locale.US, "%s:%.2f:%d", "Store 1", 1000.0, 10))
+                .thenApply(s -&gt; s.split(":"))
+                .thenCompose(p -&gt; CompletableFuture.supplyAsync(() -&gt; {
+                    double preco = Double.parseDouble(p[1]);
+                    double finalPrice = preco * (100 - Integer.parseInt(p[2])) / 100;
+                    return String.format(Locale.US, "%s: %.2f -&gt; %.2f", p[0], preco, finalPrice);
+                }))
+                .join();
+        System.out.println(resultado);                                                    // ?
+
+        // extra · erros
+        int comFallback = CompletableFuture.supplyAsync(() -&gt; {
+                    if (true) throw new IllegalStateException("loja fora do ar");
+                    return 1;
+                })
+                .exceptionally(e -&gt; -1)
+                .join();
+        System.out.println("com exceptionally: " + comFallback);                          // ?
+        try {
+            CompletableFuture.supplyAsync(() -&gt; { throw new IllegalStateException("loja fora do ar"); }).join();
+        } catch (CompletionException e) {
+            System.out.println(e.getClass().getSimpleName() + " / " + e.getCause().getMessage()); // ?
+        }
+
+        // 245 · allOf e anyOf
+        CompletableFuture&lt;String&gt; lenta = CompletableFuture.supplyAsync(() -&gt; { dorme(400); return "lenta"; }, executor);
+        CompletableFuture&lt;String&gt; rapida = CompletableFuture.supplyAsync(() -&gt; { dorme(50); return "rápida"; }, executor);
+        CompletableFuture&lt;String&gt; media = CompletableFuture.supplyAsync(() -&gt; { dorme(200); return "média"; }, executor);
+        System.out.println("anyOf: " + CompletableFuture.anyOf(lenta, rapida, media).join());   // ?
+        CompletableFuture.allOf(lenta, rapida, media).join();
+        System.out.println("allOf: todas prontas? " + (lenta.isDone() &amp;&amp; rapida.isDone() &amp;&amp; media.isDone())); // ?
+
+        // completar manualmente
+        CompletableFuture&lt;String&gt; manual = new CompletableFuture&lt;&gt;();
+        manual.complete("valor definido na mão");
+        System.out.println(manual.join());                                                // ?
+
+        executor.shutdown();
+    }
+}
+EOF
+
+javac -d out $(find src -name '*.java')
+java -cp out academy.devdojo.maratonajava.javacore.ZZGconcorrencia.test.CompletableFuturePraticaTest01</code></pre>
+      <details>
+        <summary>Ver a saída esperada</summary>
+<pre><code>[100, 200, 300, 400] [100, 200, 300, 400]
+assíncrono mais rápido? true
+stream único levou mais de 1 s? true
+Store 1: 1000.00 -&gt; 900.00
+com exceptionally: -1
+CompletionException / loja fora do ar
+anyOf: rápida
+allOf: todas prontas? true
+valor definido na mão</code></pre>
+      </details>
+      <p>Os tempos: o síncrono leva cerca de 1200 ms (4 × 300), o assíncrono com dois streams cerca de 300 ms, e o stream único volta aos 1200 ms. O <code>join</code> lança <code>CompletionException</code>, e a exceção original fica em <code>getCause()</code>. O <code>anyOf</code> pega a de 50 ms.</p>
+      <p><strong>Exercícios:</strong></p>
+      <ol>
+        <li>Rode o <code>CompletableFutureTest01</code> da aula 240 com os três métodos (sync, Future, CompletableFuture) e anote os tempos.</li>
+        <li>No <code>searchPricesAsyncFuture</code>, chame o <code>get()</code> logo depois de cada <code>getPricesAsyncFuture</code>. Quanto tempo leva agora?</li>
+        <li>No <code>CompletableFutureTest04</code> da aula 244, troque o <code>thenCompose</code> por <code>thenApply</code>. Qual o tipo resultante e o que o <code>join</code> devolve?</li>
+        <li>Rode o <code>CompletableFutureTest05</code> da aula 245 com <code>allOf</code> e com <code>anyOf</code>. Quantas lojas imprimem em cada caso e por quê?</li>
+        <li>Se sua JVM estiver em português (<code>java -Duser.language=pt -Duser.country=BR ...</code>), rode o <code>CompletableFutureTest04</code> e veja a <code>NumberFormatException</code>. Corrija com <code>Locale.US</code> no <code>String.format</code>.</li>
+      </ol>
+
+      <h3>Glossário</h3>
+      <ul>
+        <li><strong><code>CompletableFuture&lt;T&gt;</code></strong>: <code>Future</code> que pode ser completado manualmente e encadeado com outras etapas.</li>
+        <li><strong><code>supplyAsync</code></strong>: executa um <code>Supplier</code> em outra thread e devolve um <code>CompletableFuture</code> com o resultado.</li>
+        <li><strong><code>runAsync</code></strong> (extra): o mesmo para um <code>Runnable</code> (sem resultado).</li>
+        <li><strong><code>ForkJoinPool.commonPool()</code></strong>: pool padrão, compartilhado, com threads daemon.</li>
+        <li><strong><code>join</code></strong>: espera e devolve o resultado; em erro, <code>CompletionException</code> (unchecked).</li>
+        <li><strong><code>ThreadFactory</code></strong>: interface que cria as threads de um executor (nome, daemon, prioridade).</li>
+        <li><strong><code>thenApply</code></strong>: transforma o resultado quando ele chegar (map).</li>
+        <li><strong><code>thenCompose</code></strong>: encadeia outra operação assíncrona e achata o resultado (flatMap).</li>
+        <li><strong><code>thenAccept</code></strong>: consome o resultado sem devolver nada.</li>
+        <li><strong><code>allOf</code> / <code>anyOf</code></strong>: completa quando todos / o primeiro completarem.</li>
+        <li><strong><code>exceptionally</code> / <code>handle</code></strong> (extra): tratam falhas dentro da corrente.</li>
+        <li><strong>Método de fábrica estático</strong>: método <code>static</code> que cria objetos no lugar do construtor (<code>Quote.newQuote</code>).</li>
+      </ul>
+
+      <h3>Revisão espaçada</h3>
+      <ul class="revisao">
+        <li><span class="dia">Dia 1</span><span>Todos os flashcards + a prática com previsões.</span></li>
+        <li><span class="dia">Dia 3</span><span>Quiz + exercícios 1 a 3.</span></li>
+        <li><span class="dia">Dia 7</span><span>Exercícios 4 e 5 + reescrever de memória a corrente preço → Quote → desconto da aula 244.</span></li>
+        <li><span class="dia">Dia 14</span><span>Flashcards que errou + questões discursivas + revisar as páginas 220–239 (o bloco inteiro de concorrência).</span></li>
+      </ul>
+
+      <h3>Para aprofundar</h3>
+      <ul>
+        <li>Qual a diferença entre <code>thenApply</code> e <code>thenApplyAsync</code> (em qual thread cada um roda)?</li>
+        <li>Como <code>thenCombine</code> junta dois <code>CompletableFuture</code> independentes (ex.: preço e frete ao mesmo tempo)?</li>
+        <li>O que fazem <code>orTimeout</code> e <code>completeOnTimeout</code> (Java 9)?</li>
+        <li>Como as <em>virtual threads</em> (Java 21) permitem escrever código "síncrono" que escala como o assíncrono?</li>
+        <li>Como o Spring usa <code>CompletableFuture</code> com <code>@Async</code>, e o WebFlux com <code>Mono</code>/<code>Flux</code>?</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    window.AULA = {
+      flashcards: [
+        ["Qual o problema das consultas síncronas às lojas?", "Os tempos se somam: 4 lojas × 2 s = 8 s (com 30 lojas, você perde o cliente)"],
+        ["Como fazer várias consultas com Future sem voltar a ser sequencial?", "Disparar todos os submit primeiro e só depois chamar os get()"],
+        ["O que faz CompletableFuture.supplyAsync(supplier)?", "Executa o Supplier em outra thread (ForkJoinPool comum) e devolve um CompletableFuture"],
+        ["Vantagens do CompletableFuture sobre o Future", "Não precisa criar executor/shutdown, join sem exceção checked, pode ser completado manualmente, encadeia e combina"],
+        ["join() × get()?", "Ambos esperam; join lança CompletionException (unchecked), get lança exceções checked"],
+        ["Em qual pool o supplyAsync roda por padrão?", "No ForkJoinPool.commonPool(), com threads daemon"],
+        ["Por que map(supplyAsync).map(join) num só stream fica sequencial?", "O stream é lazy e passa um elemento por vez pelo pipeline: dispara um e já espera"],
+        ["Como corrigir o stream único?", "Dois streams: collect da lista de CompletableFuture e depois outro stream com join"],
+        ["Como usar um executor próprio com CompletableFuture?", "supplyAsync(supplier, executor)"],
+        ["Para que serve uma ThreadFactory?", "Definir como o executor cria as threads (nome, daemon, prioridade)"],
+        ["Por que as threads da ThreadFactory da aula 242 são daemon?", "Para não segurar o programa aberto se o executor não for desligado"],
+        ["Como tornar assíncrono um serviço que só tem método síncrono?", "Embrulhar: CompletableFuture.supplyAsync(() -> service.getPriceSync(s))"],
+        ["Como é o Quote da aula 243?", "Classe final imutável, construtor privado e fábrica estática newQuote que faz split(\":\") de 'loja:preço:código'"],
+        ["Como se calcula o preço com desconto?", "preço × (100 − porcentagem) / 100"],
+        ["O que faz thenApply?", "Quando o resultado chega, aplica uma Function e devolve outro CompletableFuture (map)"],
+        ["O que faz thenCompose?", "Encadeia outra operação que devolve CompletableFuture e achata o resultado (flatMap)"],
+        ["O que acontece se usar thenApply com uma função que devolve CompletableFuture?", "Fica CompletableFuture<CompletableFuture<T>>"],
+        ["O que faz thenAccept?", "Consome o resultado (Consumer) e devolve CompletableFuture<Void>"],
+        ["O que faz CompletableFuture.allOf?", "Devolve um CompletableFuture<Void> que completa quando todos os passados completarem"],
+        ["O que faz CompletableFuture.anyOf?", "Devolve um CompletableFuture<Object> que completa quando o primeiro completar"],
+        ["Por que toArray(CompletableFuture[]::new) na aula 245?", "allOf/anyOf recebem varargs (array), não lista"],
+        ["Caso de uso de anyOf?", "Consultar a mesma informação (cotação do dólar) em várias fontes e ficar com a mais rápida"],
+        ["Por que sem join() no allOf nada é impresso?", "O main termina e as threads do pool comum são daemon, então são abandonadas"],
+        ["Como tratar a falha de uma loja na corrente?", "exceptionally(e -> valorPadrao) ou handle((v, e) -> ...)"],
+        ["Qual o risco do String.format(\"%.2f\") no getPriceSync?", "Em locale pt-BR sai vírgula, e Double.parseDouble quebra; use Locale.US"]
+      ],
+      quiz: [
+        { tipo: 'multipla', pergunta: 'Quatro lojas, cada consulta leva 2 s. Quanto tempo leva a versão síncrona e a versão com CompletableFuture (feita do jeito certo)?',
+          opcoes: ['2 s e 8 s', '8 s e cerca de 2 s', '8 s e 8 s', '2 s e 2 s'],
+          correta: 1,
+          explicacao: 'Síncrono soma os tempos (4 × 2 s). Assíncrono dispara as quatro em paralelo e espera a mais lenta (cerca de 2 s).' },
+        { tipo: 'vf', pergunta: 'Com CompletableFuture.supplyAsync(supplier) é obrigatório criar um ExecutorService e chamar shutdown().',
+          correta: 1,
+          explicacao: 'Falso. Sem executor, ele usa o ForkJoinPool comum, com threads daemon, sem shutdown. O executor é opcional: supplyAsync(supplier, executor).' },
+        { tipo: 'multipla', pergunta: 'Qual a diferença entre join() e get() num CompletableFuture?',
+          opcoes: ['join não espera o resultado', 'join lança exceção unchecked (CompletionException); get lança exceções checked', 'get só existe no Future', 'join cancela a tarefa'],
+          correta: 1,
+          explicacao: 'Ambos bloqueiam até o resultado. O join não obriga try/catch, e por isso o professor o prefere, especialmente dentro de streams.' },
+        { tipo: 'multipla', pergunta: 'stores.stream().map(service::getPricesAsyncCompletableFuture).map(CompletableFuture::join).collect(toList()) com 4 lojas de 2 s leva cerca de:',
+          opcoes: ['2 s, porque é assíncrono', '8 s, porque o stream processa um elemento por vez: dispara e já espera', '0 s', 'Não compila'],
+          correta: 1,
+          explicacao: 'As operações intermediárias são lazy e passam cada elemento pelo pipeline inteiro. A solução são dois streams, com collect da lista de futures antes do join.' },
+        { tipo: 'multipla', pergunta: 'Na aula 242, para que serve o segundo argumento de Executors.newFixedThreadPool(10, r -> { ... })?',
+          opcoes: ['Definir o timeout das tarefas', 'É uma ThreadFactory: define como as threads são criadas (ali, daemon)', 'Definir a prioridade do pool', 'Tratar exceções'],
+          correta: 1,
+          explicacao: 'ThreadFactory é uma interface funcional (Thread newThread(Runnable)). O professor cria threads daemon para não segurarem o programa.' },
+        { tipo: 'vf', pergunta: 'Encadear com thenApply uma função que devolve CompletableFuture<String> resulta em CompletableFuture<CompletableFuture<String>>.',
+          correta: 0,
+          explicacao: 'Verdadeiro. Por isso existe o thenCompose, que achata o resultado (como o flatMap): CompletableFuture<String>.' },
+        { tipo: 'multipla', pergunta: 'Na corrente da aula 244, qual método dispara a chamada assíncrona de applyDiscount depois que o Quote está pronto?',
+          opcoes: ['thenApply', 'thenAccept', 'thenCompose', 'allOf'],
+          correta: 2,
+          explicacao: 'thenCompose(quote -> CompletableFuture.supplyAsync(() -> service.applyDiscount(quote))) encadeia outra operação assíncrona. O thenApply foi usado só para transformar a String em Quote.' },
+        { tipo: 'multipla', pergunta: 'Com anyOf sobre 4 lojas de tempos aleatórios, o que acontece no CompletableFutureTest05?',
+          opcoes: ['Espera todas e imprime as 4', 'Completa com a primeira que terminar; o programa acaba e só ela aparece', 'Lança exceção', 'Nunca termina'],
+          correta: 1,
+          explicacao: 'anyOf completa com o primeiro resultado. O main segue, termina, e as outras tarefas (em threads daemon do pool comum) são abandonadas. Com allOf, as 4 imprimiriam.' },
+        { tipo: 'discursiva', pergunta: 'Explique thenApply, thenCompose e thenAccept usando a corrente preço → Quote → desconto das aulas 243 a 245.',
+          explicacao: 'A corrente começa com supplyAsync(() -> service.getPriceSync(loja)), que devolve CompletableFuture<String> com "loja:preço:código". thenApply(Quote::newQuote) transforma o resultado quando ele chega: aplica uma Function comum e devolve CompletableFuture<Quote> (é o map). Em seguida, aplicar o desconto também é uma chamada remota demorada, então usamos thenCompose(quote -> CompletableFuture.supplyAsync(() -> service.applyDiscount(quote))): a função devolve outro CompletableFuture, e o thenCompose o achata em CompletableFuture<String> (é o flatMap; com thenApply ficaria CompletableFuture<CompletableFuture<String>>). Por fim, thenAccept(texto -> System.out.printf(...)) consome o resultado com um Consumer e devolve CompletableFuture<Void>. Tudo isso acontece em paralelo para cada loja, reduzindo de ~8 s para ~2 s, desde que se colete a lista de futures antes de esperar. É o mesmo que promise.then() no Guzzle ou no JavaScript.' },
+        { tipo: 'discursiva', pergunta: 'Compare allOf e anyOf: o que recebem, o que devolvem, quando completam, e dê um caso de uso para cada.',
+          explicacao: 'Os dois são métodos estáticos que recebem varargs de CompletableFuture (por isso o toArray(CompletableFuture[]::new) na aula 245). allOf devolve CompletableFuture<Void> e completa quando todos completarem (mesmo que algum termine com exceção). É usado quando você precisa de todos os resultados antes de seguir, como consultar todas as lojas para mostrar a tabela completa de preços. O tempo total é o da mais lenta, e os valores são lidos depois com join em cada future. anyOf devolve CompletableFuture<Object> e completa assim que o primeiro completar, com o valor dele. É usado quando várias fontes dão a mesma informação e basta a mais rápida, como a cotação do dólar em 5 provedores. anyOf não cancela os outros, que continuam rodando. Nos dois casos é preciso join() (ou outra espera), senão o main termina e as threads daemon do pool comum são abandonadas. Equivalem a Promise.all e Promise.any no JavaScript, ou Utils::all/any no Guzzle.' }
+      ]
+    };
+  </script>
+  <script src="../js/app.js"></script>
+</body>
+</html>
