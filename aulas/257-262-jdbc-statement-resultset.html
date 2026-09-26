@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>257–262 · JDBC: Statement</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="topo">
+      <a class="voltar" href="../index.html">← Todas as aulas</a>
+      <h1>257–262 · JDBC: Statement, Lombok, Log4J2 e ResultSet</h1>
+      <p>INSERT, DELETE e UPDATE com Statement e executeUpdate, camadas domínio/repositório/serviço, Lombok (@Value, @Builder, @Log4j2), Log4j 2, SELECT com executeQuery e ResultSet (findAll, findByName) · <a href="https://www.youtube.com/playlist?list=PL62G310vn6nFIsOCC0H-C2infYgwm8SWW" target="_blank" rel="noopener">playlist</a></p>
+    </header>
+
+    <nav class="abas">
+      <a href="#resumo">Resumo</a>
+      <a href="#flashcards">Flashcards</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#estudo">Material de estudo</a>
+    </nav>
+
+    <p class="aviso">Junta as aulas 257 (inserindo com Statement), 258 (Lombok e Log4J2), 259 (deletando), 260 (atualizando), 261 (findAll com ResultSet) e 262 (findByName). Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. O código (pacote <code>javacore.ZZIjdbc</code>: <code>ConnectionFactory</code>, <code>Producer</code>, <code>ProducerRepository</code>, <code>ProducerService</code>, <code>ConnectionFactoryTest01</code>, <code>log4j2.xml</code> e <code>pom.xml</code>) foi conferido no <a href="https://github.com/devdojobr/maratona-java-virado-no-jiraya" target="_blank" rel="noopener">repositório do professor</a>. Os itens marcados como "extra" não estão nos vídeos.</p>
+
+    <section id="resumo">
+      <h2>Resumo</h2>
+      <p>Com a conexão pronta, o bloco faz o <strong>CRUD</strong> da tabela <code>producer</code> com a forma mais simples do JDBC, o <strong><code>Statement</code></strong>: você monta o texto do SQL e manda executar. O código vai sendo organizado em <strong>camadas</strong> (domínio, repositório, serviço), ganha <strong>Lombok</strong> para acabar com getters/builders escritos na mão e <strong>Log4j 2</strong> no lugar do <code>System.out.println</code>. O professor avisa que esta forma é a introdução: montar SQL concatenando texto tem problemas graves, resolvidos com <code>PreparedStatement</code> nas aulas 268–269.</p>
+<pre><code>try (Connection conn = ConnectionFactory.getConnection();
+     Statement stmt = conn.createStatement()) {
+    int rows = stmt.executeUpdate("INSERT ... / UPDATE ... / DELETE ...");  // 257, 259, 260
+}
+try (Connection conn = ConnectionFactory.getConnection();
+     Statement stmt = conn.createStatement();
+     ResultSet rs = stmt.executeQuery("SELECT id, name FROM anime_store.producer")) { // 261
+    while (rs.next()) { rs.getInt("id"); rs.getString("name"); }
+}</code></pre>
+
+      <h3>257 · Inserindo dados com Statement</h3>
+<pre><code>public class ConnectionFactory {
+    public static Connection getConnection() throws SQLException {       // agora devolve a conexão
+        String url = "jdbc:mysql://localhost:3306/anime_store";
+        String username = "root";
+        String password = "root";
+        return DriverManager.getConnection(url, username, password);
+    }
+}
+
+public class ProducerRepository {
+    public static void save(Producer producer) {
+        String sql = "INSERT INTO `anime_store`.`producer` (`name`) VALUES ('%s');".formatted(producer.getName());
+        try (Connection conn = ConnectionFactory.getConnection();
+             Statement stmt = conn.createStatement()) {
+            int rowsAffected = stmt.executeUpdate(sql);
+            System.out.println(rowsAffected);                              // 1
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+Producer producer = Producer.ProducerBuilder.builder().name("NHK").build();
+ProducerRepository.save(producer);</code></pre>
+      <ul>
+        <li><strong>Domínio</strong> (pacote <code>dominio</code>): a classe <code>Producer</code> representa a tabela <code>producer</code>: <code>id</code> e <code>name</code>. Um builder (aula 246) cria os objetos.</li>
+        <li><strong>Repositório</strong> (pacote <code>repository</code>): a classe que conversa com o banco. O nome vem do mundo Spring; o padrão parecido é o <strong>DAO</strong> (<em>Data Access Object</em>). Métodos <code>static</code>, porque não usam nenhum atributo.</li>
+        <li><strong>Não lembra o SQL?</strong> O Workbench gera: clique com o botão direito na tabela, <em>Select Rows</em>, digite um valor novo, <em>Apply</em>, copie o SQL que ele mostra e cancele.</li>
+        <li><strong><code>conn.createStatement()</code></strong> cria o objeto que envia comandos ao banco. <strong><code>executeUpdate(sql)</code></strong> serve para tudo que <strong>altera</strong> o banco (INSERT, UPDATE, DELETE) e devolve o <strong>número de linhas afetadas</strong>.</li>
+        <li><strong>Conexão e Statement precisam ser fechados.</strong> Os dois são <code>AutoCloseable</code>, então vão no <strong>try-with-resources</strong> (aula 103) e fecham sozinhos, na ordem inversa. Por isso o <code>getConnection</code> passou a lançar a <code>SQLException</code> em vez de devolver <code>null</code>: se chegou no <code>try</code>, a conexão existe.</li>
+        <li><code>"...('%s');".formatted(valor)</code> (Java 15) é o <code>String.format</code> chamado direto na String. Para conferir o SQL montado, o professor usa o <strong>debug</strong> (breakpoint e <code>Shift+F9</code>).</li>
+      </ul>
+
+      <h3>258 · Lombok e Log4J2</h3>
+      <p>Duas dependências que "vão ajudar bastante no dia a dia".</p>
+<pre><code>&lt;dependency&gt;
+    &lt;groupId&gt;org.projectlombok&lt;/groupId&gt;
+    &lt;artifactId&gt;lombok&lt;/artifactId&gt;
+    &lt;version&gt;1.18.20&lt;/version&gt;
+    &lt;scope&gt;provided&lt;/scope&gt;          &lt;!-- só na compilação --&gt;
+&lt;/dependency&gt;
+&lt;dependency&gt;
+    &lt;groupId&gt;org.apache.logging.log4j&lt;/groupId&gt;
+    &lt;artifactId&gt;log4j-core&lt;/artifactId&gt;
+    &lt;version&gt;2.14.1&lt;/version&gt;          &lt;!-- VULNERÁVEL: veja o Atenção --&gt;
+&lt;/dependency&gt;
+
+@Value                 // classe final, atributos private final, getters, equals/hashCode/toString, construtor
+@Builder               // Producer.builder().id(1).name("NHK").build()
+public final class Producer {
+    private final Integer id;
+    private final String name;
+}</code></pre>
+      <ul>
+        <li><strong>Lombok</strong> gera código <strong>na compilação</strong> a partir de anotações: <code>@Getter</code>, <code>@Setter</code>, <code>@ToString</code>, <code>@EqualsAndHashCode</code>, <code>@Data</code>, <code>@Value</code> (classe imutável), <code>@Builder</code>... O site projectlombok.org tem um vídeo de 4 minutos. No IntelliJ é preciso ligar <em>Settings, Build, Compiler, Annotation Processors, Enable annotation processing</em>.</li>
+        <li>O <code>Producer</code> de 58 linhas virou 4. Para provar, o professor abre o <code>.class</code> compilado em <code>target/classes</code>: estão lá o construtor, <code>getId()</code>, <code>getName()</code>, <code>equals</code>, <code>hashCode</code>, <code>toString</code> e o <code>builder()</code>. Com <code>@Value</code>, o <code>private final</code> dos atributos é redundante (o IntelliJ avisa), mas ele deixa escrito para quem está começando.</li>
+        <li>O builder gerado muda a chamada: <strong><code>Producer.builder()</code></strong> em vez de <code>Producer.ProducerBuilder.builder()</code>.</li>
+        <li>Algumas empresas não gostam de Lombok. Para quem está aprendendo, se a empresa permite, "não tem por que não usar".</li>
+      </ul>
+      <p><strong>Log</strong>: em ambiente corporativo você nunca usa <code>System.out.println</code>. É ruim para o desempenho e não diz <strong>quando</strong>, em <strong>qual thread</strong> nem com que <strong>gravidade</strong> a mensagem aconteceu. O <code>@Log4j2</code> do Lombok cria o atributo <code>log</code>, e é preciso o <strong>Log4j 2</strong> no <code>pom.xml</code> e um arquivo de configuração em <code>src/main/resources/log4j2.xml</code>:</p>
+<pre><code>&lt;Configuration status="INFO"&gt;
+    &lt;Appenders&gt;
+        &lt;Console name="LogToConsole" target="SYSTEM_OUT"&gt;
+            &lt;PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{1.} - %msg%n"/&gt;
+        &lt;/Console&gt;
+    &lt;/Appenders&gt;
+    &lt;Loggers&gt;
+        &lt;!-- avoid duplicated logs with additivity=false --&gt;
+        &lt;Logger name="academy.devdojo" level="info" additivity="false"&gt;
+            &lt;AppenderRef ref="LogToConsole"/&gt;
+        &lt;/Logger&gt;
+        &lt;Root level="error"&gt;
+            &lt;AppenderRef ref="LogToConsole"/&gt;
+        &lt;/Root&gt;
+    &lt;/Loggers&gt;
+&lt;/Configuration&gt;
+
+@Log4j2
+public class ProducerRepository {
+    ...
+    log.info("Inserted producer in the database, rows affected '{}'", rowsAffected);
+}
+// 14:32:05.123 [main] INFO  a.d.m.j.Z.r.ProducerRepository - Inserted producer in the database, rows affected '1'</code></pre>
+      <ul>
+        <li><strong>Padrão da linha</strong>: <code>%d</code> hora, <code>[%t]</code> thread, <code>%-5level</code> nível, <code>%logger</code> classe, <code>%msg</code> mensagem. Na aula 259, <code>%logger{36}</code> virou <code>%logger{1.}</code>, que abrevia cada pacote para uma letra (<code>a.d.m.j.Z.r.ProducerRepository</code>), porque os nomes de classe já costumam ser únicos.</li>
+        <li><strong><code>{}</code></strong> é o marcador: <code>log.info("... '{}'", valor)</code> troca o <code>{}</code> pelo argumento (o professor gosta de pôr entre aspas simples para destacar o que é valor).</li>
+        <li><strong>Níveis</strong>, do mais detalhado ao mais grave: <code>trace</code>, <code>debug</code>, <code>info</code>, <code>warn</code>, <code>error</code>, <code>fatal</code>. O <code>level="info"</code> do logger mostra <code>info</code> para cima. Trocando para <code>debug</code>, aparece muito mais coisa. Em produção geralmente fica <code>info</code> e sem <code>debug</code>, que pode conter dados sensíveis. Localmente, <code>debug</code> ajuda.</li>
+        <li>Em produção muitas vezes você <strong>não tem acesso</strong> ao código em execução, só ao log. Por isso mensagens informativas ("inserido produtor X, linhas afetadas 1") valem ouro.</li>
+        <li>Existem outras bibliotecas (Logback, SLF4J), cada uma com seu arquivo de configuração.</li>
+      </ul>
+
+      <h3>259 · Deletando dados e a camada de serviço</h3>
+<pre><code>public static void delete(int id) {
+    String sql = "DELETE FROM `anime_store`.`producer` WHERE (`id` = '%d');".formatted(id);
+    try (Connection conn = ConnectionFactory.getConnection();
+         Statement stmt = conn.createStatement()) {
+        int rowsAffected = stmt.executeUpdate(sql);
+        log.info("Deleted producer '{}' from the database, rows affected '{}' ", id, rowsAffected);
+    } catch (SQLException e) {
+        log.error("Error while trying to delete producer '{}'", id, e);   // a exceção vai por último
+    }
+}
+
+public class ProducerService {                       // regras de negócio
+    public static void save(Producer producer) { ProducerRepository.save(producer); }
+    public static void delete(int id) {
+        if (id &lt;= 0) throw new IllegalArgumentException("Invalid value for id");
+        ProducerRepository.delete(id);
+    }
+}
+
+// no main: ProducerService.delete(5);   (não mais o repositório direto)</code></pre>
+      <ul>
+        <li>O <code>e.printStackTrace()</code> virou <code>log.error("mensagem '{}'", valor, e)</code>. Passando a exceção como <strong>último argumento</strong>, o Log4j imprime a pilha junto.</li>
+        <li><strong>Camadas</strong>: <code>Producer</code> é o domínio (a tabela), <code>ProducerRepository</code> fala com o banco, <code>ProducerService</code> tem as <strong>regras de negócio</strong> (id não pode ser ≤ 0, porque a chave auto incrementada nunca é negativa) e o <code>main</code> faz o papel da tela (a <em>view</em>). O professor compara com o MVC. A vantagem: mudanças no repositório não obrigam a mexer em quem chama, desde que o "contrato" (os métodos) se mantenha.</li>
+        <li>O <em>auto increment</em> não reaproveita ids apagados: depois de deletar o 11, o próximo inserido é o 12. "É normal, não precisa se preocupar."</li>
+      </ul>
+
+      <h3>260 · Atualizando dados</h3>
+<pre><code>public static void update(Producer producer) {
+    String sql = "UPDATE `anime_store`.`producer` SET `name` = '%s ' WHERE (`id` = '%d');"
+            .formatted(producer.getName(), producer.getId());
+    ...
+    log.info("Updated producer '{}', rows affected '{}' ", producer.getId(), rowsAffected);
+}
+
+public class ProducerService {
+    public static void delete(Integer id) { requireValidId(id); ProducerRepository.delete(id); }
+    public static void update(Producer producer) { requireValidId(producer.getId()); ProducerRepository.update(producer); }
+
+    private static void requireValidId(Integer id) {            // regra reaproveitada
+        if (id == null || id &lt;= 0) throw new IllegalArgumentException("Invalid value for id");
+    }
+}
+
+Producer producerToUpdate = Producer.builder().id(1).name("MADHOUSE").build();
+ProducerService.update(producerToUpdate);</code></pre>
+      <ul>
+        <li>Normalmente o <code>id</code> nunca é alterado, só os outros campos (aqui, o <code>name</code>).</li>
+        <li><strong>Nunca esqueça o <code>WHERE</code></strong>. O professor conta o caso de um órgão público em que alguém rodou um UPDATE sem WHERE e alterou milhões de registros. A dica: comece a escrever já com o <code>WHERE</code>, porque "isso pode destruir uma empresa".</li>
+        <li><strong>Não coloque dados que identificam pessoas no log</strong> (<em>PII, personally identifiable information</em>): nome, e-mail, CPF. Logue o <code>id</code>.</li>
+        <li>A validação repetida virou o método privado <code>requireValidId</code>, que também trata <code>null</code> (por isso <code>int</code> virou <code>Integer</code>).</li>
+      </ul>
+
+      <h3>261 · Buscando dados com ResultSet: findAll</h3>
+<pre><code>public static List&lt;Producer&gt; findAll() {
+    log.info("Finding all Producers");
+    String sql = "SELECT id, name FROM anime_store.producer;";
+    List&lt;Producer&gt; producers = new ArrayList&lt;&gt;();
+    try (Connection conn = ConnectionFactory.getConnection();
+         Statement stmt = conn.createStatement();
+         ResultSet rs = stmt.executeQuery(sql)) {          // ResultSet também é fechado
+        while (rs.next()) {                                 // avança o cursor; false no fim
+            Producer producer = Producer
+                    .builder()
+                    .id(rs.getInt("id"))
+                    .name(rs.getString("name"))
+                    .build();
+            producers.add(producer);
+        }
+    } catch (SQLException e) {
+        log.error("Error while trying to find all producers", e);
+    }
+    return producers;                                       // lista vazia, nunca null
+}
+
+List&lt;Producer&gt; producers = ProducerService.findAll();
+log.info("Producers found '{}'", producers);
+// Producers found '[Producer(id=1, name=MADHOUSE), Producer(id=2, name=NHK), ...]'</code></pre>
+      <ul>
+        <li><strong><code>executeQuery(sql)</code></strong> é para SELECT e devolve um <strong><code>ResultSet</code></strong>. <code>executeUpdate</code> é para o que altera.</li>
+        <li>O <code>ResultSet</code> tem um <strong>cursor</strong> que começa <strong>antes da primeira linha</strong>. Cada <code>rs.next()</code> avança uma linha e devolve <code>true</code>; no fim, <code>false</code>. Por isso o <code>while (rs.next())</code>, parecido com o <code>Iterator</code> (aula 174).</li>
+        <li><strong>Lendo colunas</strong>: <code>rs.getInt(...)</code>, <code>rs.getString(...)</code>, <code>getDouble</code>, <code>getDate</code>... O argumento pode ser o <strong>índice</strong> (começando em <strong>1</strong>, "como se já não fosse confuso o suficiente") ou o <strong>nome</strong> da coluna. O professor prefere o nome, por ser mais explícito, e por isso escreve <code>SELECT id, name</code> em vez de <code>SELECT *</code>. A IBM tem uma tabela de tipos SQL e seus equivalentes em Java (<code>INT</code> → <code>int</code>, <code>VARCHAR</code> → <code>String</code>...).</li>
+        <li>Cada linha vira um objeto e vai para a lista. O <code>ArrayList</code> aceita duplicados, então cuidado.</li>
+        <li><strong>Retorne lista vazia, não <code>null</code></strong>: "tratar nulo é um saco", e uma coleção vazia funciona em qualquer <code>for</code>.</li>
+        <li>Um <code>SELECT</code> sem filtro em produção pode trazer a tabela inteira. Use com cuidado.</li>
+      </ul>
+
+      <h3>262 · findByName</h3>
+<pre><code>public static List&lt;Producer&gt; findAll() {
+    log.info("Finding all Producers");
+    return findByName("");                                  // LIKE '%%' = todos
+}
+
+public static List&lt;Producer&gt; findByName(String name) {
+    log.info("Finding Producer by name");
+    String sql = "SELECT * FROM anime_store.producer where name like '%%%s%%';"
+            .formatted(name);                               // %% vira %, %s vira o nome
+    ... // o mesmo while (rs.next()) do findAll
+}
+
+ProducerService.findByName("Mad");   // → '%Mad%' → Madhouse, MADHOUSE...</code></pre>
+      <ul>
+        <li><strong><code>LIKE '%texto%'</code></strong>: <code>%</code> é o curinga do SQL ("qualquer coisa"). <code>'%%'</code> casa com tudo.</li>
+        <li>No <code>formatted</code>, <code>%</code> é caractere especial, então para ter um <code>%</code> literal escreve-se <strong><code>%%</code></strong>: <code>'%%%s%%'</code> vira <code>'%Mad%'</code>. O professor tentou <code>\%</code> e concatenação antes de acertar.</li>
+        <li><strong>Reaproveitamento</strong>: <code>findAll</code> virou <code>findByName("")</code> e o código do <code>while</code> ficou num lugar só.</li>
+        <li>Outra ideia citada: guardar os SQLs numa classe separada ou num arquivo de propriedades.</li>
+      </ul>
+
+      <h3>Atenção</h3>
+      <ul>
+        <li><strong>SQL injection</strong> (extra, e o grande problema deste bloco): montar SQL com <code>formatted</code>/concatenação deixa o <strong>texto do usuário virar SQL</strong>. Um <code>findByName("x' OR 1=1 -- ")</code> gera <code>... like '%x' OR 1=1 -- %'</code> e devolve <strong>todos</strong> os registros; algo como <code>"'; DROP TABLE ..."</code> pode ser pior. Um nome legítimo com apóstrofo (<code>Kyoto's Animation</code>) quebra o SQL com erro de sintaxe. A solução é o <strong><code>PreparedStatement</code></strong> com <code>?</code>, das aulas 268–269, e em código real ele é obrigatório.</li>
+        <li><strong>Correção: o UPDATE do repositório tem um espaço sobrando</strong>, <code>SET `name` = '%s '</code>. O nome é gravado como <code>"MADHOUSE "</code>, com espaço no fim, o que quebra comparações com <code>=</code>. O certo é <code>'%s'</code>.</li>
+        <li><strong>Correção de segurança: Log4j 2.14.1 é vulnerável ao Log4Shell</strong> (CVE-2021-44228, descoberto em dezembro de 2021, meses depois da gravação). Uma mensagem de log com <code>${jndi:ldap://...}</code> permitia a um atacante executar código no servidor. Use a versão <strong>2.17.1 ou mais nova</strong> (a prática usa 2.24.x) e acrescente também <code>log4j-api</code>.</li>
+        <li><strong><code>executeUpdate</code> × <code>executeQuery</code></strong>: o primeiro altera e devolve <code>int</code> (linhas afetadas); o segundo lê e devolve <code>ResultSet</code>.</li>
+        <li><strong>Feche <code>Connection</code>, <code>Statement</code> e <code>ResultSet</code></strong>, sempre com try-with-resources.</li>
+        <li><strong>Índice de coluna começa em 1</strong>, não em 0.</li>
+        <li><strong>Extra: <code>'%d'</code> com aspas no DELETE</strong> funciona no MySQL (ele converte o texto para número), mas o correto para número é sem aspas.</li>
+        <li><strong>Extra: com Lombok, o IntelliJ precisa do plugin</strong> (já vem nas versões recentes) e do <em>annotation processing</em> ligado. No Maven, o Lombok no <code>pom.xml</code> já basta.</li>
+      </ul>
+
+      <h3>Paralelo com PHP</h3>
+      <ul>
+        <li><strong><code>Statement</code> ≈ <code>$pdo-&gt;exec($sql)</code> / <code>$pdo-&gt;query($sql)</code></strong>: <code>exec</code> devolve as linhas afetadas (o <code>executeUpdate</code>); <code>query</code> devolve um <code>PDOStatement</code> que você percorre com <code>while ($row = $stmt-&gt;fetch())</code> (o <code>while (rs.next())</code>). E o mesmo alerta vale: <code>"... VALUES ('$nome')"</code> no PHP é a mesma injeção de SQL. O PHP também resolve com <code>prepare</code> + <code>?</code>/<code>:nome</code>.</li>
+        <li><strong>Camadas</strong>: o <code>ProducerRepository</code> é o que o Eloquent faz por você (<code>Producer::create</code>, <code>-&gt;update()</code>, <code>-&gt;delete()</code>, <code>Producer::all()</code>, <code>where('name', 'like', "%$nome%")-&gt;get()</code>), e o Query Builder já usa <em>bindings</em>, sem injeção. O <code>ProducerService</code> com <code>requireValidId</code> é o seu <em>Service</em>/<em>Action</em> ou as <em>Form Requests</em> de validação do Laravel.</li>
+        <li><strong>Lombok ≈ o que o PHP 8 faz na linguagem</strong>: <em>constructor promotion</em> + <code>readonly</code> dão a classe imutável do <code>@Value</code> sem gerar código. Getters/setters mágicos lembram os <em>accessors</em> do Eloquent.</li>
+        <li><strong>Log4j 2 ≈ Monolog</strong> (o <code>Log::info('Inserted producer', ['rows' =&gt; $rows])</code> do Laravel): os mesmos níveis (debug, info, warning, error), canais (<code>config/logging.php</code> ≈ <code>log4j2.xml</code>) e contexto no lugar de <code>{}</code>.</li>
+      </ul>
+    </section>
+
+    <section id="flashcards">
+      <h2>Flashcards</h2>
+      <p style="color:var(--muted);margin-top:-6px">Toque no cartão para virar.</p>
+      <div id="flashcards-app"></div>
+    </section>
+
+    <section id="quiz">
+      <h2>Quiz</h2>
+      <div id="quiz-app"></div>
+    </section>
+
+    <section id="estudo">
+      <h2>Material de estudo</h2>
+
+      <h3>Mapa mental</h3>
+<pre><code>JDBC com Statement (257–262)
+├── Camadas
+│   ├── dominio: Producer (@Value @Builder) = tabela producer
+│   ├── repository: ProducerRepository (fala com o banco)
+│   ├── service: ProducerService (regras: requireValidId)
+│   └── test/main: faz o papel da tela
+├── Alterar (257, 259, 260): conn.createStatement() → executeUpdate(sql) → int linhas
+│   ├── INSERT ... VALUES ('%s') · DELETE ... WHERE id = %d · UPDATE ... SET ... WHERE
+│   └── try-with-resources fecha Connection e Statement
+├── Ler (261–262): executeQuery(sql) → ResultSet
+│   ├── cursor antes da 1ª linha · while (rs.next())
+│   ├── rs.getInt("id") / getString("name") (ou índice a partir de 1)
+│   ├── lista vazia, não null
+│   └── LIKE '%%%s%%' → '%texto%' · findAll = findByName("")
+├── Lombok (258): @Value · @Builder · @Log4j2 · annotation processing
+└── Log4j 2 (258–259): log4j2.xml em resources · {} · níveis trace→fatal
+    └── log.error("msg '{}'", valor, e) · sem PII · 2.14.1 = Log4Shell!
+⚠ Statement + formatted = SQL injection → PreparedStatement (268)</code></pre>
+
+      <h3>Prática no seu WSL (30 minutos)</h3>
+      <p>Continua o projeto <code>~/java-lab-jdbc</code> da página 252–256 (MySQL no Docker e tabela <code>producer</code>). Primeiro, zere a tabela para os ids começarem em 1:</p>
+<pre><code>cd ~/java-lab-jdbc
+docker compose up -d
+docker exec mysql mysql -uroot -proot -e "DELETE FROM anime_store.anime; DELETE FROM anime_store.producer; ALTER TABLE anime_store.producer AUTO_INCREMENT = 1;"
+
+# pom.xml: acrescente dentro de &lt;dependencies&gt;
+#   &lt;dependency&gt;&lt;groupId&gt;org.projectlombok&lt;/groupId&gt;&lt;artifactId&gt;lombok&lt;/artifactId&gt;&lt;version&gt;1.18.34&lt;/version&gt;&lt;scope&gt;provided&lt;/scope&gt;&lt;/dependency&gt;
+#   &lt;dependency&gt;&lt;groupId&gt;org.apache.logging.log4j&lt;/groupId&gt;&lt;artifactId&gt;log4j-api&lt;/artifactId&gt;&lt;version&gt;2.24.3&lt;/version&gt;&lt;/dependency&gt;
+#   &lt;dependency&gt;&lt;groupId&gt;org.apache.logging.log4j&lt;/groupId&gt;&lt;artifactId&gt;log4j-core&lt;/artifactId&gt;&lt;version&gt;2.24.3&lt;/version&gt;&lt;/dependency&gt;
+
+cat > src/main/resources/log4j2.xml &lt;&lt;'EOF'
+&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;Configuration status="WARN"&gt;
+    &lt;Appenders&gt;
+        &lt;Console name="LogToConsole" target="SYSTEM_OUT"&gt;
+            &lt;PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{1.} - %msg%n"/&gt;
+        &lt;/Console&gt;
+    &lt;/Appenders&gt;
+    &lt;Loggers&gt;
+        &lt;Logger name="academy.devdojo" level="info" additivity="false"&gt;
+            &lt;AppenderRef ref="LogToConsole"/&gt;
+        &lt;/Logger&gt;
+        &lt;Root level="error"&gt;&lt;AppenderRef ref="LogToConsole"/&gt;&lt;/Root&gt;
+    &lt;/Loggers&gt;
+&lt;/Configuration&gt;
+EOF
+
+J=src/main/java/academy/devdojo/maratonajava/javacore/ZZIjdbc
+mkdir -p $J/dominio $J/repository $J/service
+
+cat > $J/dominio/Producer.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.ZZIjdbc.dominio;
+
+import lombok.Builder;
+import lombok.Value;
+
+@Value
+@Builder
+public class Producer {
+    Integer id;
+    String name;
+}
+EOF
+
+cat > $J/repository/ProducerRepository.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.ZZIjdbc.repository;
+
+import academy.devdojo.maratonajava.javacore.ZZIjdbc.conn.ConnectionFactory;
+import academy.devdojo.maratonajava.javacore.ZZIjdbc.dominio.Producer;
+import lombok.extern.log4j.Log4j2;
+
+import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
+
+@Log4j2
+public class ProducerRepository {
+    public static void save(Producer producer) {
+        String sql = "INSERT INTO anime_store.producer (name) VALUES ('%s');".formatted(producer.getName());
+        executeUpdate(sql, "Inserted producer", producer.getName());
+    }
+
+    public static void delete(int id) {
+        executeUpdate("DELETE FROM anime_store.producer WHERE id = %d;".formatted(id), "Deleted producer", id);
+    }
+
+    public static void update(Producer producer) {         // sem o espaço sobrando do repositório
+        String sql = "UPDATE anime_store.producer SET name = '%s' WHERE id = %d;"
+                .formatted(producer.getName(), producer.getId());
+        executeUpdate(sql, "Updated producer", producer.getId());
+    }
+
+    public static List&lt;Producer&gt; findAll() {
+        return findByName("");
+    }
+
+    public static List&lt;Producer&gt; findByName(String name) {
+        String sql = "SELECT id, name FROM anime_store.producer WHERE name LIKE '%%%s%%' ORDER BY id;".formatted(name);
+        List&lt;Producer&gt; producers = new ArrayList&lt;&gt;();
+        try (Connection conn = ConnectionFactory.getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                producers.add(Producer.builder().id(rs.getInt("id")).name(rs.getString("name")).build());
+            }
+        } catch (SQLException e) {
+            log.error("Error while trying to find producers by name", e);
+        }
+        return producers;
+    }
+
+    private static void executeUpdate(String sql, String message, Object value) {
+        try (Connection conn = ConnectionFactory.getConnection();
+             Statement stmt = conn.createStatement()) {
+            int rowsAffected = stmt.executeUpdate(sql);
+            log.info("{} '{}', rows affected '{}'", message, value, rowsAffected);
+        } catch (SQLException e) {
+            log.error("Error: {} '{}' - {}", message, value, e.getClass().getSimpleName());
+        }
+    }
+}
+EOF
+
+cat > $J/service/ProducerService.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.ZZIjdbc.service;
+
+import academy.devdojo.maratonajava.javacore.ZZIjdbc.dominio.Producer;
+import academy.devdojo.maratonajava.javacore.ZZIjdbc.repository.ProducerRepository;
+import java.util.List;
+
+public class ProducerService {
+    public static void save(Producer producer) { ProducerRepository.save(producer); }
+    public static void delete(Integer id) { requireValidId(id); ProducerRepository.delete(id); }
+    public static void update(Producer producer) { requireValidId(producer.getId()); ProducerRepository.update(producer); }
+    public static List&lt;Producer&gt; findAll() { return ProducerRepository.findAll(); }
+    public static List&lt;Producer&gt; findByName(String name) { return ProducerRepository.findByName(name); }
+
+    private static void requireValidId(Integer id) {
+        if (id == null || id &lt;= 0) throw new IllegalArgumentException("Invalid value for id");
+    }
+}
+EOF
+
+cat > $J/test/ProducerStatementTest01.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.ZZIjdbc.test;
+
+import academy.devdojo.maratonajava.javacore.ZZIjdbc.dominio.Producer;
+import academy.devdojo.maratonajava.javacore.ZZIjdbc.service.ProducerService;
+import lombok.extern.log4j.Log4j2;
+
+@Log4j2
+public class ProducerStatementTest01 {
+    public static void main(String[] args) {
+        ProducerService.save(Producer.builder().name("NHK").build());
+        ProducerService.save(Producer.builder().name("Studio Deen").build());
+        ProducerService.save(Producer.builder().name("Madhouse").build());
+        log.info("findAll: {}", ProducerService.findAll());
+
+        ProducerService.update(Producer.builder().id(1).name("MADHOUSE").build());
+        ProducerService.delete(2);
+        log.info("findByName(mad): {}", ProducerService.findByName("mad"));
+
+        log.info("injeção: {}", ProducerService.findByName("xyz' OR 1=1 -- "));  // não devia achar nada
+        ProducerService.save(Producer.builder().name("Kyoto's Animation").build()); // o apóstrofo quebra o SQL
+
+        try {
+            ProducerService.delete(0);
+        } catch (IllegalArgumentException e) {
+            log.warn("serviço barrou: {}", e.getMessage());
+        }
+    }
+}
+EOF
+
+mvn -q compile
+mvn -q dependency:build-classpath -Dmdep.outputFile=cp.txt
+java -cp target/classes:$(cat cp.txt) academy.devdojo.maratonajava.javacore.ZZIjdbc.test.ProducerStatementTest01</code></pre>
+      <details>
+        <summary>Ver a saída esperada (os horários mudam)</summary>
+<pre><code>hh:mm:ss.SSS [main] INFO  a.d.m.j.Z.r.ProducerRepository - Inserted producer 'NHK', rows affected '1'
+hh:mm:ss.SSS [main] INFO  a.d.m.j.Z.r.ProducerRepository - Inserted producer 'Studio Deen', rows affected '1'
+hh:mm:ss.SSS [main] INFO  a.d.m.j.Z.r.ProducerRepository - Inserted producer 'Madhouse', rows affected '1'
+hh:mm:ss.SSS [main] INFO  a.d.m.j.Z.t.ProducerStatementTest01 - findAll: [Producer(id=1, name=NHK), Producer(id=2, name=Studio Deen), Producer(id=3, name=Madhouse)]
+hh:mm:ss.SSS [main] INFO  a.d.m.j.Z.r.ProducerRepository - Updated producer '1', rows affected '1'
+hh:mm:ss.SSS [main] INFO  a.d.m.j.Z.r.ProducerRepository - Deleted producer '2', rows affected '1'
+hh:mm:ss.SSS [main] INFO  a.d.m.j.Z.t.ProducerStatementTest01 - findByName(mad): [Producer(id=1, name=MADHOUSE), Producer(id=3, name=Madhouse)]
+hh:mm:ss.SSS [main] INFO  a.d.m.j.Z.t.ProducerStatementTest01 - injeção: [Producer(id=1, name=MADHOUSE), Producer(id=3, name=Madhouse)]
+hh:mm:ss.SSS [main] ERROR a.d.m.j.Z.r.ProducerRepository - Error: Inserted producer 'Kyoto's Animation' - SQLSyntaxErrorException
+hh:mm:ss.SSS [main] WARN  a.d.m.j.Z.t.ProducerStatementTest01 - serviço barrou: Invalid value for id</code></pre>
+      </details>
+      <p>O <code>findByName("mad")</code> encontra <code>MADHOUSE</code> e <code>Madhouse</code> porque a comparação padrão do MySQL não diferencia maiúsculas. A linha "injeção" é o alerta do bloco: um texto que não bate com nenhum nome devolveu a tabela inteira.</p>
+      <p><strong>Exercícios:</strong></p>
+      <ol>
+        <li>Volte o UPDATE para <code>'%s '</code>, como no repositório, rode e confira no banco com <code>SELECT CONCAT('[', name, ']') FROM anime_store.producer</code>. Onde aparece o espaço?</li>
+        <li>Troque o nível do logger <code>academy.devdojo</code> para <code>debug</code> e depois para <code>warn</code>. O que some e o que aparece?</li>
+        <li>Remova o <code>WHERE</code> do UPDATE (num banco de teste!) e veja quantas linhas foram afetadas.</li>
+        <li>Leia as colunas pelo índice (<code>rs.getInt(1)</code>, <code>rs.getString(2)</code>) e depois tente <code>rs.getInt(0)</code>. Qual exceção aparece?</li>
+        <li>Abra <code>target/classes/.../Producer.class</code> no IntelliJ (ou rode <code>javap -p</code> nele) e liste os métodos que o Lombok gerou.</li>
+      </ol>
+
+      <h3>Glossário</h3>
+      <ul>
+        <li><strong>CRUD</strong>: Create, Read, Update, Delete, as quatro operações básicas.</li>
+        <li><strong><code>Statement</code></strong>: objeto JDBC que executa um SQL em texto.</li>
+        <li><strong><code>executeUpdate</code></strong>: executa INSERT/UPDATE/DELETE e devolve as linhas afetadas.</li>
+        <li><strong><code>executeQuery</code></strong>: executa SELECT e devolve um <code>ResultSet</code>.</li>
+        <li><strong><code>ResultSet</code></strong>: resultado de uma consulta, lido com um cursor (<code>next()</code>).</li>
+        <li><strong>Repositório / DAO</strong>: camada que concentra o acesso ao banco.</li>
+        <li><strong>Camada de serviço</strong>: onde ficam as regras de negócio, entre a tela e o repositório.</li>
+        <li><strong>Lombok</strong>: biblioteca que gera código repetitivo em tempo de compilação por anotações.</li>
+        <li><strong>Annotation processing</strong>: etapa do compilador que processa anotações e gera código.</li>
+        <li><strong>Log4j 2</strong>: biblioteca de log da Apache; configurada por <code>log4j2.xml</code>.</li>
+        <li><strong>Nível de log</strong>: gravidade da mensagem (trace, debug, info, warn, error, fatal).</li>
+        <li><strong>PII</strong>: informação que identifica uma pessoa; não vai para o log.</li>
+        <li><strong>SQL injection</strong>: ataque em que a entrada do usuário altera o SQL executado.</li>
+        <li><strong>Log4Shell</strong>: falha crítica (CVE-2021-44228) do Log4j 2 até a 2.14.1.</li>
+      </ul>
+
+      <h3>Revisão espaçada</h3>
+      <ul class="revisao">
+        <li><span class="dia">Dia 1</span><span>Todos os flashcards + a prática com previsões.</span></li>
+        <li><span class="dia">Dia 3</span><span>Quiz + exercícios 1 a 3.</span></li>
+        <li><span class="dia">Dia 7</span><span>Exercícios 4 e 5 + reescrever de memória o <code>findByName</code> com try-with-resources e <code>while (rs.next())</code>.</span></li>
+        <li><span class="dia">Dia 14</span><span>Flashcards que errou + questões discursivas + explicar em voz alta por que o <code>Statement</code> abre espaço para SQL injection.</span></li>
+      </ul>
+
+      <h3>Para aprofundar</h3>
+      <ul>
+        <li>Como o <code>PreparedStatement</code> (aula 268) separa o SQL dos valores, e por que isso impede a injeção?</li>
+        <li>O que é o padrão DAO e como o Spring Data gera repositórios a partir de uma interface?</li>
+        <li>O que o <code>@Data</code> do Lombok gera a mais que o <code>@Value</code>, e por que <code>@Data</code> em entidades JPA pode dar problema?</li>
+        <li>SLF4J: por que muitas bibliotecas logam por uma "fachada" em vez de chamar o Log4j direto?</li>
+        <li>Como a Apache corrigiu o Log4Shell e o que mudou em <code>lookups</code> nas versões 2.15 a 2.17?</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    window.AULA = {
+      flashcards: [
+        ["Como se cria um Statement?", "A partir da conexão: conn.createStatement()"],
+        ["Para que serve executeUpdate?", "Executar INSERT, UPDATE ou DELETE; devolve o número de linhas afetadas"],
+        ["Para que serve executeQuery?", "Executar SELECT; devolve um ResultSet"],
+        ["Por que Connection e Statement vão no try-with-resources?", "Precisam ser fechados; sendo AutoCloseable, o try fecha sozinho (na ordem inversa)"],
+        ["Por que getConnection passou a lançar SQLException?", "Para nunca devolver null: se entrou no try, a conexão existe"],
+        ["Qual o papel de cada camada: Producer, ProducerRepository, ProducerService?", "Domínio (a tabela), acesso ao banco e regras de negócio"],
+        ["O que @Value do Lombok gera?", "Classe final, atributos private final, getters, equals, hashCode, toString e construtor com todos os campos"],
+        ["O que @Builder gera?", "Um builder: Producer.builder().id(1).name(\"NHK\").build()"],
+        ["O que @Log4j2 do Lombok faz?", "Cria o atributo estático log (um Logger do Log4j 2)"],
+        ["O que é preciso ligar no IntelliJ para o Lombok funcionar?", "Annotation processing (Settings > Build > Compiler > Annotation Processors)"],
+        ["Por que não usar System.out.println em produção?", "Desempenho ruim e sem hora, thread nem nível da mensagem"],
+        ["Onde fica a configuração do Log4j 2?", "src/main/resources/log4j2.xml"],
+        ["Para que serve {} numa mensagem de log?", "É o marcador substituído pelos argumentos: log.info(\"linhas '{}'\", rows)"],
+        ["Quais os níveis de log?", "trace, debug, info, warn, error, fatal"],
+        ["Como logar uma exceção com a pilha?", "Passá-la como último argumento: log.error(\"msg '{}'\", id, e)"],
+        ["O que %logger{1.} faz no padrão?", "Abrevia cada pacote para uma letra: a.d.m.j.Z.r.ProducerRepository"],
+        ["O que não deve ir para o log?", "Dados que identificam pessoas (PII); logue o id"],
+        ["Qual a regra de ouro do UPDATE e do DELETE?", "Nunca esquecer o WHERE (comece a escrever por ele)"],
+        ["Onde começa o cursor do ResultSet?", "Antes da primeira linha; cada next() avança e devolve false no fim"],
+        ["Como ler colunas do ResultSet?", "rs.getInt(\"id\"), rs.getString(\"name\") ou pelo índice, que começa em 1"],
+        ["O que devolver quando a busca não acha nada?", "Uma lista vazia, nunca null"],
+        ["Como escrever % literal num formatted?", "%%: '%%%s%%' vira '%texto%'"],
+        ["Qual o erro do UPDATE no repositório?", "'%s ' grava o nome com um espaço no fim"],
+        ["Qual o risco de montar SQL com formatted?", "SQL injection: o texto do usuário vira SQL (resolvido com PreparedStatement)"],
+        ["Por que não usar Log4j 2.14.1?", "É vulnerável ao Log4Shell (CVE-2021-44228); use 2.17.1 ou mais nova"]
+      ],
+      quiz: [
+        { tipo: 'multipla', pergunta: 'Qual método do Statement se usa para um INSERT e o que ele devolve?',
+          opcoes: ['executeQuery, um ResultSet', 'executeUpdate, o número de linhas afetadas', 'execute, sempre true', 'executeInsert, o id gerado'],
+          correta: 1,
+          explicacao: 'executeUpdate serve para tudo que altera (INSERT, UPDATE, DELETE) e devolve um int com as linhas afetadas. executeQuery é para SELECT.' },
+        { tipo: 'vf', pergunta: 'Com try-with-resources, Connection e Statement são fechados automaticamente, mesmo se ocorrer uma SQLException.',
+          correta: 0,
+          explicacao: 'Verdadeiro. Os dois são AutoCloseable; o try fecha os recursos em ordem inversa à criação, com ou sem exceção.' },
+        { tipo: 'multipla', pergunta: 'O que a anotação @Value do Lombok gera no Producer?',
+          opcoes: ['Só os getters', 'Classe imutável: final, atributos private final, getters, equals/hashCode/toString e construtor', 'Getters e setters', 'Uma tabela no banco'],
+          correta: 1,
+          explicacao: '@Value é para classes imutáveis. Setters não existem. Junto com @Builder, a criação fica Producer.builder()...build().' },
+        { tipo: 'multipla', pergunta: 'Com o logger academy.devdojo em level="info", qual chamada NÃO aparece no console?',
+          opcoes: ['log.info(...)', 'log.warn(...)', 'log.error(...)', 'log.debug(...)'],
+          correta: 3,
+          explicacao: 'O nível info mostra info, warn, error e fatal. debug e trace ficam de fora, o que é bom em produção, porque o debug pode conter dados sensíveis.' },
+        { tipo: 'multipla', pergunta: 'Onde o cursor de um ResultSet recém-criado está posicionado?',
+          opcoes: ['Na primeira linha', 'Antes da primeira linha', 'Na última linha', 'Em lugar nenhum até chamar first()'],
+          correta: 1,
+          explicacao: 'Por isso o padrão é while (rs.next()): o primeiro next() move para a primeira linha e devolve true; no fim, devolve false.' },
+        { tipo: 'vf', pergunta: 'rs.getString(0) lê a primeira coluna do ResultSet.',
+          correta: 1,
+          explicacao: 'Falso. O índice de coluna no JDBC começa em 1. O professor prefere usar o nome (rs.getString("name")) por ser explícito.' },
+        { tipo: 'multipla', pergunta: 'Qual SQL gera "SELECT * FROM anime_store.producer where name like \'%%%s%%\';".formatted("Mad")?',
+          opcoes: ["... like '%%Mad%%'", "... like '%Mad%'", "... like 'Mad'", 'Lança exceção'],
+          correta: 1,
+          explicacao: 'No formatted, %% vira um % literal e %s vira o argumento. O resultado é o curinga do LIKE: tudo que contém "Mad".' },
+        { tipo: 'multipla', pergunta: 'O que acontece com findByName("xyz\' OR 1=1 -- ") no repositório feito com Statement e formatted?',
+          opcoes: ['Não encontra nada', 'Lança exceção sempre', 'Devolve todos os produtores: o texto virou parte do SQL (SQL injection)', 'Procura o nome literal com aspas'],
+          correta: 2,
+          explicacao: "O SQL vira ... like '%xyz' OR 1=1 -- %'. O OR 1=1 é sempre verdadeiro e o -- comenta o resto. A correção é o PreparedStatement com ? (aula 268)." },
+        { tipo: 'discursiva', pergunta: 'Descreva as camadas montadas nas aulas 257 a 260 (domínio, repositório, serviço e teste) e o que ganhamos separando assim.',
+          explicacao: 'Domínio: Producer, a representação da tabela producer (id, name), imutável com @Value e criada com @Builder. Repositório: ProducerRepository, a única classe que conversa com o banco. Abre a conexão pela ConnectionFactory, cria o Statement e executa SQL (save/delete/update com executeUpdate; findAll/findByName com executeQuery e ResultSet), sempre com try-with-resources e logando com Log4j 2. Serviço: ProducerService, com as regras de negócio, como requireValidId (id não pode ser null nem menor ou igual a zero), e que só então chama o repositório. Teste/main: faz o papel da tela e chama só o serviço. O ganho é a separação de responsabilidades: a regra fica num lugar só, e trocar a implementação do banco (por exemplo, de Statement para PreparedStatement) não afeta quem chama, desde que os métodos (o contrato) sejam mantidos. No Laravel, seria Model + Service/Action + Controller, com o Eloquent fazendo o papel do repositório.' },
+        { tipo: 'discursiva', pergunta: 'Aponte os três problemas do código deste bloco que precisam ser corrigidos antes de ir para produção e como corrigir cada um.',
+          explicacao: '1) SQL injection: o SQL é montado com formatted/concatenação, então a entrada do usuário vira SQL. findByName("x\' OR 1=1 -- ") devolve tudo, e um nome com apóstrofo quebra o comando. A correção é usar PreparedStatement com parâmetros ? (aulas 268-269), como o prepare/bind do PDO. 2) O UPDATE grava um espaço extra: SET name = \'%s \' salva "MADHOUSE ", e deve ser \'%s\' (com PreparedStatement o problema some). 3) A dependência log4j-core 2.14.1 é vulnerável ao Log4Shell (CVE-2021-44228), que permite execução remota de código por mensagens de log com ${jndi:...}. É preciso atualizar para 2.17.1 ou mais nova (e incluir log4j-api). Menores: usar \'%d\' com aspas para número funciona no MySQL, mas o certo é sem aspas; não logar dados pessoais (PII); não esquecer o WHERE em UPDATE/DELETE.' }
+      ]
+    };
+  </script>
+  <script src="../js/app.js"></script>
+</body>
+</html>
