@@ -30,7 +30,7 @@ Aulas que são partes do mesmo tema viram uma página só: `aulas/NN-MM-slug.htm
 commit `Aulas NN-MM - Título`. Exercícios e resoluções ficam junto da teoria. Só gerar a página com as transcrições
 do bloco inteiro (o autor pode mandar em partes). Aulas avulsas continuam `NN-slug.html`.
 
-Feitas: 02 · 03–07 · 08 · 09 · 10–14 · 15–19 · 20–24 · 25–26 · 27–31 · 32–34 · 35 · 36–38 · 39–43 · 44–47 · 48–51 · 52–53 · 54–57 · 58–59 · 60–63 · 64–70 · 71–75 · 76 · 77–79 · 80–83 · 84–86 · 87–89 · 90–94 · 95–99 · 100–105 · 106–107 · 108–111 · 112–118 · 119–124 · 125–130 · 131–136 · 137–143 · 144–148 · 149–153 · 154–158 · 159–165 · 166–174 · 175–182 · 183–188 · 189–194 · 195–202 · 203–210 · 211–219 · 220–228 · 229–235 · 236–239 · 240–245 · 246–251.
+Feitas: 02 · 03–07 · 08 · 09 · 10–14 · 15–19 · 20–24 · 25–26 · 27–31 · 32–34 · 35 · 36–38 · 39–43 · 44–47 · 48–51 · 52–53 · 54–57 · 58–59 · 60–63 · 64–70 · 71–75 · 76 · 77–79 · 80–83 · 84–86 · 87–89 · 90–94 · 95–99 · 100–105 · 106–107 · 108–111 · 112–118 · 119–124 · 125–130 · 131–136 · 137–143 · 144–148 · 149–153 · 154–158 · 159–165 · 166–174 · 175–182 · 183–188 · 189–194 · 195–202 · 203–210 · 211–219 · 220–228 · 229–235 · 236–239 · 240–245 · 246–251 · 252–256.
 
 Plano (títulos no README do professor; a aula 35 não está na playlist, é o vídeo cl47iLWalUw — o script aceita a URL direta):
 - 10–14 Tipos primitivos (convenções, declaração/memória, casting, Strings, exercício)
@@ -97,7 +97,7 @@ Se o vídeo não tiver legenda nenhuma (ex.: aulas 206, 213, 216 e 243), o scrip
 ## Código do professor
 Repositório oficial: https://github.com/devdojobr/maratona-java-virado-no-jiraya (branch `videoNN` = projeto acumulado
 até a aula NN; o README lista os títulos das 284 aulas). Código exato de uma aula: `git diff origin/videoNN-1 origin/videoNN`.
-Faltam algumas branches (ex.: não existem `video106` e `video219`); nesse caso, diff a partir da anterior que existir (`video105..video107`).
+Faltam algumas branches (ex.: não existem `video106`, `video219`, `video252` e `video254`); nesse caso, diff a partir da anterior que existir (`video105..video107`).
 Usar para conferir nomes de classes/pacotes (ex.: testes são `XxxTest01`, pacotes `javacore.Aintroducaoclasses`,
 `Bintroducaometodos`, ... `Gassociacao`, `Hheranca`) e valores dos exemplos, em vez de adivinhar pelo áudio.
 

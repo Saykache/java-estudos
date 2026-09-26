@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>252–256 · JDBC: ambiente</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="topo">
+      <a class="voltar" href="../index.html">← Todas as aulas</a>
+      <h1>252–256 · JDBC: Docker, MySQL, Maven e a primeira conexão</h1>
+      <p>Docker e containers, docker-compose com MySQL, Workbench (schema anime_store, tabelas producer e anime), Maven e pom.xml, JDBC e DriverManager · <a href="https://www.youtube.com/playlist?list=PL62G310vn6nFIsOCC0H-C2infYgwm8SWW" target="_blank" rel="noopener">playlist</a></p>
+    </header>
+
+    <nav class="abas">
+      <a href="#resumo">Resumo</a>
+      <a href="#flashcards">Flashcards</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#estudo">Material de estudo</a>
+    </nav>
+
+    <p class="aviso">Junta as aulas 252 (instalando Docker), 253 (container MySQL), 254 (Workbench, schema e tabelas), 255 (Maven) e 256 (dependência e conexão). Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. O código (<code>docker-compose.yml</code>, <code>pom.xml</code>, pacote <code>javacore.ZZIjdbc</code> com <code>ConnectionFactory</code>) foi conferido no <a href="https://github.com/devdojobr/maratona-java-virado-no-jiraya" target="_blank" rel="noopener">repositório do professor</a>. Não existem as branches <code>video252</code> e <code>video254</code>, porque as aulas 252 e 254 não mexem em código. O nome da tabela <code>producer</code> (a legenda às vezes entende "publisher") foi conferido no SQL das aulas seguintes. Os itens marcados como "extra" não estão nos vídeos. As aulas são de 2021 e as versões citadas (MySQL 8.0.25, Maven 3.8.1, Java 15) são daquela época.</p>
+
+    <section id="resumo">
+      <h2>Resumo</h2>
+      <p>Começa o banco de dados. O foco do curso é o <strong>JDBC</strong>, e não o MySQL em si (o professor recomenda uma pesquisa rápida sobre o que é e como funciona um banco). Estas cinco aulas montam o ambiente: o MySQL roda num <strong>container Docker</strong>, o banco e as tabelas são criados no <strong>MySQL Workbench</strong>, o projeto passa a usar <strong>Maven</strong> para baixar o <strong>driver</strong> do MySQL, e no fim o Java abre a primeira <strong>conexão</strong>.</p>
+<pre><code>docker-compose up                      // 253 · sobe o MySQL num container
+CREATE SCHEMA anime_store;             // 254 · banco + tabelas producer e anime
+pom.xml → mysql-connector-java         // 255–256 · Maven baixa o driver
+DriverManager.getConnection("jdbc:mysql://localhost:3306/anime_store", "root", "root"); // 256</code></pre>
+
+      <h3>252 · Instalando Docker</h3>
+      <ul>
+        <li>Dá para instalar o MySQL <strong>nativamente</strong> (instalador em dev.mysql.com/downloads/installer), e quem tiver problemas com Docker pode fazer isso. Lembre do usuário e da senha que definir na instalação.</li>
+        <li>O curso usa <strong>Docker</strong> porque "uma vez que você aprende, não instala mais nada no seu computador": banco, Grafana e outras ferramentas viram containers (o curso de Spring Boot da DevDojo usa bastante). E para parar é só <code>Ctrl+C</code> no terminal, sem caçar processo no gerenciador de tarefas.</li>
+        <li><strong>Container × máquina virtual</strong>: numa VM (VirtualBox, VMware), o <em>hypervisor</em> roda um <strong>sistema operacional completo</strong> para cada máquina, e três VMs são três sistemas operacionais dividindo os recursos do seu computador. No Docker, o <strong>Docker Engine</strong> reaproveita bibliotecas e funcionalidades do sistema existente, e cada container é como "uma máquina virtual bem pequena", só com o necessário para rodar a aplicação.</li>
+        <li>Instalação no Windows: <strong>Docker Desktop</strong> (a versão gratuita). Pode pedir para reiniciar e para ativar a <strong>virtualização na BIOS</strong> (<em>hardware-assisted virtualization</em>); o professor precisou fazer isso. Quando o ícone da baleia para de se mexer, o Docker está pronto.</li>
+        <li>O Docker Desktop é um pouco pesado: com <strong>menos de 6 GB de RAM</strong>, o professor aconselha instalar o MySQL nativo.</li>
+      </ul>
+
+      <h3>253 · Criando o container MySQL</h3>
+      <p>Na raiz do projeto, um arquivo <code>docker-compose.yml</code> (o nome importa). YAML é um formato em que a <strong>indentação é a sintaxe</strong>: um espaço a mais e o arquivo não funciona. Na dúvida, copie o arquivo do repositório.</p>
+<pre><code>version: '2.4'
+services:
+  db:                                  # nome do serviço (qualquer um)
+    image: mysql                       # imagem do Docker Hub; sem tag = a mais recente
+    container_name: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root        # senha do usuário root
+    ports:
+      - "3306:3306"                    # porta do SEU PC : porta do container
+    volumes:
+      - devdojo_maratona_data:/var/lib/mysql   # os dados ficam fora do container
+
+volumes:
+  devdojo_maratona_data:</code></pre>
+      <ul>
+        <li><strong><code>version: '2.4'</code></strong>: as versões 3.x foram pensadas para orquestradores (Docker Swarm, Kubernetes); para rodar imagens direto, a 2.4 é a indicada.</li>
+        <li><strong><code>image: mysql</code></strong>: vem do <strong>Docker Hub</strong> (hub.docker.com), onde há imagem de praticamente tudo (Postgres, MariaDB...). Sem versão, pega a última; com versão, <code>mysql:8.0.25</code>.</li>
+        <li><strong><code>environment</code></strong>: variáveis que a imagem lê ao iniciar. A documentação da imagem lista quais existem, como <code>MYSQL_ROOT_PASSWORD</code>. O professor não usou o <code>restart: always</code> do exemplo da documentação: quando ele parar o container, quer que pare mesmo.</li>
+        <li><strong><code>ports: "3306:3306"</code></strong>: o primeiro número é a porta no seu computador, o segundo é a porta dentro do container. Se a 3306 do seu PC já estiver ocupada (um MySQL instalado, por exemplo), use <code>"3307:3306"</code> e conecte na 3307. (Extra: a legenda deixa confuso qual lado é qual; a regra é <code>HOST:CONTAINER</code>.)</li>
+        <li><strong><code>volumes</code></strong>: o container é descartável, e matar o container apagaria os dados. O volume nomeado guarda <code>/var/lib/mysql</code> fora dele, e o nome identifica o volume de cada projeto.</li>
+      </ul>
+<pre><code>docker ps                    # containers rodando (vazio no começo)
+docker-compose up            # baixa a imagem (em camadas) e sobe o container
+docker ps                    # agora aparece o mysql, com a porta 3306
+# Ctrl+C                     # para o container
+docker ps -a                 # lista também os parados
+docker-compose down          # remove o container (os dados continuam no volume)
+docker volume ls             # o volume aparece com o prefixo do projeto: maratona-java_devdojo_maratona_data</code></pre>
+
+      <h3>254 · Workbench, schema e tabelas</h3>
+      <p>O container é o <strong>servidor</strong> de banco, onde os dados ficam. Para criar tabelas e mexer nos dados de forma visual, é preciso um <strong>cliente</strong>. O professor usa o <strong>MySQL Workbench</strong> (existem outros).</p>
+      <ul>
+        <li>Nova conexão: host <code>127.0.0.1</code> (localhost), porta <code>3306</code>, usuário <code>root</code>, senha <code>root</code> (guardada no <em>vault</em>), e depois <em>Test Connection</em>.</li>
+        <li>A tela mostra o status do servidor. Parando o container (<code>Ctrl+C</code>) e atualizando, o status vira "parado"; com <code>docker-compose up</code> de novo, volta a rodar. É fácil liberar os recursos quando você não está estudando.</li>
+        <li>Criar o banco: no Workbench um <strong>schema</strong> é um banco de dados. O nome é <code>anime_store</code>, em minúsculas e com <em>underscore</em>, um padrão comum em banco.</li>
+        <li>Duas tabelas: <strong><code>producer</code></strong> (produtor) e <strong><code>anime</code></strong>. Um produtor produz <strong>um ou vários</strong> animes; um anime tem <strong>um</strong> produtor (um-para-muitos). Na vida real um anime pode ter vários produtores, mas o exemplo fica simples.</li>
+      </ul>
+<pre><code>CREATE SCHEMA anime_store;
+
+CREATE TABLE anime_store.producer (
+  id   INT          NOT NULL AUTO_INCREMENT,   -- PK: identifica o registro
+  name VARCHAR(255) NOT NULL,
+  PRIMARY KEY (id)
+);
+
+CREATE TABLE anime_store.anime (
+  id          INT          NOT NULL AUTO_INCREMENT,
+  name        VARCHAR(300) NOT NULL,           -- "nome de anime ultimamente está complicado"
+  episodes    INT          NOT NULL,
+  producer_id INT          NOT NULL,           -- mesmo tipo da coluna referenciada
+  PRIMARY KEY (id),
+  CONSTRAINT fk_anime_producer
+    FOREIGN KEY (producer_id) REFERENCES anime_store.producer (id)
+);
+
+SELECT * FROM anime;          -- erro: "No database selected"
+USE anime_store;              -- no Workbench: botão direito no schema → Set as Default Schema
+SELECT * FROM anime;          -- agora funciona</code></pre>
+      <ul>
+        <li><strong>PK</strong> (<em>primary key</em>), <strong>NN</strong> (<em>not null</em>) e <strong>AI</strong> (<em>auto increment</em>, o próprio MySQL numera) são as caixinhas do Workbench. Ao aplicar, ele mostra o SQL gerado.</li>
+        <li><strong>Chave estrangeira</strong> (aba <em>Foreign Keys</em>): a coluna <code>producer_id</code> de <code>anime</code> referencia <code>producer.id</code>. Assim nenhum anime pode apontar para um produtor que não existe.</li>
+        <li>Num trecho regravado, o professor avisa que nesse ponto "deu capim na palheta", um erro que ele só percebeu na aula 279: a coluna <code>producer_id</code> da tabela <code>anime</code> tem que referenciar a coluna <code>id</code> da tabela <code>producer</code>. O SQL acima já está do jeito certo.</li>
+        <li><strong>Extra</strong>: o script SQL acima é o equivalente do que foi feito clicando no Workbench (o nome da <em>constraint</em> é livre). Na prática abaixo ele é executado sem Workbench.</li>
+      </ul>
+
+      <h3>255 · Maven</h3>
+      <p><strong>JDBC</strong> (<em>Java Database Connectivity</em>) é a API que o Java criou para <strong>padronizar</strong> a conexão com qualquer banco (Oracle, MySQL, PostgreSQL, SQL Server, MariaDB, H2, Cassandra...). O pacote <strong><code>java.sql</code></strong> define <strong>interfaces</strong> (<code>Connection</code>, <code>Statement</code>, <code>ResultSet</code>, existentes desde o Java 1.1) e a classe <code>DriverManager</code>. Cada fabricante (<em>vendor</em>) escreve a implementação, o <strong>driver</strong>, distribuído como um <code>.jar</code>. Seu código usa só as interfaces, e trocar de banco é trocar o driver (desde que você não use recursos exclusivos de um banco). É a interface da aula 87 aplicada em grande escala.</p>
+      <p>O driver do MySQL (<em>Connector/J</em>) poderia ser baixado à mão no site, mas "fazer download manual de bibliotecas hoje em dia é coisa de louco": a cada versão nova seria preciso baixar, colocar numa pasta e reconfigurar. Por isso entra um <strong>gerenciador de dependências</strong>, o <strong>Maven</strong>. <strong>Dependência</strong> é uma biblioteca sem a qual o projeto não funciona.</p>
+      <ul>
+        <li><strong>Instalar</strong>: baixar o <em>binary zip</em> em maven.apache.org (na gravação, 3.8.1), extrair numa pasta e criar variáveis de ambiente: <code>M2_HOME</code> (a pasta do Maven, sem a barra no fim), <code>M2</code> = <code>%M2_HOME%\bin</code>, e adicionar <code>%M2%</code> ao <code>Path</code>. Teste com <code>mvn --version</code>, que mostra também o Java encontrado (15, no curso).</li>
+        <li><strong>No IntelliJ</strong>: botão direito no projeto, <em>Add Framework Support</em>, <strong>Maven</strong>. A estrutura muda para o padrão do Maven: <strong><code>src/main/java</code></strong> (código), <strong><code>src/main/resources</code></strong> (arquivos de configuração) e <strong><code>src/test/java</code></strong> (testes). O professor diz que tudo continua funcionando normalmente.</li>
+        <li><strong>Pegadinha</strong>: os arquivos <code>messages*.properties</code> do <code>ResourceBundle</code> (aula 130) param de ser encontrados. É preciso movê-los para <code>src/main/resources</code>.</li>
+        <li>Surge o <strong><code>pom.xml</code></strong> (<em>Project Object Model</em>), o arquivo de configuração do Maven, em XML (linguagem de marcação):</li>
+      </ul>
+<pre><code>&lt;project ...&gt;
+    &lt;modelVersion&gt;4.0.0&lt;/modelVersion&gt;
+    &lt;groupId&gt;academy.devdojo&lt;/groupId&gt;           &lt;!-- geralmente o pacote base --&gt;
+    &lt;artifactId&gt;maratona-java&lt;/artifactId&gt;       &lt;!-- nome do projeto --&gt;
+    &lt;version&gt;1.0-SNAPSHOT&lt;/version&gt;              &lt;!-- SNAPSHOT = em desenvolvimento --&gt;
+    &lt;properties&gt;
+        &lt;maven.compiler.source&gt;15&lt;/maven.compiler.source&gt;
+        &lt;maven.compiler.target&gt;15&lt;/maven.compiler.target&gt;
+    &lt;/properties&gt;
+&lt;/project&gt;</code></pre>
+
+      <h3>256 · Dependência e conexão com o banco</h3>
+<pre><code>&lt;dependencies&gt;
+    &lt;dependency&gt;
+        &lt;groupId&gt;mysql&lt;/groupId&gt;
+        &lt;artifactId&gt;mysql-connector-java&lt;/artifactId&gt;
+        &lt;version&gt;8.0.25&lt;/version&gt;
+    &lt;/dependency&gt;
+&lt;/dependencies&gt;</code></pre>
+      <ul>
+        <li>O trecho vem do <strong>Maven Repository</strong> (mvnrepository.com): procure "mysql connector java", escolha a versão e copie o XML. O professor tenta usar a <strong>mesma versão do servidor</strong> (o <code>docker-compose up</code> mostrou 8.0.25).</li>
+        <li>Fica vermelho até o IntelliJ "carregar as mudanças do Maven" (botão de recarregar ou <code>Ctrl+Shift+O</code>). Aí aparecem em <em>External Libraries</em> o conector e também o <code>protobuf</code> do Google, uma <strong>dependência transitiva</strong> que o conector usa, e o Maven baixa sozinho.</li>
+        <li>Tudo vai para o <strong>repositório local</strong> <code>~/.m2/repository</code> (no Windows, <code>C:\Users\você\.m2</code>). Se outra versão já estiver lá, não baixa de novo.</li>
+      </ul>
+<pre><code>public class ConnectionFactory {
+    //java.sql = Connection, Statement, ResultSet, DriverManager
+    public static Connection getConnection() {
+        String url = "jdbc:mysql://localhost:3306/anime_store";
+        String username = "root";
+        String password = "root";
+        try {
+            Connection connection = DriverManager.getConnection(url, username, password);
+            System.out.println(connection);   // com.mysql.cj.jdbc.ConnectionImpl@...
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+}
+
+public class ConnectionFactoryTest {
+    public static void main(String[] args) {
+        ConnectionFactory.getConnection();
+    }
+}</code></pre>
+      <ul>
+        <li><strong>A URL JDBC</strong>: <code>jdbc:</code> + <em>vendor</em> (<code>mysql</code>) + <code>://host:porta/banco</code>. Cada banco tem seu formato (veja a documentação do fabricante): <code>jdbc:postgresql://localhost:5432/banco</code>, por exemplo. Se você mapeou a 3307, a URL usa 3307.</li>
+        <li><strong><code>DriverManager.getConnection(url, usuario, senha)</code></strong> procura, entre os drivers no classpath, um que aceite aquela URL, e devolve uma <code>Connection</code>. Imprimir mostra a classe do MySQL (<code>ConnectionImpl</code>) por trás da interface.</li>
+        <li><code>SQLException</code> é checked. O container precisa estar rodando, senão vem <code>Communications link failure</code>.</li>
+        <li>O nome <code>ConnectionFactory</code> é o padrão Factory da aula 247.</li>
+      </ul>
+
+      <h3>Atenção</h3>
+      <ul>
+        <li><strong>Neste primeiro teste, <code>getConnection()</code> imprime a conexão e devolve <code>null</code></strong>, e a conexão nunca é fechada. O professor corrige na aula 257: o método passa a <code>throws SQLException</code> e faz <code>return DriverManager.getConnection(...)</code>. Toda conexão deve ser fechada, com <strong>try-with-resources</strong> (aula 103), porque <code>Connection</code> é <code>AutoCloseable</code>.</li>
+        <li><strong>YAML: indentação é sintaxe</strong>. Use espaços, nunca tabs.</li>
+        <li><strong><code>ports</code> é <code>HOST:CONTAINER</code></strong>. A URL do Java usa a porta do host.</li>
+        <li><strong><code>docker-compose down</code> não apaga os dados</strong> (estão no volume); <code>docker-compose down -v</code> apaga o volume junto.</li>
+        <li><strong>Extra: fixe a versão da imagem</strong> (<code>image: mysql:8.0</code>). Sem tag, cada <code>docker pull</code> pode trazer uma versão nova e diferente do driver.</li>
+        <li><strong>Extra: o artefato mudou de nome</strong>. Desde a versão 8.0.31 o conector é <code>com.mysql:mysql-connector-j</code>; o <code>mysql:mysql-connector-java</code> da aula foi descontinuado (redireciona para o novo). Em projeto novo, use o novo.</li>
+        <li><strong>Extra: <code>docker-compose</code> × <code>docker compose</code></strong>. O comando com hífen é o antigo (Compose v1, um programa separado); hoje ele vem embutido no Docker como <code>docker compose</code>, e o campo <code>version:</code> do arquivo é ignorado.</li>
+        <li><strong>Extra: senha no código</strong> (<code>root</code>/<code>root</code>) só serve para estudo. Em projeto real ela vem de variável de ambiente ou arquivo de configuração fora do Git, como o <code>.env</code> do Laravel.</li>
+      </ul>
+
+      <h3>Paralelo com PHP</h3>
+      <ul>
+        <li><strong>Docker</strong>: o <strong>Laravel Sail</strong> é exatamente isso, um <code>docker-compose.yml</code> com MySQL, Redis etc. (<code>./vendor/bin/sail up</code>). O <code>ports</code>, o <code>environment</code> e os <code>volumes</code> são os mesmos conceitos.</li>
+        <li><strong>Maven ≈ Composer</strong>: <code>pom.xml</code> ≈ <code>composer.json</code>; <code>&lt;dependency&gt;</code> ≈ uma linha em <code>require</code>; mvnrepository.com/Maven Central ≈ packagist.org; <code>~/.m2/repository</code> ≈ o cache do Composer + a pasta <code>vendor</code>; dependência transitiva (o <code>protobuf</code>) ≈ as dependências das dependências que aparecem no <code>composer.lock</code>. <code>groupId:artifactId</code> ≈ <code>vendor/pacote</code>. O Maven também <strong>compila e empacota</strong> (é uma <em>build tool</em>), algo que o PHP não precisa.</li>
+        <li><strong>JDBC ≈ PDO</strong>: o PDO também é uma API única com um driver por banco (<code>pdo_mysql</code>, <code>pdo_pgsql</code>). A URL JDBC é o DSN do PDO: <code>new PDO('mysql:host=127.0.0.1;port=3306;dbname=anime_store', 'root', 'root')</code> ≈ <code>DriverManager.getConnection("jdbc:mysql://localhost:3306/anime_store", "root", "root")</code>. No Laravel, isso fica no <code>.env</code> (<code>DB_CONNECTION</code>, <code>DB_HOST</code>, <code>DB_PORT</code>, <code>DB_DATABASE</code>...).</li>
+        <li><strong>Tabelas</strong>: no Laravel você não clicaria no Workbench, escreveria uma <em>migration</em> (<code>$table-&gt;id(); $table-&gt;string('name', 300); $table-&gt;foreignId('producer_id')-&gt;constrained();</code>). No mundo Java, o equivalente de migrations são ferramentas como <strong>Flyway</strong> e <strong>Liquibase</strong>.</li>
+      </ul>
+    </section>
+
+    <section id="flashcards">
+      <h2>Flashcards</h2>
+      <p style="color:var(--muted);margin-top:-6px">Toque no cartão para virar.</p>
+      <div id="flashcards-app"></div>
+    </section>
+
+    <section id="quiz">
+      <h2>Quiz</h2>
+      <div id="quiz-app"></div>
+    </section>
+
+    <section id="estudo">
+      <h2>Material de estudo</h2>
+
+      <h3>Mapa mental</h3>
+<pre><code>Ambiente JDBC (252–256)
+├── Docker (252): container = "VM bem pequena" · Docker Engine × hypervisor
+│   └── Docker Desktop · virtualização na BIOS · &lt; 6 GB RAM → MySQL nativo
+├── docker-compose.yml (253)
+│   ├── image: mysql (Docker Hub) · container_name · environment: MYSQL_ROOT_PASSWORD
+│   ├── ports: "HOST:CONTAINER" (3306:3306 ou 3307:3306)
+│   ├── volumes: dados fora do container
+│   └── up · Ctrl+C · ps · ps -a · down · volume ls
+├── Workbench (254): cliente gráfico → servidor no container
+│   ├── schema anime_store
+│   └── producer(id PK AI, name) 1 ── N anime(id, name, episodes, producer_id FK)
+├── Maven (255): gerenciador de dependências + build
+│   ├── M2_HOME, Path · mvn --version
+│   ├── src/main/java · src/main/resources (properties!) · src/test/java
+│   └── pom.xml: groupId · artifactId · version
+└── Conexão (256)
+    ├── &lt;dependency&gt; mysql-connector-java · ~/.m2/repository · transitivas
+    ├── JDBC = interfaces (java.sql) + driver do vendor
+    └── DriverManager.getConnection("jdbc:mysql://localhost:3306/anime_store", "root", "root")</code></pre>
+
+      <h3>Prática no seu WSL (30 minutos)</h3>
+      <p>Esta prática precisa de <strong>Docker</strong>, <strong>JDK</strong> e <strong>Maven</strong> no WSL. Use o Docker Desktop do Windows com a integração WSL ligada (<em>Settings, Resources, WSL integration</em>) ou o <code>docker.io</code> do Ubuntu. JDK e Maven: <code>sudo apt install openjdk-17-jdk maven</code>. Ela usa um projeto separado, <code>~/java-lab-jdbc</code>, porque agora o projeto tem a estrutura do Maven.</p>
+<pre><code>mkdir -p ~/java-lab-jdbc &amp;&amp; cd ~/java-lab-jdbc
+docker --version &amp;&amp; java -version &amp;&amp; mvn -v
+
+# 253 · o MySQL num container
+cat > docker-compose.yml &lt;&lt;'EOF'
+services:
+  db:
+    image: mysql:8.0
+    container_name: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3306:3306"
+    volumes:
+      - devdojo_maratona_data:/var/lib/mysql
+volumes:
+  devdojo_maratona_data:
+EOF
+docker compose up -d          # -d: em segundo plano (sem prender o terminal)
+docker ps                     # espere uns 20 s na primeira vez
+
+# 254 · schema e tabelas (sem Workbench: pelo cliente mysql de dentro do container)
+cat > schema.sql &lt;&lt;'EOF'
+CREATE SCHEMA IF NOT EXISTS anime_store;
+CREATE TABLE IF NOT EXISTS anime_store.producer (
+  id INT NOT NULL AUTO_INCREMENT, name VARCHAR(255) NOT NULL, PRIMARY KEY (id));
+CREATE TABLE IF NOT EXISTS anime_store.anime (
+  id INT NOT NULL AUTO_INCREMENT, name VARCHAR(300) NOT NULL, episodes INT NOT NULL,
+  producer_id INT NOT NULL, PRIMARY KEY (id),
+  CONSTRAINT fk_anime_producer FOREIGN KEY (producer_id) REFERENCES anime_store.producer (id));
+EOF
+docker exec -i mysql mysql -uroot -proot &lt; schema.sql
+docker exec mysql mysql -uroot -proot -e "SHOW TABLES FROM anime_store"
+
+# 255 · projeto Maven
+J=src/main/java/academy/devdojo/maratonajava/javacore/ZZIjdbc
+mkdir -p $J/conn $J/test src/main/resources src/test/java
+cat > pom.xml &lt;&lt;'EOF'
+&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"&gt;
+    &lt;modelVersion&gt;4.0.0&lt;/modelVersion&gt;
+    &lt;groupId&gt;academy.devdojo&lt;/groupId&gt;
+    &lt;artifactId&gt;maratona-java&lt;/artifactId&gt;
+    &lt;version&gt;1.0-SNAPSHOT&lt;/version&gt;
+    &lt;properties&gt;
+        &lt;maven.compiler.source&gt;17&lt;/maven.compiler.source&gt;
+        &lt;maven.compiler.target&gt;17&lt;/maven.compiler.target&gt;
+        &lt;project.build.sourceEncoding&gt;UTF-8&lt;/project.build.sourceEncoding&gt;
+    &lt;/properties&gt;
+    &lt;dependencies&gt;
+        &lt;dependency&gt;
+            &lt;groupId&gt;com.mysql&lt;/groupId&gt;
+            &lt;artifactId&gt;mysql-connector-j&lt;/artifactId&gt;
+            &lt;version&gt;8.0.33&lt;/version&gt;
+        &lt;/dependency&gt;
+    &lt;/dependencies&gt;
+&lt;/project&gt;
+EOF
+
+# 256 · ConnectionFactory (já na versão corrigida da aula 257) e teste
+cat > $J/conn/ConnectionFactory.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.ZZIjdbc.conn;
+
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+
+public class ConnectionFactory {
+    //java.sql = Connection, Statement, ResultSet, DriverManager
+    public static Connection getConnection() throws SQLException {
+        String url = "jdbc:mysql://localhost:3306/anime_store";
+        String username = "root";
+        String password = "root";
+        return DriverManager.getConnection(url, username, password);
+    }
+}
+EOF
+cat > $J/test/ConnectionFactoryTest.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.ZZIjdbc.test;
+
+import academy.devdojo.maratonajava.javacore.ZZIjdbc.conn.ConnectionFactory;
+import java.sql.Connection;
+import java.sql.DatabaseMetaData;
+import java.sql.SQLException;
+
+public class ConnectionFactoryTest {
+    public static void main(String[] args) {
+        try (Connection connection = ConnectionFactory.getConnection()) {       // fecha sozinho
+            System.out.println(connection.getClass().getName());                // ?
+            DatabaseMetaData meta = connection.getMetaData();
+            System.out.println(meta.getDatabaseProductName() + " " + meta.getDatabaseMajorVersion()); // ?
+            System.out.println("catálogo: " + connection.getCatalog());         // ?
+            System.out.println("válida? " + connection.isValid(2));             // ?
+        } catch (SQLException e) {
+            System.out.println("Falhou: " + e.getMessage());
+        }
+    }
+}
+EOF
+
+mvn -q compile                                          # baixa o driver para ~/.m2 e compila
+mvn -q dependency:build-classpath -Dmdep.outputFile=cp.txt
+java -cp target/classes:$(cat cp.txt) academy.devdojo.maratonajava.javacore.ZZIjdbc.test.ConnectionFactoryTest
+ls ~/.m2/repository/com/mysql/mysql-connector-j/        # o jar baixado pelo Maven</code></pre>
+      <details>
+        <summary>Ver a saída esperada</summary>
+<pre><code>com.mysql.cj.jdbc.ConnectionImpl
+MySQL 8
+catálogo: anime_store
+válida? true
+
+(ls) 8.0.33
+
+# com o container parado (docker compose stop), a mesma execução imprime:
+Falhou: Communications link failure ...</code></pre>
+      </details>
+      <p>O Java só conhece a interface <code>Connection</code>, mas quem trabalha é a <code>ConnectionImpl</code> do driver do MySQL. É a ideia central do JDBC.</p>
+      <p><strong>Exercícios:</strong></p>
+      <ol>
+        <li>Troque a porta para <code>"3307:3306"</code> no <code>docker-compose.yml</code>, recrie o container e ajuste a URL. O que acontece se a URL continuar com 3306?</li>
+        <li>Rode <code>docker compose down</code> e depois <code>up -d</code>: as tabelas continuam lá? E depois de <code>down -v</code>?</li>
+        <li>Tire a <code>&lt;dependency&gt;</code> do <code>pom.xml</code>, recompile e rode. Qual erro aparece (dica: <em>No suitable driver</em>)?</li>
+        <li>Rode <code>mvn dependency:tree</code> e encontre as dependências transitivas do conector.</li>
+        <li>Insira um produtor e um anime pelo cliente do container (<code>docker exec -it mysql mysql -uroot -proot anime_store</code>) e tente inserir um anime com <code>producer_id = 999</code>. O que a chave estrangeira faz?</li>
+      </ol>
+
+      <h3>Glossário</h3>
+      <ul>
+        <li><strong>Docker</strong>: plataforma que roda aplicações em containers.</li>
+        <li><strong>Container</strong>: processo isolado com só o necessário para a aplicação; mais leve que uma VM.</li>
+        <li><strong>Imagem</strong>: o "molde" do container (ex.: <code>mysql:8.0</code>), baixado do Docker Hub em camadas.</li>
+        <li><strong>docker-compose.yml</strong>: arquivo que descreve serviços, portas, variáveis e volumes.</li>
+        <li><strong>Volume</strong>: armazenamento fora do container, que sobrevive à remoção dele.</li>
+        <li><strong>Schema</strong>: no MySQL, sinônimo de banco de dados.</li>
+        <li><strong>Chave primária (PK)</strong>: coluna que identifica cada registro.</li>
+        <li><strong>Chave estrangeira (FK)</strong>: coluna que referencia a PK de outra tabela.</li>
+        <li><strong>JDBC</strong>: API Java (<code>java.sql</code>) para conectar a bancos de forma padronizada.</li>
+        <li><strong>Driver</strong>: implementação do JDBC feita pelo fabricante do banco (<code>.jar</code>).</li>
+        <li><strong>Maven</strong>: ferramenta de build e gerenciador de dependências; configurado pelo <code>pom.xml</code>.</li>
+        <li><strong>Dependência transitiva</strong>: dependência de uma dependência, baixada automaticamente.</li>
+        <li><strong>URL JDBC</strong>: endereço de conexão, <code>jdbc:vendor://host:porta/banco</code>.</li>
+      </ul>
+
+      <h3>Revisão espaçada</h3>
+      <ul class="revisao">
+        <li><span class="dia">Dia 1</span><span>Todos os flashcards + subir o ambiente da prática até o <code>válida? true</code>.</span></li>
+        <li><span class="dia">Dia 3</span><span>Quiz + exercícios 1 a 3.</span></li>
+        <li><span class="dia">Dia 7</span><span>Exercícios 4 e 5 + escrever de memória o <code>docker-compose.yml</code> e o trecho <code>&lt;dependency&gt;</code>.</span></li>
+        <li><span class="dia">Dia 14</span><span>Flashcards que errou + questões discursivas.</span></li>
+      </ul>
+
+      <h3>Para aprofundar</h3>
+      <ul>
+        <li>Como funciona o <code>ServiceLoader</code> que permite ao <code>DriverManager</code> achar o driver sem <code>Class.forName("com.mysql.cj.jdbc.Driver")</code> (JDBC 4+)?</li>
+        <li>O que é um <em>connection pool</em> (HikariCP) e por que abrir uma conexão por requisição é caro?</li>
+        <li>Quais são as fases do ciclo de vida do Maven (<code>compile</code>, <code>test</code>, <code>package</code>, <code>install</code>)?</li>
+        <li>Maven × Gradle: o que muda?</li>
+        <li>Como o Flyway versiona o schema do banco, como as migrations do Laravel?</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    window.AULA = {
+      flashcards: [
+        ["Por que o curso usa Docker para o MySQL?", "Não instala nada nativo, sobe e para com um comando, e serve para qualquer ferramenta (banco, Grafana...)"],
+        ["Container × máquina virtual?", "A VM roda um sistema operacional inteiro por máquina (hypervisor); o container reaproveita o sistema via Docker Engine e é bem mais leve"],
+        ["Quando o professor recomenda MySQL nativo em vez de Docker?", "Com menos de 6 GB de RAM (ou problemas com o Docker)"],
+        ["Onde ficam as imagens como mysql e postgres?", "No Docker Hub (hub.docker.com)"],
+        ["O que acontece com image: mysql sem versão?", "Pega a versão mais recente (latest)"],
+        ["Para que serve environment: MYSQL_ROOT_PASSWORD?", "Define a senha do root quando a imagem inicializa"],
+        ["Como ler ports: \"3307:3306\"?", "Porta 3307 do seu PC → porta 3306 do container (HOST:CONTAINER)"],
+        ["Por que usar volumes?", "Para os dados ficarem fora do container e sobreviverem à remoção dele"],
+        ["docker ps × docker ps -a?", "ps lista os containers rodando; -a inclui os parados"],
+        ["O que docker-compose down faz com os dados?", "Remove o container, mas os dados continuam no volume (down -v apagaria)"],
+        ["Servidor × cliente de banco?", "O servidor (container) guarda os dados; o cliente (Workbench) é a interface para criar tabelas e consultar"],
+        ["O que é um schema no MySQL?", "Um banco de dados (ex.: anime_store)"],
+        ["Qual o relacionamento entre producer e anime?", "Um-para-muitos: um produtor tem vários animes; cada anime tem um produtor (producer_id FK)"],
+        ["O que significam PK, NN e AI?", "Primary key, not null e auto increment"],
+        ["Por que o SELECT deu 'No database selected'?", "Faltou escolher o banco: USE anime_store ou Set as Default Schema"],
+        ["O que é JDBC?", "Java Database Connectivity: API padrão (java.sql) para conectar a qualquer banco"],
+        ["Quem implementa as interfaces do JDBC?", "Cada fabricante de banco, no driver (.jar), ex.: MySQL Connector/J"],
+        ["Por que não baixar o driver à mão?", "Cada versão nova exigiria baixar e configurar de novo; o Maven gerencia isso"],
+        ["O que é o Maven?", "Gerenciador de dependências e ferramenta de build do Java"],
+        ["Qual a estrutura de pastas do Maven?", "src/main/java, src/main/resources e src/test/java"],
+        ["O que vai no pom.xml?", "groupId, artifactId, version, properties (versão do Java) e dependencies"],
+        ["O que é uma dependência transitiva?", "Uma dependência da sua dependência (ex.: protobuf do conector MySQL), baixada automaticamente"],
+        ["Onde o Maven guarda os jars baixados?", "No repositório local ~/.m2/repository"],
+        ["Qual o formato da URL JDBC do MySQL?", "jdbc:mysql://localhost:3306/anime_store"],
+        ["O que faz DriverManager.getConnection(url, user, senha)?", "Encontra o driver que aceita a URL e devolve uma Connection"]
+      ],
+      quiz: [
+        { tipo: 'multipla', pergunta: 'Qual a principal diferença entre um container Docker e uma máquina virtual tradicional?',
+          opcoes: ['O container é sempre mais lento', 'A VM roda um sistema operacional completo; o container reaproveita o sistema através do Docker Engine', 'O container precisa de um hypervisor por aplicação', 'Não há diferença'],
+          correta: 1,
+          explicacao: 'Cada VM carrega um sistema operacional inteiro sobre o hypervisor. O container compartilha o sistema e leva só o necessário: "uma máquina virtual bem pequena".' },
+        { tipo: 'vf', pergunta: 'Com ports: "3307:3306", o Java deve se conectar em jdbc:mysql://localhost:3306/anime_store.',
+          correta: 1,
+          explicacao: 'Falso. O formato é HOST:CONTAINER: o MySQL escuta na 3306 dentro do container, mas no seu PC ele está na 3307, então a URL usa 3307.' },
+        { tipo: 'multipla', pergunta: 'Para que serve a seção volumes no docker-compose.yml da aula 253?',
+          opcoes: ['Aumentar a memória do container', 'Guardar os dados do MySQL fora do container para não perdê-los ao removê-lo', 'Definir a senha', 'Abrir portas'],
+          correta: 1,
+          explicacao: 'O container é descartável. O volume nomeado guarda /var/lib/mysql fora dele, e docker-compose down não apaga os dados (down -v apagaria).' },
+        { tipo: 'multipla', pergunta: 'Na tabela anime, o que a coluna producer_id com chave estrangeira garante?',
+          opcoes: ['Que cada produtor tenha só um anime', 'Que todo anime aponte para um produtor existente em producer.id', 'Que o nome do anime seja único', 'Que o id seja automático'],
+          correta: 1,
+          explicacao: 'A FK referencia producer(id): não dá para inserir um anime com um produtor inexistente. É o relacionamento um-para-muitos (um produtor, vários animes).' },
+        { tipo: 'multipla', pergunta: 'O que é o JDBC?',
+          opcoes: ['Um banco de dados do Java', 'Uma API padrão (java.sql) de interfaces, implementada por drivers de cada fabricante', 'O cliente gráfico do MySQL', 'Um gerenciador de dependências'],
+          correta: 1,
+          explicacao: 'Java Database Connectivity: interfaces como Connection, Statement e ResultSet e o DriverManager. Cada fabricante entrega o driver, e o seu código usa só as interfaces.' },
+        { tipo: 'vf', pergunta: 'Depois de adicionar o Maven ao projeto, os arquivos .properties do ResourceBundle podem precisar ser movidos para src/main/resources.',
+          correta: 0,
+          explicacao: 'Verdadeiro. O Maven procura recursos em src/main/resources. O professor teve de arrastar os messages*.properties para lá para voltarem a ser encontrados.' },
+        { tipo: 'multipla', pergunta: 'Depois de adicionar mysql-connector-java ao pom.xml, apareceu também o protobuf do Google. Por quê?',
+          opcoes: ['Foi um erro do IntelliJ', 'É uma dependência transitiva: o conector depende dele e o Maven baixa automaticamente', 'O Maven sempre baixa bibliotecas do Google', 'É necessário para o Docker'],
+          correta: 1,
+          explicacao: 'Dependências também têm dependências. O Maven resolve a árvore inteira e guarda tudo em ~/.m2/repository, como o Composer faz com o vendor.' },
+        { tipo: 'multipla', pergunta: 'Qual o problema do getConnection() da aula 256 como está no repositório?',
+          opcoes: ['A URL está errada', 'Ele imprime a conexão mas devolve null (e nunca a fecha)', 'Falta o import do Docker', 'Usa a porta 3307'],
+          correta: 1,
+          explicacao: 'Era só o primeiro teste. Na aula 257 o método passa a lançar SQLException e retornar DriverManager.getConnection(...). A conexão deve ser fechada com try-with-resources.' },
+        { tipo: 'discursiva', pergunta: 'Descreva o docker-compose.yml da aula 253 linha a linha e os comandos para subir, verificar, parar e remover o container.',
+          explicacao: 'version: 2.4 (a indicada para rodar imagens direto, sem orquestrador); services: db (nome do serviço); image: mysql (imagem do Docker Hub, sem tag pega a mais recente, e o ideal é fixar mysql:8.0); container_name: mysql; environment: MYSQL_ROOT_PASSWORD: root (senha do root lida pela imagem); ports: "3306:3306" (porta do host : porta do container; com a 3306 ocupada, 3307:3306); volumes: devdojo_maratona_data:/var/lib/mysql e a declaração do volume no fim (os dados ficam fora do container). YAML depende de indentação. Comandos: docker-compose up (baixa a imagem em camadas e sobe), docker ps (rodando), Ctrl+C (para), docker ps -a (inclui parados), docker-compose down (remove o container e mantém o volume), docker volume ls (lista volumes). É o mesmo que o Laravel Sail faz.' },
+        { tipo: 'discursiva', pergunta: 'Explique como JDBC, driver, Maven e DriverManager se encaixam para a conexão da aula 256, comparando com o PDO e o Composer do PHP.',
+          explicacao: 'O JDBC é a API padrão do Java para bancos: o pacote java.sql define interfaces (Connection, Statement, ResultSet) e o DriverManager. Quem as implementa é o fabricante do banco, no driver (MySQL Connector/J), um jar. Em vez de baixar o jar à mão, declaramos a dependência no pom.xml (groupId mysql, artifactId mysql-connector-java, versão próxima à do servidor), e o Maven baixa para ~/.m2/repository junto com as dependências transitivas (protobuf) e coloca no classpath. Em tempo de execução, DriverManager.getConnection("jdbc:mysql://localhost:3306/anime_store", "root", "root") encontra o driver que aceita a URL (jdbc:vendor://host:porta/banco) e devolve uma Connection, na verdade uma com.mysql.cj.jdbc.ConnectionImpl. No PHP: o PDO é a API única, e pdo_mysql é o driver; o DSN mysql:host=...;dbname=... é a URL JDBC; o Composer (composer.json, packagist, vendor) é o Maven (pom.xml, Maven Central, ~/.m2). No Laravel esses dados ficam no .env.' }
+      ]
+    };
+  </script>
+  <script src="../js/app.js"></script>
+</body>
+</html>
