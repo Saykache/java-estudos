@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>275–279 · JDBC: CRUD</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="topo">
+      <a class="voltar" href="../index.html">← Todas as aulas</a>
+      <h1>275–279 · JDBC: CRUD completo pelo console</h1>
+      <p>Menu com Scanner, findByName/findAll, delete com confirmação, save, update com findById e Optional, switch com setas, text blocks e o CRUD de Anime com INNER JOIN · <a href="https://www.youtube.com/playlist?list=PL62G310vn6nFIsOCC0H-C2infYgwm8SWW" target="_blank" rel="noopener">playlist</a></p>
+    </header>
+
+    <nav class="abas">
+      <a href="#resumo">Resumo</a>
+      <a href="#flashcards">Flashcards</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#estudo">Material de estudo</a>
+    </nav>
+
+    <p class="aviso">Junta as aulas 275 (findByName e findAll), 276 (delete), 277 (save), 278 (update) e 279 (CRUD de Anime), o fecho do bloco de JDBC. Feito a partir das legendas automáticas baixadas com <code>ferramentas/transcricao.py</code>. O código (pacote novo <code>javacore.ZZJcrud</code>: <code>ConnectionFactory</code>, <code>Producer</code>, <code>Anime</code>, <code>ProducerRepository</code>, <code>AnimeRepository</code>, <code>ProducerService</code>, <code>AnimeService</code>, <code>CrudTest01</code>) foi conferido no <a href="https://github.com/devdojobr/maratona-java-virado-no-jiraya" target="_blank" rel="noopener">repositório do professor</a>. Os itens marcados como "extra" não estão nos vídeos.</p>
+
+    <section id="resumo">
+      <h2>Resumo</h2>
+      <p>Tudo o que foi visto de JDBC vira uma aplicação de verdade, com dados entrando <strong>pelo console</strong>: um <strong>CRUD</strong> (<em>Create, Read, Update, Delete</em>) de produtores e depois de animes. Cada operação segue o mesmo desenho: <strong>serviço</strong> (conversa com o usuário via <code>Scanner</code>), <strong>repositório</strong> (<code>PreparedStatement</code> criado num método auxiliar) e <strong>domínio</strong> imutável (<code>@Value @Builder</code>). No caminho aparecem recursos novos do Java: o <strong><code>switch</code> com setas</strong>, os <strong>text blocks</strong> (<code>"""</code>) e o <strong><code>Optional</code></strong> no <code>findById</code>.</p>
+<pre><code>CrudTest01 (menu)  →  ProducerService / AnimeService (Scanner, regras)  →  ProducerRepository / AnimeRepository (JDBC)
+                                                                           ↳ ConnectionFactory · PreparedStatement · ResultSet
+Producer(id, name)  ·  Anime(id, name, episodes, producer)   // @Value @Builder</code></pre>
+
+      <h3>275 · CRUD pt 01: findByName e findAll</h3>
+      <p>Um pacote novo, <code>ZZJcrud</code>, com a <code>ConnectionFactory</code> copiada (só o <code>getConnection</code>, "o mais limpo possível") e o domínio:</p>
+<pre><code>@Value @Builder
+public class Producer {
+    Integer id;
+    String name;
+}
+
+@Builder @Value
+public class Anime {
+    Integer id;
+    String name;
+    int episodes;
+    Producer producer;      // um anime tem um produtor (relacionamento unidirecional)
+}</code></pre>
+<pre><code>// ProducerRepository: o findByName com PreparedStatement das aulas 268–269
+public static List&lt;Producer&gt; findByName(String name) {
+    log.info("Finding Producer by name '{}'", name);
+    List&lt;Producer&gt; producers = new ArrayList&lt;&gt;();
+    try (Connection conn = ConnectionFactory.getConnection();
+         PreparedStatement ps = createPrepareStatementFindByName(conn, name);
+         ResultSet rs = ps.executeQuery()) {
+        while (rs.next()) {
+            producers.add(Producer.builder().id(rs.getInt("id")).name(rs.getString("name")).build());
+        }
+    } catch (SQLException e) {
+        log.error("Error while trying to find all producers", e);
+    }
+    return producers;
+}
+
+// ProducerService: conversa com o usuário
+public class ProducerService {
+    private static final Scanner SCANNER = new Scanner(System.in);
+
+    public static void menu(int op) {
+        switch (op) {
+            case 1 -&gt; findByName();
+            case 2 -&gt; delete();
+            case 3 -&gt; save();
+            case 4 -&gt; update();
+            default -&gt; throw new IllegalArgumentException("Not a valid option");
+        }
+    }
+
+    private static void findByName() {
+        System.out.println("Type the name or empty to all");
+        String name = SCANNER.nextLine();                         // vazio → LIKE '%%' → todos
+        ProducerRepository.findByName(name)
+                .forEach(p -&gt; System.out.printf("[%d] - %s%n", p.getId(), p.getName()));
+    }
+}
+
+// CrudTest01: o laço do menu
+while (true) {
+    producerMenu();                                               // "1. Search for producer ... 0. Exit"
+    op = Integer.parseInt(SCANNER.nextLine());
+    if (op == 0) break;
+    ProducerService.menu(op);
+}</code></pre>
+      <ul>
+        <li><strong>findAll = findByName com texto vazio</strong>: o menu pergunta "o nome ou vazio para todos".</li>
+        <li><strong>Mensagens para o usuário vão com <code>System.out</code></strong>, e o log fica para informações técnicas. Com <code>log.info</code>, o menu sairia cheio de data, thread e pacote.</li>
+        <li><strong>Por que <code>Integer.parseInt(scanner.nextLine())</code></strong> em vez de <code>nextInt()</code>: o <code>nextInt()</code> lê o número mas deixa o Enter no buffer, e o próximo <code>nextLine()</code> volta vazio "e geralmente dá capim na palheta". Lendo sempre a linha inteira e convertendo, isso não acontece (aula 70).</li>
+        <li>No começo a lista era impressa com o índice (<code>[0] - Madhouse</code>). Na aula 277 passou a mostrar o <strong>id do banco</strong>, que é o que o usuário precisa digitar para deletar ou atualizar.</li>
+      </ul>
+
+      <h3>276 · CRUD pt 02: delete</h3>
+<pre><code>private static void delete() {
+    System.out.println("Type the id of the producer you want to delete");
+    int id = Integer.parseInt(SCANNER.nextLine());
+    System.out.println("Are you sure? Y/N");
+    String choice = SCANNER.nextLine();
+    if ("y".equalsIgnoreCase(choice)) {                 // literal primeiro: sem NullPointerException
+        ProducerRepository.delete(id);
+    }
+}
+
+// ProducerRepository
+public static void delete(int id) {
+    try (Connection conn = ConnectionFactory.getConnection();
+         PreparedStatement ps = createPrepareStatementDelete(conn, id)) {
+        ps.execute();
+        log.info("Deleted producer '{}' from the database", id);
+    } catch (SQLException e) {
+        log.error("Error while trying to delete producer '{}'", id, e);
+    }
+}
+private static PreparedStatement createPrepareStatementDelete(Connection conn, Integer id) throws SQLException {
+    PreparedStatement ps = conn.prepareStatement("DELETE FROM `anime_store`.`producer` WHERE (`id` = ?);");
+    ps.setInt(1, id);
+    return ps;
+}</code></pre>
+      <ul>
+        <li><strong>Apagar pelo <code>id</code></strong>, e não pelo nome, é o mais seguro. Por isso a lista mostra o id.</li>
+        <li><strong>Confirmação</strong> ("Tem certeza?") antes de apagar. <code>"y".equalsIgnoreCase(choice)</code> aceita <code>y</code> ou <code>Y</code>. O professor mostra também <code>startsWith</code> e <code>toUpperCase</code>, e na gravação primeiro usou "S/N" e depois trocou para "Y/N", já que tudo está em inglês.</li>
+        <li>Refatorações: o <code>Scanner</code> virou constante (<code>private static final Scanner SCANNER</code>, renomeado com <code>Shift+F6</code>) e o <code>buildMenu</code> virou <code>menu</code>.</li>
+        <li>A ideia de fluxo: normalmente o usuário primeiro <strong>pesquisa</strong> e depois decide o que apagar. Dava para juntar os dois passos num método só, mas o professor mantém simples.</li>
+      </ul>
+
+      <h3>277 · CRUD pt 03: save e o switch novo</h3>
+<pre><code>private static void save() {
+    System.out.println("Type the name of the producer");
+    String name = SCANNER.nextLine();
+    Producer producer = Producer.builder().name(name).build();   // sem id: o banco gera
+    ProducerRepository.save(producer);
+}
+
+private static PreparedStatement createPrepareStatementSave(Connection conn, Producer producer) throws SQLException {
+    PreparedStatement ps = conn.prepareStatement("INSERT INTO `anime_store`.`producer` (`name`) VALUES (?);");
+    ps.setString(1, producer.getName());
+    return ps;
+}</code></pre>
+      <ul>
+        <li>O repositório recebe o <strong>objeto</strong> <code>Producer</code>, e não só o nome: se a tabela ganhar colunas, a assinatura não muda.</li>
+        <li><strong>Switch com setas</strong> (<em>enhanced switch</em>, que o IntelliJ oferece com <code>Alt+Enter</code>): <code>case 1 -&gt; findByName();</code> dispensa o <code>break</code>, sem risco de "cair" no próximo <code>case</code>. O professor data como Java 12, melhorado na 13; é definitivo desde o Java 14, e o curso usa o 15.</li>
+        <li>Ele também serve como <strong>expressão</strong> que devolve valor:</li>
+      </ul>
+<pre><code>int i = switch (op) {
+    case 1, 2, 3, 4, 5 -&gt; 100;          // vários valores num case
+    default -&gt; throw new IllegalArgumentException();   // como expressão, precisa cobrir todos os casos
+};</code></pre>
+      <ul>
+        <li>A lista virou <code>ProducerRepository.findByName(name).forEach(p -&gt; System.out.printf("[%d] - %s%n", p.getId(), p.getName()))</code>, sem o <code>for</code> com índice.</li>
+        <li><code>Ctrl+Alt+O</code> remove os imports não usados.</li>
+      </ul>
+
+      <h3>278 · CRUD pt 04: update com findById e Optional</h3>
+<pre><code>// ProducerRepository
+public static Optional&lt;Producer&gt; findById(Integer id) {
+    try (Connection conn = ConnectionFactory.getConnection();
+         PreparedStatement ps = createPrepareStatementFindById(conn, id);   // WHERE id = ?
+         ResultSet rs = ps.executeQuery()) {
+        if (!rs.next()) return Optional.empty();                             // não achou
+        return Optional.of(Producer.builder().id(rs.getInt("id")).name(rs.getString("name")).build());
+    } catch (SQLException e) {
+        log.error("Error while trying to find all producers", e);
+    }
+    return Optional.empty();
+}
+
+// ProducerService
+private static void update() {
+    System.out.println("Type the id of the object you want to update");
+    Optional&lt;Producer&gt; producerOptional = ProducerRepository.findById(Integer.parseInt(SCANNER.nextLine()));
+    if (producerOptional.isEmpty()) {
+        System.out.println("Producer not found");
+        return;
+    }
+    Producer producerFromDb = producerOptional.get();
+    System.out.println("Producer found " + producerFromDb);
+    System.out.println("Type the new name or enter to keep the same");
+    String name = SCANNER.nextLine();
+    name = name.isEmpty() ? producerFromDb.getName() : name;     // enter = mantém
+
+    Producer producerToUpdate = Producer.builder()               // imutável: um objeto novo
+            .id(producerFromDb.getId())
+            .name(name)
+            .build();
+    ProducerRepository.update(producerToUpdate);                 // UPDATE ... SET name = ? WHERE id = ?
+}</code></pre>
+      <ul>
+        <li>O update é "mais complicadinho": primeiro você precisa <strong>trazer o objeto do banco</strong> (<code>findById</code>), mostrar ao usuário e só então alterar.</li>
+        <li><strong><code>Optional</code> como retorno</strong> (aulas 201–202): quem chama é obrigado a tratar o "não achou". O professor comenta que também seria válido lançar exceção quando o id não existe ("se você pesquisa por id, você sabe o que está procurando"), e mostra as opções <code>isEmpty()</code>, <code>isPresent()</code> e <code>orElseThrow</code>. Ele fica com o <code>isEmpty()</code> e uma mensagem amigável.</li>
+        <li><strong>Enter para manter</strong>: se o usuário não digitar nada, o ternário mantém o valor antigo.</li>
+        <li><strong>Imutabilidade</strong> (<code>@Value</code>): não há <code>setName</code>, então o update monta um objeto novo com o id antigo e o nome novo. O <code>id</code> nunca é alterado.</li>
+      </ul>
+
+      <h3>279 · CRUD pt 05: CRUD de Anime</h3>
+      <p>O repositório de <code>Anime</code> nasce da cópia do de <code>Producer</code>, com o <strong>Replace</strong> do IntelliJ (<code>Ctrl+R</code>, com <em>Match case</em> e <em>Words</em> ligados para trocar <code>Producer</code>→<code>Anime</code> e <code>producer</code>→<code>anime</code> sem estragar o resto). A novidade é que o anime tem um <strong>produtor</strong>, que está em outra tabela. Em vez de buscar cada produtor separado, um <strong>INNER JOIN</strong> traz tudo numa consulta:</p>
+<pre><code>private static PreparedStatement createPrepareStatementFindByName(Connection conn, String name) throws SQLException {
+    String sql = """
+            SELECT a.id, a.name, a.episodes, a.producer_id, p.name as 'producer_name' FROM anime_store.anime a inner join
+            anime_store.producer p on a.producer_id = p.id
+            where a.name like ?;
+            """;                                                  // text block: sem + e \n
+    PreparedStatement ps = conn.prepareStatement(sql);
+    ps.setString(1, String.format("%%%s%%", name));
+    return ps;
+}
+
+// montando o Anime com o Producer dentro
+while (rs.next()) {
+    Producer producer = Producer.builder()
+            .name(rs.getString("producer_name"))                  // o alias do SELECT
+            .id(rs.getInt("producer_id"))
+            .build();
+    Anime anime = Anime.builder()
+            .id(rs.getInt("id"))
+            .name(rs.getString("name"))
+            .episodes(rs.getInt("episodes"))
+            .producer(producer)
+            .build();
+    animes.add(anime);
+}
+
+// save: o produtor entra só pelo id
+String sql = "INSERT INTO `anime_store`.`anime` (`name`, `episodes`, `producer_id`) VALUES ( ?, ?, ?);";
+ps.setString(1, anime.getName());
+ps.setInt(2, anime.getEpisodes());
+ps.setInt(3, anime.getProducer().getId());
+
+// update: nome e episódios (o produtor não muda depois de criado)
+String sql = "UPDATE `anime_store`.`anime` SET `name` = ?, `episodes` = ? WHERE (`id` = ?);";</code></pre>
+      <ul>
+        <li><strong><code>a</code> e <code>p</code> são apelidos</strong> das tabelas (<code>anime a</code>, <code>producer p</code>). As duas têm a coluna <code>name</code>, então o nome do produtor ganha o apelido de coluna <strong><code>as 'producer_name'</code></strong>, e é por ele que o <code>rs.getString("producer_name")</code> o encontra. O <code>a.producer_id</code> já traz o id do produtor, então não precisa do <code>p.id</code>.</li>
+        <li><strong>Text block</strong> (<code>"""</code>): texto em várias linhas sem <code>+</code> nem <code>\n</code>. O conteúdo começa na linha seguinte às aspas de abertura. Preview no Java 13 e definitivo no 15. O SQL fica muito mais legível.</li>
+        <li>No <code>save</code> do anime, o usuário digita nome, episódios e o <strong>id do produtor</strong>, e basta um <code>Producer</code> só com o id. O professor sugere que daria para listar os produtores antes.</li>
+        <li>O <code>findById</code> do anime usa o mesmo JOIN com <code>where a.id = ?</code>. No update, o produtor é copiado do objeto do banco.</li>
+        <li><strong>Menu de dois níveis</strong>: <code>1. Producer</code> / <code>2. Anime</code> / <code>0. Exit</code>, cada um com seu submenu (<code>1</code> a <code>4</code> e <code>9. Go Back</code>). O laço do <code>main</code> usa <code>switch</code> com setas e blocos <code>{ }</code>.</li>
+        <li>"Tem muita coisa que a gente poderia melhorar, várias validações, mas você tem agora um CRUD 100% funcional usando JDBC, não mais dados em memória."</li>
+      </ul>
+
+      <h3>Atenção</h3>
+      <ul>
+        <li><strong>Correção: <code>9. Go Back</code> derruba o programa no menu de produtor.</strong> O <code>ProducerService.menu</code> ficou com <code>default -&gt; throw new IllegalArgumentException("Not a valid option")</code>, e o 9 cai nele. O <code>AnimeService.menu</code> não tem <code>default</code> e por isso "volta" sem erro. Trate o 9 no <code>CrudTest01</code> (ou um <code>case 9 -&gt; {}</code>).</li>
+        <li><strong>Correção: três <code>Scanner(System.in)</code></strong> (no <code>CrudTest01</code>, no <code>ProducerService</code> e no <code>AnimeService</code>). No terminal interativo costuma funcionar, mas cada <code>Scanner</code> tem seu próprio buffer, e o primeiro pode "engolir" linhas destinadas ao outro, o que fica evidente ao passar a entrada por arquivo ou pipe. O correto é <strong>um único <code>Scanner</code></strong> compartilhado (a prática faz assim).</li>
+        <li><strong>Apagar um produtor que tem animes falha</strong>: a chave estrangeira impede (<code>SQLIntegrityConstraintViolationException</code>), e o repositório só loga o erro. O usuário merece uma mensagem clara, ou apague os animes antes. <strong>Extra</strong>: <code>ON DELETE CASCADE</code> na FK apagaria em cascata, com cuidado.</li>
+        <li><strong>Salvar anime com id de produtor inexistente</strong> também viola a FK.</li>
+        <li><strong><code>Integer.parseInt</code> em entrada vazia ou texto</strong> lança <code>NumberFormatException</code> e derruba o menu; o professor comenta sobre isso. Em código real, valide ou trate a exceção.</li>
+        <li><strong>Switch como expressão</strong> precisa cobrir todos os casos (<code>default</code>); com setas não há <code>break</code> nem "fall-through".</li>
+        <li>Detalhe no repositório: o <code>save</code> loga "Error while trying to <em>update</em>" em caso de falha (mensagem copiada).</li>
+      </ul>
+
+      <h3>Paralelo com PHP</h3>
+      <ul>
+        <li><strong>Menu no console ≈ comando Artisan</strong>: <code>$this-&gt;choice('Opção', ['Producer', 'Anime'])</code>, <code>$this-&gt;ask('Nome')</code>, <code>$this-&gt;confirm('Tem certeza?')</code> e <code>$this-&gt;table([...], $rows)</code> fazem num comando o que o <code>Scanner</code> + <code>printf</code> fazem aqui (e o Laravel Prompts deixa ainda mais bonito). No PHP puro, <code>readline()</code>/<code>fgets(STDIN)</code>.</li>
+        <li><strong>O CRUD inteiro ≈ Eloquent</strong>: <code>Producer::where('name', 'like', "%$n%")-&gt;get()</code>, <code>Producer::find($id)</code> (devolve <code>null</code>, o nosso <code>Optional</code>) / <code>findOrFail</code>, <code>Producer::create([...])</code>, <code>$p-&gt;update([...])</code>, <code>Producer::destroy($id)</code>. O JOIN com apelido é o <code>Anime::with('producer')</code> (<em>eager loading</em>) com <code>belongsTo</code>, ou <code>DB::table('anime as a')-&gt;join('producer as p', 'a.producer_id', '=', 'p.id')-&gt;select('a.*', 'p.name as producer_name')</code>.</li>
+        <li><strong>Switch com setas ≈ <code>match</code> do PHP 8</strong>: <code>$i = match($op) { 1, 2, 3 =&gt; 100, default =&gt; throw new InvalidArgumentException() };</code>. Também é expressão, sem <code>break</code>, e com comparação estrita.</li>
+        <li><strong>Text block ≈ heredoc/nowdoc</strong> do PHP (<code>&lt;&lt;&lt;SQL ... SQL;</code>), com a mesma ideia de indentação.</li>
+      </ul>
+    </section>
+
+    <section id="flashcards">
+      <h2>Flashcards</h2>
+      <p style="color:var(--muted);margin-top:-6px">Toque no cartão para virar.</p>
+      <div id="flashcards-app"></div>
+    </section>
+
+    <section id="quiz">
+      <h2>Quiz</h2>
+      <div id="quiz-app"></div>
+    </section>
+
+    <section id="estudo">
+      <h2>Material de estudo</h2>
+
+      <h3>Mapa mental</h3>
+<pre><code>CRUD pelo console (275–279) · pacote ZZJcrud
+├── Camadas: CrudTest01 (menu) → Service (Scanner) → Repository (PreparedStatement) → banco
+├── Domínio: Producer(id, name) · Anime(id, name, episodes, producer) · @Value @Builder
+├── Read (275): findByName("") = todos · printf("[%d] - %s%n", id, nome)
+├── Delete (276): pelo id · confirmação "y".equalsIgnoreCase(...)
+├── Create (277): builder sem id · INSERT ... VALUES (?)
+│   └── switch com setas: case 1 -&gt; ... · expressão: int i = switch(op) { case 1, 2 -&gt; 100; default -&gt; ... }
+├── Update (278): findById → Optional · isEmpty → "not found" · enter mantém · objeto novo (imutável)
+├── Anime (279): Replace com Match case/Words
+│   ├── INNER JOIN producer p ON a.producer_id = p.id · p.name as 'producer_name'
+│   ├── text block """ ... """
+│   └── menu de dois níveis (1 Producer · 2 Anime · 9 voltar · 0 sair)
+└── Cuidados: 1 Scanner só · 9 cai no default (exceção) · FK ao apagar produtor · parseInt de vazio</code></pre>
+
+      <h3>Prática no seu WSL (30 minutos)</h3>
+      <p>Continua o projeto <code>~/java-lab-jdbc</code>. É um CRUD compacto num arquivo só, com <strong>um único <code>Scanner</code></strong>. Assim ele funciona tanto digitando quanto recebendo as respostas de um arquivo, o que deixa a saída previsível.</p>
+<pre><code>cd ~/java-lab-jdbc
+docker compose up -d
+docker exec mysql mysql -uroot -proot -e "DELETE FROM anime_store.anime; DELETE FROM anime_store.producer; ALTER TABLE anime_store.anime AUTO_INCREMENT = 1; ALTER TABLE anime_store.producer AUTO_INCREMENT = 1; INSERT INTO anime_store.producer (name) VALUES ('NHK'), ('Studio Deen'), ('Madhouse');"
+
+C=src/main/java/academy/devdojo/maratonajava/javacore/ZZJcrud
+mkdir -p $C/test
+cat > $C/test/CrudPraticaTest01.java &lt;&lt;'EOF'
+package academy.devdojo.maratonajava.javacore.ZZJcrud.test;
+
+import lombok.Builder;
+import lombok.Value;
+
+import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.Scanner;
+
+public class CrudPraticaTest01 {
+    private static final Scanner SCANNER = new Scanner(System.in);          // UM Scanner só
+
+    @Value @Builder static class Producer { Integer id; String name; }
+    @Value @Builder static class Anime { Integer id; String name; int episodes; Producer producer; }
+
+    static Connection conn() throws SQLException {
+        return DriverManager.getConnection("jdbc:mysql://localhost:3306/anime_store", "root", "root");
+    }
+
+    // ---------- repositório ----------
+    static final String SELECT_ANIME = """
+            SELECT a.id, a.name, a.episodes, a.producer_id, p.name AS producer_name
+            FROM anime_store.anime a INNER JOIN anime_store.producer p ON a.producer_id = p.id
+            """;
+
+    static Anime toAnime(ResultSet rs) throws SQLException {
+        Producer producer = Producer.builder().id(rs.getInt("producer_id")).name(rs.getString("producer_name")).build();
+        return Anime.builder().id(rs.getInt("id")).name(rs.getString("name"))
+                .episodes(rs.getInt("episodes")).producer(producer).build();
+    }
+
+    static List&lt;Producer&gt; findProducers(String name) throws SQLException {
+        try (Connection c = conn();
+             PreparedStatement ps = c.prepareStatement("SELECT * FROM producer WHERE name LIKE ? ORDER BY id")) {
+            ps.setString(1, "%" + name + "%");
+            try (ResultSet rs = ps.executeQuery()) {
+                List&lt;Producer&gt; list = new ArrayList&lt;&gt;();
+                while (rs.next()) list.add(Producer.builder().id(rs.getInt("id")).name(rs.getString("name")).build());
+                return list;
+            }
+        }
+    }
+
+    static List&lt;Anime&gt; findAnimes(String name) throws SQLException {
+        try (Connection c = conn();
+             PreparedStatement ps = c.prepareStatement(SELECT_ANIME + "WHERE a.name LIKE ? ORDER BY a.id")) {
+            ps.setString(1, "%" + name + "%");
+            try (ResultSet rs = ps.executeQuery()) {
+                List&lt;Anime&gt; list = new ArrayList&lt;&gt;();
+                while (rs.next()) list.add(toAnime(rs));
+                return list;
+            }
+        }
+    }
+
+    static Optional&lt;Anime&gt; findAnimeById(int id) throws SQLException {
+        try (Connection c = conn(); PreparedStatement ps = c.prepareStatement(SELECT_ANIME + "WHERE a.id = ?")) {
+            ps.setInt(1, id);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? Optional.of(toAnime(rs)) : Optional.empty();
+            }
+        }
+    }
+
+    static int execute(String sql, Object... params) throws SQLException {
+        try (Connection c = conn(); PreparedStatement ps = c.prepareStatement(sql)) {
+            for (int i = 0; i &lt; params.length; i++) ps.setObject(i + 1, params[i]);
+            return ps.executeUpdate();
+        }
+    }
+
+    // ---------- console ----------
+    static String ask(String question) {
+        System.out.println(question);
+        return SCANNER.nextLine();
+    }
+
+    public static void main(String[] args) {
+        while (true) {
+            int op = Integer.parseInt(ask("Menu: 1. Producer | 2. Anime | 0. Exit"));
+            if (op == 0) break;
+            int sub = Integer.parseInt(ask((op == 1 ? "Producer" : "Anime")
+                    + ": 1. Search | 2. Delete | 3. Save | 4. Update | 9. Go Back"));
+            if (sub == 9) continue;                                     // 9 não cai em default
+            try {
+                if (op == 1) producerMenu(sub); else animeMenu(sub);
+            } catch (SQLIntegrityConstraintViolationException e) {
+                System.out.println("Operação barrada pela chave estrangeira");
+            } catch (SQLException e) {
+                System.out.println("Erro no banco: " + e.getMessage());
+            }
+        }
+    }
+
+    static void producerMenu(int op) throws SQLException {
+        switch (op) {
+            case 1 -&gt; findProducers(ask("Type the name or empty to all"))
+                    .forEach(p -&gt; System.out.printf("[%d] - %s%n", p.getId(), p.getName()));
+            case 2 -&gt; {
+                int id = Integer.parseInt(ask("Type the id of the producer"));
+                if ("y".equalsIgnoreCase(ask("Are you sure? Y/N"))) System.out.println("Deleted rows: " + execute("DELETE FROM producer WHERE id = ?", id));
+            }
+            case 3 -&gt; System.out.println("Saved rows: " + execute("INSERT INTO producer (name) VALUES (?)", ask("Type the name of the producer")));
+            default -&gt; System.out.println("Not a valid option");
+        }
+    }
+
+    static void animeMenu(int op) throws SQLException {
+        switch (op) {
+            case 1 -&gt; findAnimes(ask("Type the name or empty to all"))
+                    .forEach(a -&gt; System.out.printf("[%d] - %s %d %s%n", a.getId(), a.getName(), a.getEpisodes(), a.getProducer().getName()));
+            case 2 -&gt; {
+                int id = Integer.parseInt(ask("Type the id of the anime"));
+                if ("y".equalsIgnoreCase(ask("Are you sure? Y/N"))) System.out.println("Deleted rows: " + execute("DELETE FROM anime WHERE id = ?", id));
+            }
+            case 3 -&gt; {
+                String name = ask("Type the name of the anime");
+                int episodes = Integer.parseInt(ask("Type the number of episodes"));
+                int producerId = Integer.parseInt(ask("Type the id of the producer"));
+                System.out.println("Saved rows: " + execute("INSERT INTO anime (name, episodes, producer_id) VALUES (?, ?, ?)", name, episodes, producerId));
+            }
+            case 4 -&gt; {
+                Optional&lt;Anime&gt; fromDb = findAnimeById(Integer.parseInt(ask("Type the id of the anime")));
+                if (fromDb.isEmpty()) { System.out.println("Anime not found"); return; }
+                Anime anime = fromDb.get();
+                System.out.println("Anime found " + anime.getName() + " (" + anime.getEpisodes() + ")");
+                String name = ask("Type the new name or enter to keep the same");
+                name = name.isEmpty() ? anime.getName() : name;
+                int episodes = Integer.parseInt(ask("Type the new number of episodes"));
+                System.out.println("Updated rows: " + execute("UPDATE anime SET name = ?, episodes = ? WHERE id = ?", name, episodes, anime.getId()));
+            }
+            default -&gt; System.out.println("Not a valid option");
+        }
+    }
+}
+EOF
+
+# as respostas que um usuário digitaria, uma por linha (as linhas vazias são "enter")
+cat > entrada.txt &lt;&lt;'EOF'
+1
+1
+
+2
+3
+Overlord
+13
+3
+2
+3
+Hellsing
+10
+3
+2
+1
+
+2
+4
+1
+
+26
+2
+2
+2
+y
+1
+2
+3
+y
+1
+9
+2
+1
+
+0
+EOF
+
+mvn -q compile
+java -cp target/classes:$(cat cp.txt) academy.devdojo.maratonajava.javacore.ZZJcrud.test.CrudPraticaTest01 &lt; entrada.txt
+# para usar de verdade, rode sem o "&lt; entrada.txt" e digite as opções</code></pre>
+      <details>
+        <summary>Ver a saída esperada</summary>
+<pre><code>Menu: 1. Producer | 2. Anime | 0. Exit
+Producer: 1. Search | 2. Delete | 3. Save | 4. Update | 9. Go Back
+Type the name or empty to all
+[1] - NHK
+[2] - Studio Deen
+[3] - Madhouse
+Menu: 1. Producer | 2. Anime | 0. Exit
+Anime: 1. Search | 2. Delete | 3. Save | 4. Update | 9. Go Back
+Type the name of the anime
+Type the number of episodes
+Type the id of the producer
+Saved rows: 1
+Menu: 1. Producer | 2. Anime | 0. Exit
+Anime: 1. Search | 2. Delete | 3. Save | 4. Update | 9. Go Back
+Type the name of the anime
+Type the number of episodes
+Type the id of the producer
+Saved rows: 1
+Menu: 1. Producer | 2. Anime | 0. Exit
+Anime: 1. Search | 2. Delete | 3. Save | 4. Update | 9. Go Back
+Type the name or empty to all
+[1] - Overlord 13 Madhouse
+[2] - Hellsing 10 Madhouse
+Menu: 1. Producer | 2. Anime | 0. Exit
+Anime: 1. Search | 2. Delete | 3. Save | 4. Update | 9. Go Back
+Type the id of the anime
+Anime found Overlord (13)
+Type the new name or enter to keep the same
+Type the new number of episodes
+Updated rows: 1
+Menu: 1. Producer | 2. Anime | 0. Exit
+Anime: 1. Search | 2. Delete | 3. Save | 4. Update | 9. Go Back
+Type the id of the anime
+Are you sure? Y/N
+Deleted rows: 1
+Menu: 1. Producer | 2. Anime | 0. Exit
+Producer: 1. Search | 2. Delete | 3. Save | 4. Update | 9. Go Back
+Type the id of the producer
+Are you sure? Y/N
+Operação barrada pela chave estrangeira
+Menu: 1. Producer | 2. Anime | 0. Exit
+Producer: 1. Search | 2. Delete | 3. Save | 4. Update | 9. Go Back
+Menu: 1. Producer | 2. Anime | 0. Exit
+Anime: 1. Search | 2. Delete | 3. Save | 4. Update | 9. Go Back
+Type the name or empty to all
+[1] - Overlord 26 Madhouse
+Menu: 1. Producer | 2. Anime | 0. Exit</code></pre>
+      </details>
+      <p>O produtor 3 (Madhouse) não pode ser apagado enquanto o Overlord apontar para ele, e a FK barra. O <code>9</code> volta ao menu sem exceção, e o <code>update</code> com enter manteve o nome "Overlord". O update de produtor (opção 4) ficou como exercício.</p>
+      <p><strong>Exercícios:</strong></p>
+      <ol>
+        <li>Implemente o <code>case 4</code> do <code>producerMenu</code> (update com <code>findById</code> + <code>Optional</code> + "enter mantém"), como na aula 278.</li>
+        <li>Troque o <code>SCANNER</code> único por um <code>Scanner</code> em cada método, como no repositório, e rode de novo com <code>&lt; entrada.txt</code>. O que acontece?</li>
+        <li>Digite uma letra onde se espera número. Trate a <code>NumberFormatException</code> para o menu continuar.</li>
+        <li>Antes de salvar um anime, liste os produtores e verifique se o id digitado existe.</li>
+        <li>Converta o <code>if (op == 1) ... else ...</code> do <code>main</code> num <code>switch</code> com setas e blocos, como o <code>CrudTest01</code> da aula 279.</li>
+      </ol>
+
+      <h3>Glossário</h3>
+      <ul>
+        <li><strong>CRUD</strong>: Create, Read, Update, Delete.</li>
+        <li><strong>Enhanced switch</strong>: <code>switch</code> com <code>-&gt;</code>, sem <code>break</code>, com vários valores por case e uso como expressão.</li>
+        <li><strong>Switch expression</strong>: <code>switch</code> que devolve valor; precisa cobrir todos os casos.</li>
+        <li><strong>Text block</strong>: String multilinha delimitada por <code>"""</code> (Java 15).</li>
+        <li><strong>INNER JOIN</strong>: combina linhas de duas tabelas que satisfazem a condição (<code>ON a.producer_id = p.id</code>).</li>
+        <li><strong>Alias</strong>: apelido de tabela (<code>anime a</code>) ou de coluna (<code>p.name AS producer_name</code>).</li>
+        <li><strong><code>findById</code> com <code>Optional</code></strong>: busca por chave que devolve "valor ou vazio".</li>
+        <li><strong>Confirmação</strong>: perguntar antes de uma operação destrutiva.</li>
+        <li><strong>Replace com Match case/Words</strong>: substituição do IntelliJ que respeita maiúsculas e palavras inteiras.</li>
+      </ul>
+
+      <h3>Revisão espaçada</h3>
+      <ul class="revisao">
+        <li><span class="dia">Dia 1</span><span>Todos os flashcards + a prática rodando com a entrada pronta e depois digitando.</span></li>
+        <li><span class="dia">Dia 3</span><span>Quiz + exercícios 1 a 3.</span></li>
+        <li><span class="dia">Dia 7</span><span>Exercícios 4 e 5 + escrever de memória o SQL do JOIN com os apelidos.</span></li>
+        <li><span class="dia">Dia 14</span><span>Flashcards que errou + questões discursivas + revisar as páginas 252–274 (o bloco inteiro de JDBC).</span></li>
+      </ul>
+
+      <h3>Para aprofundar</h3>
+      <ul>
+        <li>O que é o problema N+1 e por que o JOIN evita buscar o produtor de cada anime separadamente?</li>
+        <li>Como um ORM (JPA/Hibernate) mapearia <code>Anime</code> → <code>Producer</code> com <code>@ManyToOne</code> e faria todo esse CRUD sem SQL?</li>
+        <li>Como o Spring Data JPA gera <code>findByName</code>, <code>findById</code> (com <code>Optional</code>), <code>save</code> e <code>deleteById</code> a partir de uma interface?</li>
+        <li>O que é paginação (<code>LIMIT</code>/<code>OFFSET</code>) e por que um "findAll" sem limite é perigoso em produção?</li>
+        <li>Como o <em>pattern matching</em> do <code>switch</code> (Java 21) amplia o switch com setas?</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    window.AULA = {
+      flashcards: [
+        ["Quais as camadas do CRUD da aula 275?", "CrudTest01 (menu) → Service (Scanner e regras) → Repository (JDBC) → banco; domínio imutável com @Value @Builder"],
+        ["Como o findAll é feito no CRUD?", "É o findByName com texto vazio: LIKE '%%' traz todos"],
+        ["Por que Integer.parseInt(scanner.nextLine()) em vez de nextInt()?", "nextInt deixa o Enter no buffer e o próximo nextLine vem vazio"],
+        ["Por que as mensagens do menu usam System.out e não log?", "O log adiciona data, thread e pacote; é para informação técnica"],
+        ["Por que apagar pelo id?", "É único e seguro; por isso a listagem mostra o id"],
+        ["Como confirmar uma exclusão?", "Perguntar 'Are you sure? Y/N' e checar \"y\".equalsIgnoreCase(resposta)"],
+        ["Por que \"y\".equalsIgnoreCase(choice) e não choice.equals...?", "Com o literal primeiro não há NullPointerException, e ignora maiúsculas"],
+        ["O que é o switch com setas?", "case 1 -> ...; sem break, sem fall-through; vários valores com case 1, 2, 3"],
+        ["Quando o switch vira expressão?", "Quando devolve valor: int i = switch(op) { case 1 -> 100; default -> ... }; precisa cobrir todos os casos"],
+        ["Por que o save recebe um Producer e não só o nome?", "Se a tabela ganhar colunas, a assinatura não muda"],
+        ["Por que o update começa com findById?", "É preciso trazer o registro atual, mostrar e só então alterar"],
+        ["O que o findById devolve e por quê?", "Optional<Producer>: obriga quem chama a tratar o 'não encontrado'"],
+        ["Como o update mantém o nome se o usuário der enter?", "name = name.isEmpty() ? fromDb.getName() : name"],
+        ["Por que o update cria um objeto novo?", "O domínio é imutável (@Value, sem setters): builder com o id antigo e os dados novos"],
+        ["Como o repositório de Anime foi criado rápido?", "Copiando o de Producer e usando Replace (Ctrl+R) com Match case e Words"],
+        ["Por que INNER JOIN no findByName de anime?", "Traz o anime e o nome do produtor numa consulta só, sem buscar cada produtor"],
+        ["Para que serve p.name as 'producer_name'?", "As duas tabelas têm name; o alias diferencia e é lido com rs.getString(\"producer_name\")"],
+        ["O que significam 'anime a' e 'producer p'?", "Apelidos das tabelas, para escrever a.name, p.name, a.producer_id"],
+        ["O que é um text block?", "String multilinha entre \"\"\" \"\"\", sem + nem \\n (Java 15)"],
+        ["Como o save de anime informa o produtor?", "Um Producer só com o id: ps.setInt(3, anime.getProducer().getId())"],
+        ["Qual o bug do '9. Go Back' no menu de produtor?", "ProducerService.menu tem default que lança IllegalArgumentException; o 9 cai nele"],
+        ["Qual o problema de ter três Scanner(System.in)?", "Cada um tem seu buffer e pode consumir linhas do outro (quebra com entrada por arquivo/pipe); use um só"],
+        ["O que acontece ao apagar um produtor que tem animes?", "A chave estrangeira impede: SQLIntegrityConstraintViolationException"],
+        ["Equivalente PHP do switch com setas?", "match do PHP 8: é expressão, sem break"],
+        ["Equivalente Laravel do findById com Optional?", "Producer::find($id) (null se não achar) ou findOrFail"]
+      ],
+      quiz: [
+        { tipo: 'multipla', pergunta: 'Por que o professor lê números com Integer.parseInt(SCANNER.nextLine())?',
+          opcoes: ['É mais rápido', 'nextInt() deixa o Enter no buffer e o próximo nextLine() viria vazio', 'nextInt() não existe', 'Para aceitar letras'],
+          correta: 1,
+          explicacao: 'Misturar nextInt e nextLine é a pegadinha clássica do Scanner (aula 70). Lendo sempre a linha e convertendo, cada nextLine pega exatamente o que foi digitado.' },
+        { tipo: 'vf', pergunta: 'No switch com setas (case 1 -> ...), é preciso colocar break para não executar o case seguinte.',
+          correta: 1,
+          explicacao: 'Falso. Com -> não há fall-through: só o bloco do case escolhido roda. É uma das vantagens do enhanced switch.' },
+        { tipo: 'multipla', pergunta: 'O que é obrigatório num switch usado como expressão (int i = switch (op) { ... };)?',
+          opcoes: ['Usar break', 'Cobrir todos os casos, geralmente com default', 'Ter no máximo 3 cases', 'Usar só Strings'],
+          correta: 1,
+          explicacao: 'Como a expressão precisa sempre produzir um valor, todos os casos devem ser cobertos (default que devolve valor ou lança exceção).' },
+        { tipo: 'multipla', pergunta: 'No update da aula 278, o que acontece se o usuário apertar só Enter no novo nome?',
+          opcoes: ['O nome vira vazio', 'Lança exceção', 'O nome antigo é mantido', 'O registro é apagado'],
+          correta: 2,
+          explicacao: 'name = name.isEmpty() ? producerFromDb.getName() : name; o ternário mantém o valor que veio do banco.' },
+        { tipo: 'multipla', pergunta: 'Por que o findById devolve Optional<Producer>?',
+          opcoes: ['Porque JDBC exige', 'Para obrigar quem chama a tratar o caso de não encontrar o id', 'Para ser mais rápido', 'Porque Producer é imutável'],
+          correta: 1,
+          explicacao: 'Optional deixa explícito que pode não haver resultado (aulas 201–202). O serviço checa isEmpty() e mostra "not found".' },
+        { tipo: 'multipla', pergunta: "No SQL do AnimeRepository, para que serve p.name as 'producer_name'?",
+          opcoes: ['Renomeia a tabela', "Diferencia o nome do produtor do nome do anime, e o Java lê com rs.getString(\"producer_name\")", 'Cria uma coluna nova no banco', 'É obrigatório em todo JOIN'],
+          correta: 1,
+          explicacao: 'As duas tabelas têm a coluna name. O alias de coluna evita a ambiguidade no ResultSet.' },
+        { tipo: 'vf', pergunta: 'Um text block ("""...""") permite escrever o SQL em várias linhas sem concatenar com + e \\n.',
+          correta: 0,
+          explicacao: 'Verdadeiro. Text blocks são definitivos desde o Java 15 e deixam SQL, JSON e HTML muito mais legíveis.' },
+        { tipo: 'multipla', pergunta: 'No CrudTest01 final, o que acontece ao escolher Producer e depois "9. Go Back"?',
+          opcoes: ['Volta ao menu principal', 'Sai do programa normalmente', 'ProducerService.menu cai no default e lança IllegalArgumentException', 'Apaga o produtor 9'],
+          correta: 2,
+          explicacao: 'O ProducerService.menu manteve o default que lança exceção. O AnimeService não tem default, por isso lá o 9 "funciona". A correção é tratar o 9 antes de chamar o serviço.' },
+        { tipo: 'discursiva', pergunta: 'Descreva o fluxo completo do update de anime da aula 279, do menu ao SQL, e os cuidados com imutabilidade e com o produtor.',
+          explicacao: 'No menu principal o usuário escolhe 2 (Anime) e depois 4 (Update). O AnimeService pede o id, lido com Integer.parseInt(SCANNER.nextLine()), e chama AnimeRepository.findById(id), que executa o SELECT com INNER JOIN (a.producer_id = p.id, p.name as producer_name) filtrando a.id = ?. Ele monta o Producer e o Anime com o builder e devolve Optional.of(anime) ou Optional.empty(). O serviço checa isEmpty() e mostra "Anime not found"; se achou, mostra o anime, pede o novo nome (enter mantém, com o ternário name.isEmpty() ? fromDb.getName() : name) e o novo número de episódios. Como o domínio é imutável (@Value), é criado um objeto novo com o builder: id e produtor copiados do objeto do banco, nome e episódios novos. O repositório executa UPDATE anime SET name = ?, episodes = ? WHERE id = ? com PreparedStatement. O produtor não é alterado (regra do professor: o anime nasce com um produtor). Cuidados: parseInt de entrada vazia derruba o programa, e se o anime não existir não se deve tentar o UPDATE.' },
+        { tipo: 'discursiva', pergunta: 'Aponte os problemas do CRUD do repositório que você corrigiria antes de entregar para um usuário, e como.',
+          explicacao: '1) "9. Go Back" no menu de produtor cai no default do ProducerService.menu e lança IllegalArgumentException: tratar o 9 no laço principal (continue) ou com um case 9 -> {}. 2) Três Scanner(System.in) (CrudTest01, ProducerService, AnimeService): cada um tem buffer próprio e pode consumir entradas do outro, o que quebra com entrada por arquivo ou pipe. Usar um único Scanner compartilhado. 3) Integer.parseInt de texto ou vazio lança NumberFormatException e encerra o programa: validar ou capturar e repetir a pergunta. 4) Apagar produtor com animes viola a chave estrangeira, e o erro só vai para o log: mostrar mensagem clara (ou oferecer apagar os animes antes; ON DELETE CASCADE com cuidado). 5) Salvar anime com id de produtor inexistente também viola a FK: listar os produtores ou validar com findById antes. 6) Mensagem de log copiada errada no save ("update"). 7) A listagem sem limite pode ficar enorme (paginação). No Laravel, boa parte disso vem pronta: validação em Form Requests/Prompts e findOrFail.' }
+      ]
+    };
+  </script>
+  <script src="../js/app.js"></script>
+</body>
+</html>
